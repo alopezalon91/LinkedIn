@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Historial — Liberfy LinkedIn</title>
+  <meta name="description" content="Historial de posts publicados en LinkedIn por Liberfy" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<div class="app-wrapper">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📊</div>
+      <div class="logo-text">
+        <span class="logo-name">Liberfy</span>
+        <span class="logo-sub">LinkedIn Auto</span>
+      </div>
+    </div>
+    <span class="sidebar-section-label">Publicación</span>
+    <a href="index.html" class="nav-item">
+      <span class="nav-icon">📋</span>
+      Cola de revisión
+      <span class="nav-badge urgent" id="pending-count">…</span>
+    </a>
+    <a href="history.html" class="nav-item active">
+      <span class="nav-icon">📅</span>
+      Historial
+    </a>
+    <span class="sidebar-section-label">Inteligencia</span>
+    <a href="analytics.html" class="nav-item">
+      <span class="nav-icon">🧠</span>
+      Aprendizaje
+    </a>
+    <span class="sidebar-section-label">Sistema</span>
+    <a href="setup.html" class="nav-item">
+      <span class="nav-icon">⚙️</span>
+      Configuración
+    </a>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar">AL</div>
+        <div>
+          <div class="user-name">Alberto López</div>
+          <div class="user-role">Gestor contable · Liberfy</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Historial de publicaciones</h1>
+        <p class="page-subtitle">Todos los posts publicados, aprobados y rechazados.</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" style="margin-bottom:24px">
+      <div class="stat-card">
+        <span class="stat-icon">📢</span>
+        <div class="stat-value" id="hist-published" style="color:var(--accent-green)">—</div>
+        <div class="stat-label">Total publicados</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">📋</span>
+        <div class="stat-value" id="hist-normativa" style="color:var(--accent-blue)">—</div>
+        <div class="stat-label">Normativa</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">📰</span>
+        <div class="stat-value" id="hist-actualidad" style="color:var(--accent-purple)">—</div>
+        <div class="stat-label">Actualidad</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">❌</span>
+        <div class="stat-value" id="hist-rejected" style="color:var(--text-muted)">—</div>
+        <div class="stat-label">Rechazados</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar" style="margin-bottom:20px">
+      <div class="filter-group">
+        <button class="filter-btn active" data-status="all">Todos</button>
+        <button class="filter-btn" data-status="published">Publicados</button>
+        <button class="filter-btn" data-status="scheduled">Programados</button>
+        <button class="filter-btn" data-status="rejected">Rechazados</button>
+      </div>
+      <div class="filter-group">
+        <button class="filter-btn active" data-type="all">Tipo</button>
+        <button class="filter-btn" data-type="normativa">Normativa</button>
+        <button class="filter-btn" data-type="actualidad">Actualidad</button>
+      </div>
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="hist-search" placeholder="Buscar en historial…" />
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="analytics-card" style="padding:0; overflow:hidden">
+      <table class="history-table" id="history-table">
+        <thead>
+          <tr>
+            <th style="padding-left:20px">Fecha</th>
+            <th>Tipo</th>
+            <th>Sector</th>
+            <th>Post (preview)</th>
+            <th>Fuente</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="history-body">
+          <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:40px">Cargando historial…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div style="display:flex; justify-content:center; gap:8px; margin-top:20px" id="pagination"></div>
+  </main>
+</div>
+
+<!-- Post detail modal -->
+<div class="modal-overlay" id="post-modal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Detalle del post</h2>
+      <button class="btn-icon" id="close-modal">✕</button>
+    </div>
+    <div id="modal-body"></div>
+    <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end" id="modal-actions"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="assets/app.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    App.init('history');
+  });
+</script>
+</body>
+</html>

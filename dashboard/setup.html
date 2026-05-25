@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configuración — Liberfy LinkedIn</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <style>
+    .setup-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .setup-section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .setup-section-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+    .form-input:focus { border-color: var(--accent-blue); }
+    .form-input::placeholder { color: var(--text-muted); }
+    .form-hint { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+    .step-badge {
+      width: 28px; height: 28px;
+      background: var(--grad-primary);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .check-row:last-child { border-bottom: none; }
+    .check-icon { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📊</div>
+      <div class="logo-text">
+        <span class="logo-name">Liberfy</span>
+        <span class="logo-sub">LinkedIn Auto</span>
+      </div>
+    </div>
+    <span class="sidebar-section-label">Publicación</span>
+    <a href="index.html" class="nav-item">
+      <span class="nav-icon">📋</span>
+      Cola de revisión
+    </a>
+    <a href="history.html" class="nav-item">
+      <span class="nav-icon">📅</span>
+      Historial
+    </a>
+    <span class="sidebar-section-label">Inteligencia</span>
+    <a href="analytics.html" class="nav-item">
+      <span class="nav-icon">🧠</span>
+      Aprendizaje
+    </a>
+    <span class="sidebar-section-label">Sistema</span>
+    <a href="setup.html" class="nav-item active">
+      <span class="nav-icon">⚙️</span>
+      Configuración
+    </a>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar">AL</div>
+        <div>
+          <div class="user-name">Alberto López</div>
+          <div class="user-role">Gestor contable · Liberfy</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Configuración</h1>
+        <p class="page-subtitle">Conecta LinkedIn, la IA y el Worker de Cloudflare. Solo necesitas hacerlo una vez.</p>
+      </div>
+    </div>
+
+    <!-- Connection status -->
+    <div class="setup-section">
+      <div class="setup-section-title"><span>🔌</span> Estado de las conexiones</div>
+      <div class="setup-section-sub">Comprueba que todos los servicios están correctamente conectados.</div>
+      <div id="connection-status">
+        <div class="check-row"><span class="check-icon">⏳</span> Comprobando conexiones…</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:14px" id="check-connections-btn">🔄 Volver a comprobar</button>
+    </div>
+
+    <!-- Cloudflare Worker URL -->
+    <div class="setup-section">
+      <div class="setup-section-title"><span class="step-badge">1</span> API del Worker (Cloudflare)</div>
+      <div class="setup-section-sub">La URL de tu Cloudflare Worker desplegado. Ejemplo: <code style="color:var(--accent-blue)">https://liberfy-linkedin.TU_SUBDOMAIN.workers.dev</code></div>
+      <div class="form-group">
+        <label class="form-label" for="worker-url">Worker URL</label>
+        <input class="form-input" type="url" id="worker-url" placeholder="https://liberfy-linkedin.xxx.workers.dev" />
+        <div class="form-hint">Se guarda solo en tu navegador (localStorage). Nunca se sube a ningún servidor.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="worker-secret">Dashboard Secret</label>
+        <input class="form-input" type="password" id="worker-secret" placeholder="Tu DASHBOARD_SECRET de Cloudflare" />
+        <div class="form-hint">El token Bearer que configuraste como secret en el Worker.</div>
+      </div>
+    </div>
+
+    <!-- GitHub -->
+    <div class="setup-section">
+      <div class="setup-section-title"><span class="step-badge">2</span> GitHub (para triggers manuales)</div>
+      <div class="setup-section-sub">Opcional. Permite lanzar los scrapers manualmente desde el dashboard.</div>
+      <div class="form-group">
+        <label class="form-label" for="github-repo">Repositorio (usuario/repo)</label>
+        <input class="form-input" type="text" id="github-repo" placeholder="alberto-lopez/liberfy-linkedin" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="github-token">GitHub Personal Access Token</label>
+        <input class="form-input" type="password" id="github-token" placeholder="ghp_..." />
+        <div class="form-hint">Necesita permisos de <code>workflow</code>. Crea uno en GitHub → Settings → Developer settings → Tokens.</div>
+      </div>
+    </div>
+
+    <!-- LinkedIn OAuth -->
+    <div class="setup-section">
+      <div class="setup-section-title"><span class="step-badge">3</span> LinkedIn OAuth</div>
+      <div class="setup-section-sub">Conecta tu cuenta de LinkedIn para que el sistema pueda publicar posts en tu nombre. Este proceso se hace desde el Worker de Cloudflare.</div>
+      <div style="margin-bottom:16px">
+        <div class="check-row"><span class="check-icon">1️⃣</span> Ve a <a href="https://www.linkedin.com/developers/apps/new" target="_blank" style="color:var(--accent-blue)">developer.linkedin.com/apps/new</a> y crea una app</div>
+        <div class="check-row"><span class="check-icon">2️⃣</span> En "Products", activa <strong>Share on LinkedIn</strong> y <strong>Sign In with LinkedIn using OpenID Connect</strong></div>
+        <div class="check-row"><span class="check-icon">3️⃣</span> En "Auth", añade el redirect URI de tu Worker: <code style="color:var(--accent-blue)" id="redirect-uri-display">[introduce tu Worker URL primero]</code></div>
+        <div class="check-row"><span class="check-icon">4️⃣</span> Introduce las credenciales en los secretos de tu Cloudflare Worker (LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET)</div>
+        <div class="check-row"><span class="check-icon">5️⃣</span> Haz clic en el botón de autorizar para vincular tu cuenta</div>
+      </div>
+      <button class="btn btn-primary" id="linkedin-auth-btn" disabled>
+        🔗 Autorizar LinkedIn →
+      </button>
+      <div class="form-hint" style="margin-top:10px" id="linkedin-status">Introduce primero la URL del Worker para habilitar este paso.</div>
+    </div>
+
+    <!-- Save -->
+    <div style="display:flex; gap:12px; margin-top:8px">
+      <button class="btn btn-primary btn-lg" id="save-config-btn">
+        💾 Guardar configuración
+      </button>
+      <button class="btn btn-ghost btn-lg" id="test-api-btn">
+        🧪 Probar conexión API
+      </button>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// Inline config page logic (no App dependency)
+const Toast = {
+  show(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span>${icons[type]}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3500);
+  }
+};
+
+// Load saved config
+const fields = {
+  'worker-url': 'worker_url',
+  'worker-secret': 'dashboard_secret',
+  'github-repo': 'github_repo',
+  'github-token': 'github_token',
+};
+
+Object.entries(fields).forEach(([elId, key]) => {
+  const el = document.getElementById(elId);
+  if (el) el.value = localStorage.getItem(key) || '';
+});
+
+// Update LinkedIn redirect URI display
+function updateRedirectUri() {
+  const url = document.getElementById('worker-url')?.value?.trim();
+  const display = document.getElementById('redirect-uri-display');
+  const authBtn = document.getElementById('linkedin-auth-btn');
+  const statusEl = document.getElementById('linkedin-status');
+  if (url && display) {
+    display.textContent = `${url}/api/auth/callback`;
+    authBtn.disabled = false;
+    authBtn.href = `${url}/api/auth/linkedin`;
+    statusEl.textContent = '¡Listo! Haz clic en "Autorizar LinkedIn" para vincular tu cuenta.';
+  } else {
+    display.textContent = '[introduce tu Worker URL primero]';
+    authBtn.disabled = true;
+    statusEl.textContent = 'Introduce primero la URL del Worker para habilitar este paso.';
+  }
+}
+
+document.getElementById('worker-url')?.addEventListener('input', updateRedirectUri);
+updateRedirectUri();
+
+document.getElementById('linkedin-auth-btn')?.addEventListener('click', () => {
+  const url = document.getElementById('worker-url')?.value?.trim();
+  if (url) window.open(`${url}/api/auth/linkedin`, '_blank', 'width=600,height=700');
+});
+
+// Save
+document.getElementById('save-config-btn')?.addEventListener('click', () => {
+  Object.entries(fields).forEach(([elId, key]) => {
+    const val = document.getElementById(elId)?.value?.trim();
+    if (val) localStorage.setItem(key, val);
+  });
+  Toast.show('Configuración guardada correctamente', 'success');
+  updateRedirectUri();
+});
+
+// Test API
+document.getElementById('test-api-btn')?.addEventListener('click', async () => {
+  const url = localStorage.getItem('worker_url');
+  if (!url) { Toast.show('Introduce y guarda la URL del Worker primero', 'error'); return; }
+  try {
+    const res = await fetch(`${url}/api/health`);
+    const data = await res.json();
+    if (data.status === 'ok') Toast.show('✅ Conexión con Worker correcta', 'success');
+    else Toast.show(`API responde pero con estado: ${data.status}`, 'info');
+  } catch (e) {
+    Toast.show(`No se pudo conectar: ${e.message}`, 'error');
+  }
+});
+
+// Check connections
+async function checkConnections() {
+  const el = document.getElementById('connection-status');
+  const url = localStorage.getItem('worker_url');
+  const secret = localStorage.getItem('dashboard_secret');
+  const items = [];
+
+  // Worker
+  if (!url) {
+    items.push({ icon: '❌', text: 'Worker URL no configurada' });
+  } else {
+    try {
+      const res = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(5000) });
+      const d = await res.json();
+      items.push({ icon: d.status === 'ok' ? '✅' : '⚠️', text: `Worker de Cloudflare: ${d.status === 'ok' ? 'conectado' : 'responde pero con errores'}` });
+      items.push({ icon: d.db ? '✅' : '❌', text: `Base de datos D1: ${d.db ? 'conectada' : 'no disponible'}` });
+      items.push({ icon: d.linkedin_token ? '✅' : '⚠️', text: `LinkedIn: ${d.linkedin_token ? 'token válido' : 'no vinculado — completa el paso 3'}` });
+    } catch {
+      items.push({ icon: '❌', text: 'No se pudo conectar con el Worker' });
+    }
+  }
+
+  if (!secret) items.push({ icon: '⚠️', text: 'Dashboard Secret no configurado' });
+  else items.push({ icon: '✅', text: 'Dashboard Secret configurado' });
+
+  el.innerHTML = items.map(i => `<div class="check-row"><span class="check-icon">${i.icon}</span>${i.text}</div>`).join('');
+}
+
+document.getElementById('check-connections-btn')?.addEventListener('click', checkConnections);
+checkConnections();
+</script>
+</body>
+</html>

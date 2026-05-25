@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cola de Revisión — Liberfy LinkedIn</title>
+  <meta name="description" content="Dashboard de revisión y aprobación de posts para LinkedIn de Liberfy" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<div class="app-wrapper">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📊</div>
+      <div class="logo-text">
+        <span class="logo-name">Liberfy</span>
+        <span class="logo-sub">LinkedIn Auto</span>
+      </div>
+    </div>
+
+    <span class="sidebar-section-label">Publicación</span>
+    <a href="index.html" class="nav-item active" id="nav-queue">
+      <span class="nav-icon">📋</span>
+      Cola de revisión
+      <span class="nav-badge urgent" id="pending-count">…</span>
+    </a>
+    <a href="history.html" class="nav-item" id="nav-history">
+      <span class="nav-icon">📅</span>
+      Historial
+    </a>
+
+    <span class="sidebar-section-label">Inteligencia</span>
+    <a href="analytics.html" class="nav-item" id="nav-analytics">
+      <span class="nav-icon">🧠</span>
+      Aprendizaje
+    </a>
+
+    <span class="sidebar-section-label">Sistema</span>
+    <button class="nav-item" id="trigger-boe-btn">
+      <span class="nav-icon">🔄</span>
+      Buscar BOE ahora
+    </button>
+    <button class="nav-item" id="trigger-news-btn">
+      <span class="nav-icon">📰</span>
+      Buscar noticias
+    </button>
+    <a href="setup.html" class="nav-item">
+      <span class="nav-icon">⚙️</span>
+      Configuración
+    </a>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar">AL</div>
+        <div>
+          <div class="user-name">Alberto López</div>
+          <div class="user-role">Gestor contable · Liberfy</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ── -->
+  <main class="main-content">
+
+    <!-- Setup banner (shown if not configured) -->
+    <div class="setup-banner" id="setup-banner" style="display:none">
+      <div class="setup-banner-icon">🚀</div>
+      <div>
+        <div class="setup-banner-title">Configura el sistema antes de empezar</div>
+        <div class="setup-banner-sub">Necesitas vincular tu cuenta de LinkedIn y añadir las claves API. Solo tarda 10 minutos.</div>
+      </div>
+      <a href="setup.html" class="btn btn-primary" style="margin-left:auto; flex-shrink:0">Configurar →</a>
+    </div>
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Cola de revisión</h1>
+        <p class="page-subtitle" id="queue-subtitle">Cargando posts pendientes…</p>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center">
+        <button class="btn btn-ghost btn-sm" id="refresh-btn">
+          <span>🔄</span> Actualizar
+        </button>
+        <button class="btn btn-success" id="approve-all-btn" style="display:none">
+          ✅ Aprobar seleccionados (<span id="selected-count">0</span>)
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-icon">⏳</span>
+        <div class="stat-value" id="stat-pending" style="color: var(--accent-amber)">—</div>
+        <div class="stat-label">Pendientes</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">✅</span>
+        <div class="stat-value" id="stat-approved" style="color: var(--accent-green)">—</div>
+        <div class="stat-label">Aprobados hoy</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">📢</span>
+        <div class="stat-value" id="stat-published" style="color: var(--accent-blue)">—</div>
+        <div class="stat-label">Publicados esta semana</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🧠</span>
+        <div class="stat-value" id="stat-confidence" style="background: var(--grad-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text">—</div>
+        <div class="stat-label">Confianza del sistema</div>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <button class="filter-btn active" data-filter="all" id="filter-all">Todos</button>
+        <button class="filter-btn" data-filter="normativa" id="filter-normativa">📋 Normativa</button>
+        <button class="filter-btn" data-filter="actualidad" id="filter-actualidad">📰 Actualidad</button>
+      </div>
+      <div class="filter-group">
+        <button class="filter-btn active" data-urgency="all" id="urgency-all">Toda urgencia</button>
+        <button class="filter-btn" data-urgency="alta" id="urgency-alta">🔴 Alta</button>
+        <button class="filter-btn" data-urgency="media" id="urgency-media">🟡 Media</button>
+      </div>
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="search-input" placeholder="Buscar en posts…" />
+      </div>
+    </div>
+
+    <!-- Posts grid -->
+    <div class="posts-grid" id="posts-grid">
+      <!-- Skeletons while loading -->
+      <div class="post-card" style="padding:20px">
+        <div class="skeleton" style="height:20px; width:40%; margin-bottom:12px"></div>
+        <div class="skeleton" style="height:14px; width:100%; margin-bottom:8px"></div>
+        <div class="skeleton" style="height:14px; width:85%; margin-bottom:8px"></div>
+        <div class="skeleton" style="height:14px; width:70%"></div>
+      </div>
+      <div class="post-card" style="padding:20px">
+        <div class="skeleton" style="height:20px; width:55%; margin-bottom:12px"></div>
+        <div class="skeleton" style="height:14px; width:100%; margin-bottom:8px"></div>
+        <div class="skeleton" style="height:14px; width:90%; margin-bottom:8px"></div>
+        <div class="skeleton" style="height:14px; width:60%"></div>
+      </div>
+    </div>
+
+    <!-- Empty state (hidden by default) -->
+    <div class="empty-state" id="empty-state" style="display:none">
+      <div class="empty-state-icon">🎉</div>
+      <div class="empty-state-title">Cola vacía</div>
+      <div class="empty-state-sub">No hay posts pendientes de revisión. El sistema generará nuevos esta noche.</div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Modal: LinkedIn Preview ── -->
+<div class="modal-overlay" id="preview-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Vista previa en LinkedIn</h2>
+      <button class="btn-icon" id="close-preview">✕</button>
+    </div>
+    <div class="linkedin-preview" id="preview-content">
+      <div class="linkedin-preview-header">
+        <div class="linkedin-avatar">AL</div>
+        <div>
+          <div class="linkedin-name">Alberto López</div>
+          <div class="linkedin-title">Gestor contable y fiscal · Liberfy</div>
+          <div class="linkedin-time">Ahora · 🌐</div>
+        </div>
+      </div>
+      <div class="linkedin-body" id="preview-body">—</div>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end">
+      <button class="btn btn-ghost" id="close-preview-btn">Cerrar</button>
+      <button class="btn btn-success" id="approve-from-preview">✅ Aprobar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast container ── -->
+<div class="toast-container" id="toast-container"></div>
+
+<script src="assets/app.js"></script>
+<script>
+  // Initialize queue page
+  document.addEventListener('DOMContentLoaded', () => {
+    App.init('queue');
+  });
+</script>
+</body>
+</html>

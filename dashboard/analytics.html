@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aprendizaje — Liberfy LinkedIn</title>
+  <meta name="description" content="Estadísticas del sistema de aprendizaje automático de Liberfy LinkedIn" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<div class="app-wrapper">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📊</div>
+      <div class="logo-text">
+        <span class="logo-name">Liberfy</span>
+        <span class="logo-sub">LinkedIn Auto</span>
+      </div>
+    </div>
+    <span class="sidebar-section-label">Publicación</span>
+    <a href="index.html" class="nav-item">
+      <span class="nav-icon">📋</span>
+      Cola de revisión
+      <span class="nav-badge urgent" id="pending-count">…</span>
+    </a>
+    <a href="history.html" class="nav-item">
+      <span class="nav-icon">📅</span>
+      Historial
+    </a>
+    <span class="sidebar-section-label">Inteligencia</span>
+    <a href="analytics.html" class="nav-item active">
+      <span class="nav-icon">🧠</span>
+      Aprendizaje
+    </a>
+    <span class="sidebar-section-label">Sistema</span>
+    <a href="setup.html" class="nav-item">
+      <span class="nav-icon">⚙️</span>
+      Configuración
+    </a>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar">AL</div>
+        <div>
+          <div class="user-name">Alberto López</div>
+          <div class="user-role">Gestor contable · Liberfy</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ── -->
+  <main class="main-content">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Sistema de aprendizaje</h1>
+        <p class="page-subtitle">El sistema aprende de cada decisión que tomas para llegar a la autopublicación.</p>
+      </div>
+    </div>
+
+    <!-- Phase timeline -->
+    <div class="analytics-card" style="margin-bottom:24px">
+      <div class="analytics-card-title">📍 Fase actual del sistema</div>
+      <div class="phase-timeline">
+        <div class="phase-step completed" id="phase-1">
+          <div class="phase-dot">✓</div>
+          <div class="phase-label">Fase 1<br>Control total</div>
+        </div>
+        <div class="phase-step active" id="phase-2">
+          <div class="phase-dot">→</div>
+          <div class="phase-label">Fase 2<br>Sugerencias</div>
+        </div>
+        <div class="phase-step" id="phase-3">
+          <div class="phase-dot">🤖</div>
+          <div class="phase-label">Fase 3<br>Autopublicación</div>
+        </div>
+      </div>
+      <p style="font-size:13px; color:var(--text-secondary); margin-top:16px; text-align:center" id="phase-description">
+        El sistema está aprendiendo tus preferencias. Cuando alcance 90% de confianza media, activará la autopublicación.
+      </p>
+    </div>
+
+    <!-- Top stats -->
+    <div class="stats-row" style="margin-bottom:24px">
+      <div class="stat-card">
+        <span class="stat-icon">🗳️</span>
+        <div class="stat-value" id="total-decisions" style="color:var(--accent-blue)">—</div>
+        <div class="stat-label">Decisiones tomadas</div>
+        <div class="stat-trend up" id="decision-trend">↑ 0 esta semana</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">✅</span>
+        <div class="stat-value" id="approval-rate" style="color:var(--accent-green)">—</div>
+        <div class="stat-label">Tasa de aprobación</div>
+        <div class="stat-trend" id="approval-trend" style="color:var(--text-muted)">—</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">✏️</span>
+        <div class="stat-value" id="edit-rate" style="color:var(--accent-amber)">—</div>
+        <div class="stat-label">Posts editados</div>
+        <div class="stat-trend" style="color:var(--text-muted)">Editar mejora el aprendizaje</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">📅</span>
+        <div class="stat-value" id="weeks-to-auto" style="color:var(--accent-purple)">—</div>
+        <div class="stat-label">Semanas para autopublicar</div>
+        <div class="stat-trend" style="color:var(--text-muted)">Est. con ritmo actual</div>
+      </div>
+    </div>
+
+    <!-- Analytics grid -->
+    <div class="analytics-grid">
+
+      <!-- Confidence gauge -->
+      <div class="analytics-card">
+        <div class="analytics-card-title">🎯 Confianza media actual</div>
+        <div class="confidence-gauge">
+          <div class="gauge-value" id="confidence-pct">—</div>
+          <div class="gauge-label" id="confidence-status">Calculando…</div>
+          <div class="gauge-sub" id="confidence-needed">Se necesita 90% para autopublicar</div>
+        </div>
+
+        <!-- Mini confidence bar -->
+        <div style="margin-top:20px">
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-bottom:6px">
+            <span>0%</span>
+            <span style="color:var(--accent-amber)">60% — Sugerencias</span>
+            <span style="color:var(--accent-green)">90% — Auto</span>
+          </div>
+          <div style="height:10px; background:var(--bg-elevated); border-radius:99px; overflow:hidden; position:relative">
+            <div id="main-confidence-bar" style="height:100%; border-radius:99px; background: var(--grad-primary); transition: width 1s ease; width:0%"></div>
+            <!-- Threshold markers -->
+            <div style="position:absolute; top:0; left:60%; width:2px; height:100%; background:var(--accent-amber); opacity:0.6"></div>
+            <div style="position:absolute; top:0; left:90%; width:2px; height:100%; background:var(--accent-green); opacity:0.6"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Approval by sector -->
+      <div class="analytics-card">
+        <div class="analytics-card-title">📊 Aprobación por sector</div>
+        <div id="sector-bars">
+          <!-- Populated by JS -->
+          <div class="sector-bar-row">
+            <span class="sector-bar-label skeleton" style="height:14px; width:100px"></span>
+            <div class="sector-bar-track"><div class="sector-bar-fill skeleton" style="width:100%; background:none"></div></div>
+            <span class="sector-bar-pct skeleton" style="height:14px; width:30px"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trend over time (simple bar chart via CSS) -->
+      <div class="analytics-card">
+        <div class="analytics-card-title">📈 Confianza por semana</div>
+        <div id="weekly-chart" style="display:flex; align-items:flex-end; gap:8px; height:100px; padding-top:10px">
+          <!-- Populated by JS -->
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); text-align:center; margin-top:8px">
+          Últimas semanas → progreso hacia autopublicación
+        </div>
+      </div>
+
+      <!-- What the system has learned -->
+      <div class="analytics-card">
+        <div class="analytics-card-title">🔍 Preferencias detectadas</div>
+        <div id="preferences-list" style="display:flex; flex-direction:column; gap:10px">
+          <!-- Populated by JS -->
+          <div style="font-size:13px; color:var(--text-muted)">Acumula más decisiones para ver patrones.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Decision log table -->
+    <div class="analytics-card" style="margin-top:8px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+        <div class="analytics-card-title" style="margin-bottom:0">🗂️ Últimas decisiones</div>
+        <button class="btn btn-ghost btn-sm" id="refresh-analytics">🔄 Actualizar</button>
+      </div>
+      <table class="history-table" id="decisions-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Sector</th>
+            <th>Decisión</th>
+            <th>Edición</th>
+            <th>Score IA</th>
+          </tr>
+        </thead>
+        <tbody id="decisions-body">
+          <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="assets/app.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    App.init('analytics');
+  });
+</script>
+</body>
+</html>

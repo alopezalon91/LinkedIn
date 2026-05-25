@@ -1,0 +1,47 @@
+name: "📰 News Scraper (cada 6h)"
+
+on:
+  schedule:
+    # Runs every 6 hours during working hours (8h, 14h, 20h UTC — 10h, 16h, 22h España)
+    - cron: '0 8,14,20 * * *'
+
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Sólo generar posts, no enviar al dashboard'
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  scrape-news:
+    name: Scrape Press & Generate Posts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🐍 Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: 📰 Ejecutar scraper de noticias
+        env:
+          GEMINI_API_KEY:   ${{ secrets.GEMINI_API_KEY }}
+          WORKER_URL:       ${{ secrets.WORKER_URL }}
+          WORKER_SECRET:    ${{ secrets.WORKER_SECRET }}
+          DRY_RUN:          ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          echo "📰 Iniciando scraper de noticias — $(date '+%Y-%m-%d %H:%M UTC')"
+          python main.py --module news
+
+      - name: 📊 Resumen
+        if: always()
+        run: echo "✅ News scraper completado."

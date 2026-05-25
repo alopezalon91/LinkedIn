@@ -1,0 +1,41 @@
+# Environment variables — NUNCA subir a Git
+.env
+*.env.local
+*.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Learning data local (se sincroniza con Cloudflare D1)
+data/learning_data.json
+
+# Node / Workers
+workers/node_modules/
+node_modules/
+.wrangler/
+workers/.wrangler/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

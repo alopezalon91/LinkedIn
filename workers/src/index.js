@@ -1,0 +1,339 @@
+/**
+ * index.js — Cloudflare Workers entry point & request router.
+ *
+ * Route table:
+ *   GET    /api/health              → health check (no auth)
+ *   GET    /api/auth/linkedin       → start LinkedIn OAuth flow (no auth)
+ *   GET    /api/auth/callback       → LinkedIn OAuth callback (no auth)
+ *   POST   /api/auth/refresh        → refresh LinkedIn token (auth required)
+ *   GET    /api/posts               → list posts (auth)
+ *   GET    /api/posts/:id           → get single post (auth)
+ *   POST   /api/posts               → create post (auth — called by GitHub Actions)
+ *   PATCH  /api/posts/:id           → update post (auth)
+ *   POST   /api/posts/:id/approve   → approve post (auth)
+ *   POST   /api/posts/:id/reject    → reject post (auth)
+ *   POST   /api/posts/:id/schedule  → schedule post (auth)
+ *   POST   /api/publish/:id         → publish post to LinkedIn (auth)
+ *   POST   /api/feedback            → record user decision (auth)
+ *   GET    /api/stats               → system stats (auth)
+ *
+ * CORS: all responses include Access-Control-Allow-Origin from env.CORS_ORIGIN.
+ * Auth: Bearer token checked against env.DASHBOARD_SECRET.
+ */
+
+import {
+  jsonResponse,
+  errorResponse,
+  corsHeaders,
+  isAuthorized,
+  parseJSON,
+} from './utils.js';
+
+import {
+  listPosts,
+  getPost,
+  createPost,
+  updatePost,
+  approvePost,
+  rejectPost,
+  schedulePost,
+} from './api/posts.js';
+
+import { publishPost }                              from './api/publish.js';
+import { recordFeedback, getLearningProgress }      from './api/feedback.js';
+import { getSystemStats }                           from './api/stats.js';
+import {
+  startOAuthFlow,
+  handleCallback,
+  refreshToken,
+  getStoredToken,
+} from './api/linkedin_auth.js';
+
+// ─── Worker entry point ───────────────────────────────────────────────────────
+
+export default {
+  async fetch(request, env, ctx) {
+    const url    = new URL(request.url);
+    const path   = url.pathname;
+    const method = request.method.toUpperCase();
+
+    // CORS pre-flight
+    const cors = corsHeaders(request, env.CORS_ORIGIN ?? '*');
+    if (method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: cors });
+    }
+
+    try {
+      const response = await route(request, env, ctx, url, path, method);
+      // Attach CORS headers to every response
+      const headers = new Headers(response.headers);
+      for (const [k, v] of Object.entries(cors)) headers.set(k, v);
+      return new Response(response.body, { status: response.status, headers });
+    } catch (err) {
+      console.error('[worker] Unhandled error:', err);
+      return new Response(
+        JSON.stringify({ error: 'Internal server error', detail: err.message }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...cors },
+        },
+      );
+    }
+  },
+};
+
+// ─── Router ───────────────────────────────────────────────────────────────────
+
+async function route(request, env, ctx, url, path, method) {
+  const db = env.DB;
+
+  // ── Health check (no auth) ────────────────────────────────────────────────
+  if (path === '/api/health' && method === 'GET') {
+    return handleHealth(db);
+  }
+
+  // ── OAuth endpoints (no auth — user-facing flow) ──────────────────────────
+  if (path === '/api/auth/linkedin' && method === 'GET') {
+    return handleAuthStart(env);
+  }
+  if (path === '/api/auth/callback' && method === 'GET') {
+    return handleAuthCallback(db, env, url);
+  }
+
+  // ── All other /api/* routes require Bearer auth ────────────────────────────
+  if (!isAuthorized(request, env)) {
+    return errorResponse('Unauthorized. Provide Authorization: Bearer <token>', 401);
+  }
+
+  // ── Auth: refresh token ───────────────────────────────────────────────────
+  if (path === '/api/auth/refresh' && method === 'POST') {
+    return handleAuthRefresh(db, env);
+  }
+
+  // ── Posts CRUD ─────────────────────────────────────────────────────────────
+
+  // Collection
+  if (path === '/api/posts') {
+    if (method === 'GET')  return handleListPosts(db, url);
+    if (method === 'POST') return handleCreatePost(db, request);
+    return errorResponse('Method not allowed', 405);
+  }
+
+  // ── Post sub-actions: /api/posts/:id/approve|reject|schedule ──────────────
+  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|schedule)$/);
+  if (subActionMatch && method === 'POST') {
+    const [, postId, action] = subActionMatch;
+    return handlePostAction(db, request, postId, action);
+  }
+
+  // Single post
+  const singlePostMatch = path.match(/^\/api\/posts\/([^/]+)$/);
+  if (singlePostMatch) {
+    const [, postId] = singlePostMatch;
+    if (method === 'GET')   return handleGetPost(db, postId);
+    if (method === 'PATCH') return handleUpdatePost(db, request, postId);
+    return errorResponse('Method not allowed', 405);
+  }
+
+  // ── Publish ───────────────────────────────────────────────────────────────
+  const publishMatch = path.match(/^\/api\/publish\/([^/]+)$/);
+  if (publishMatch && method === 'POST') {
+    const [, postId] = publishMatch;
+    return handlePublish(db, env, postId);
+  }
+
+  // ── Feedback ──────────────────────────────────────────────────────────────
+  if (path === '/api/feedback' && method === 'POST') {
+    return handleFeedback(db, request);
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  if (path === '/api/stats' && method === 'GET') {
+    return handleStats(db);
+  }
+
+  // ── 404 ───────────────────────────────────────────────────────────────────
+  return errorResponse(`Route not found: ${method} ${path}`, 404);
+}
+
+// ─── Handler functions ────────────────────────────────────────────────────────
+
+async function handleHealth(db) {
+  try {
+    await db.prepare('SELECT 1').first();
+    return jsonResponse({ status: 'ok', db: 'connected', ts: new Date().toISOString() });
+  } catch (err) {
+    return jsonResponse(
+      { status: 'degraded', db: 'error', error: err.message, ts: new Date().toISOString() },
+      503,
+    );
+  }
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+function handleAuthStart(env) {
+  try {
+    const { url, state } = startOAuthFlow(env);
+    // Redirect the user's browser to LinkedIn
+    return Response.redirect(url, 302);
+  } catch (err) {
+    return errorResponse(err.message, 500);
+  }
+}
+
+async function handleAuthCallback(db, env, url) {
+  const code  = url.searchParams.get('code');
+  const error = url.searchParams.get('error');
+
+  if (error) {
+    return errorResponse(
+      `LinkedIn OAuth error: ${error} — ${url.searchParams.get('error_description') ?? ''}`,
+      400,
+    );
+  }
+  if (!code) return errorResponse('Missing code parameter', 400);
+
+  try {
+    const token = await handleCallback(db, env, code);
+    // Return a small HTML page — user sees success and can close the window
+    return new Response(
+      `<!DOCTYPE html><html><body>
+        <h2>✅ LinkedIn connected!</h2>
+        <p>You can close this window.</p>
+        <script>window.opener?.postMessage('linkedin_oauth_success', '*'); window.close();</script>
+      </body></html>`,
+      { status: 200, headers: { 'Content-Type': 'text/html;charset=UTF-8' } },
+    );
+  } catch (err) {
+    return errorResponse(err.message, 500);
+  }
+}
+
+async function handleAuthRefresh(db, env) {
+  try {
+    const token = await refreshToken(db, env);
+    return jsonResponse({ success: true, expires_at: token.expires_at });
+  } catch (err) {
+    return errorResponse(err.message, 500);
+  }
+}
+
+// ── Posts ─────────────────────────────────────────────────────────────────────
+
+async function handleListPosts(db, url) {
+  const params = Object.fromEntries(url.searchParams.entries());
+  const result = await listPosts(db, params);
+  return jsonResponse(result);
+}
+
+async function handleGetPost(db, postId) {
+  const post = await getPost(db, postId);
+  if (!post) return errorResponse(`Post not found: ${postId}`, 404);
+  return jsonResponse(post);
+}
+
+async function handleCreatePost(db, request) {
+  const data = await parseJSON(request);
+  try {
+    const post = await createPost(db, data);
+    return jsonResponse(post, 201);
+  } catch (err) {
+    return errorResponse(err.message, 400);
+  }
+}
+
+async function handleUpdatePost(db, request, postId) {
+  const updates = await parseJSON(request);
+
+  // Route to specialised handlers if action shorthand keys are present
+  if ('approved' in updates || updates.status === 'approved') {
+    return _handleApprove(db, postId, updates.content_edited ?? null);
+  }
+  if (updates.status === 'rejected') {
+    return _handleReject(db, postId);
+  }
+  if (updates.status === 'scheduled' && updates.scheduled_at) {
+    return _handleSchedule(db, postId, updates.scheduled_at);
+  }
+
+  try {
+    const post = await updatePost(db, postId, updates);
+    return jsonResponse(post);
+  } catch (err) {
+    return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
+  }
+}
+
+async function handlePostAction(db, request, postId, action) {
+  const body = await parseJSON(request);
+
+  switch (action) {
+    case 'approve':  return _handleApprove(db, postId, body.content_edited ?? null);
+    case 'reject':   return _handleReject(db, postId);
+    case 'schedule': return _handleSchedule(db, postId, body.scheduled_at);
+    default:         return errorResponse(`Unknown action: ${action}`, 400);
+  }
+}
+
+async function _handleApprove(db, postId, editedContent) {
+  try {
+    const { post, editRatio } = await approvePost(db, postId, editedContent);
+    return jsonResponse({ post, edit_ratio: editRatio });
+  } catch (err) {
+    return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
+  }
+}
+
+async function _handleReject(db, postId) {
+  try {
+    const post = await rejectPost(db, postId);
+    return jsonResponse(post);
+  } catch (err) {
+    return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
+  }
+}
+
+async function _handleSchedule(db, postId, scheduledAt) {
+  try {
+    const post = await schedulePost(db, postId, scheduledAt);
+    return jsonResponse(post);
+  } catch (err) {
+    return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
+  }
+}
+
+// ── Publish ───────────────────────────────────────────────────────────────────
+
+async function handlePublish(db, env, postId) {
+  try {
+    const result = await publishPost(db, env, postId);
+    return jsonResponse(result);
+  } catch (err) {
+    // Surface token/auth issues as 401, rate limits as 429, rest as 500
+    let status = 500;
+    if (err.message.includes('token') || err.message.includes('OAuth')) status = 401;
+    if (err.message.includes('rate limit')) status = 429;
+    if (err.message.includes('not found')) status = 404;
+    return errorResponse(err.message, status);
+  }
+}
+
+// ── Feedback ──────────────────────────────────────────────────────────────────
+
+async function handleFeedback(db, request) {
+  const data = await parseJSON(request);
+  try {
+    const result = await recordFeedback(db, data);
+    return jsonResponse(result, 201);
+  } catch (err) {
+    return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
+  }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+async function handleStats(db) {
+  const stats = await getSystemStats(db);
+  return jsonResponse(stats);
+}

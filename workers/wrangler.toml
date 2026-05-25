@@ -1,0 +1,18 @@
+name = "liberfy-linkedin"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "liberfy_linkedin"
+database_id = "YOUR_DATABASE_ID_HERE"
+
+[vars]
+CORS_ORIGIN = "https://linkedin.liberfy.pages.dev"
+
+# Secrets — set each via: wrangler secret put <NAME>
+#
+#   DASHBOARD_SECRET       — Bearer token that the Pages dashboard sends
+#   LINKEDIN_CLIENT_ID     — From LinkedIn Developer App
+#   LINKEDIN_CLIENT_SECRET — From LinkedIn Developer App
+#   LINKEDIN_REDIRECT_URI  — e.g. https://liberfy-linkedin.workers.dev/api/auth/callback
