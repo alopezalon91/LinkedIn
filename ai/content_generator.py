@@ -157,13 +157,17 @@ def truncate_if_needed(text: str, max_chars: int = MAX_POST_CHARS) -> str:
 
     # Try to cut at a sentence boundary
     sentence_endings = [". ", "! ", "? ", ".\n", "!\n", "?\n"]
-    cut_pos = budget
+    cut_pos = -1
     for end in sentence_endings:
         pos = body.rfind(end, 0, budget)
         if pos != -1:
-            cut_pos = min(cut_pos, pos + len(end))
+            cut_pos = max(cut_pos, pos + len(end))
+
+    if cut_pos == -1:
+        cut_pos = budget
 
     truncated_body = body[:cut_pos].rstrip()
+
 
     # Append ellipsis + hashtag line
     result = truncated_body + "…" + hashtag_line
