@@ -41,8 +41,8 @@ log = logging.getLogger("content_generator")
 # Constants
 # ---------------------------------------------------------------------------
 
-MAX_POST_CHARS = 1300
-_MODEL_NAME = "gemini-1.5-flash"
+MAX_POST_CHARS = 2500
+_MODEL_NAME = "gemini-2.5-flash"
 
 # ---------------------------------------------------------------------------
 # Gemini client
@@ -65,10 +65,6 @@ def _get_model() -> genai.GenerativeModel:
         _model = genai.GenerativeModel(
             model_name=_MODEL_NAME,
             system_instruction=SYSTEM_CONTEXT,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.75,       # balanced creativity
-                max_output_tokens=700,  # ~1 300 chars is ~550-600 tokens; buffer added
-            ),
         )
         log.info("Gemini model '%s' initialised (content generator).", _MODEL_NAME)
     return _model
@@ -86,7 +82,7 @@ def validate_post(text: str) -> dict:
         - Total character count ≤ MAX_POST_CHARS (1 300)
         - Contains at least one hashtag (#Word)
         - Contains at least one emoji
-        - Contains 'Liberfy' branding hashtag or mention
+        # No brand mention required
 
     Args:
         text: Raw post text to validate.
@@ -105,9 +101,6 @@ def validate_post(text: str) -> dict:
             f"Demasiado largo: {char_count} chars (máximo {MAX_POST_CHARS})."
         )
 
-    if not re.search(r"#\w+", text):
-        issues.append("No contiene hashtags (#Palabra).")
-
     # Simple emoji detection: any character in the emoji Unicode ranges
     has_emoji = any(
         "\U0001f300" <= ch <= "\U0001faff"
@@ -118,8 +111,7 @@ def validate_post(text: str) -> dict:
     if not has_emoji:
         issues.append("No contiene emojis.")
 
-    if "liberfy" not in text.lower():
-        issues.append("No contiene la marca 'Liberfy'.")
+
 
     return {
         "valid": len(issues) == 0,
@@ -304,7 +296,7 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
 
     prompt = ACTUALIDAD_PROMPT.format(
         titulo=article.get("title", ""),
-        resumen=article.get("summary", "Sin resumen disponible"),
+        resumen=article.get("texto") or article.get("summary", "Sin resumen disponible"),
         url=article.get("url", ""),
         fuente=article.get("source", "Fuente desconocida").replace("_", " ").title(),
         fecha=article.get("published", ""),

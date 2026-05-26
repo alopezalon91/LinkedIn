@@ -152,6 +152,11 @@ async function route(request, env, ctx, url, path, method) {
     return handleStats(db);
   }
 
+  // ── GitHub proxy ──────────────────────────────────────────────────────────
+  if (path === '/api/github/dispatch' && method === 'POST') {
+    return handleGithubDispatch(request);
+  }
+
   // ── 404 ───────────────────────────────────────────────────────────────────
   return errorResponse(`Route not found: ${method} ${path}`, 404);
 }
@@ -161,7 +166,19 @@ async function route(request, env, ctx, url, path, method) {
 async function handleHealth(db) {
   try {
     await db.prepare('SELECT 1').first();
-    return jsonResponse({ status: 'ok', db: 'connected', ts: new Date().toISOString() });
+    
+    // Check if we have a valid, unexpired stored LinkedIn token
+    const tokenRow = await db.prepare('SELECT expires_at FROM oauth_tokens WHERE id = ?')
+      .bind('linkedin')
+      .first();
+    const hasToken = !!(tokenRow && new Date(tokenRow.expires_at) > new Date());
+
+    return jsonResponse({ 
+      status: 'ok', 
+      db: 'connected', 
+      linkedin_token: hasToken,
+      ts: new Date().toISOString() 
+    });
   } catch (err) {
     return jsonResponse(
       { status: 'degraded', db: 'error', error: err.message, ts: new Date().toISOString() },
@@ -247,13 +264,13 @@ async function handleUpdatePost(db, request, postId) {
   const updates = await parseJSON(request);
 
   // Route to specialised handlers if action shorthand keys are present
-  if ('approved' in updates || updates.status === 'approved') {
+  if (updates.action === 'approve' || 'approved' in updates || updates.status === 'approved') {
     return _handleApprove(db, postId, updates.content_edited ?? null);
   }
-  if (updates.status === 'rejected') {
+  if (updates.action === 'reject' || updates.status === 'rejected') {
     return _handleReject(db, postId);
   }
-  if (updates.status === 'scheduled' && updates.scheduled_at) {
+  if ((updates.action === 'schedule' || updates.status === 'scheduled') && updates.scheduled_at) {
     return _handleSchedule(db, postId, updates.scheduled_at);
   }
 
@@ -336,4 +353,42 @@ async function handleFeedback(db, request) {
 async function handleStats(db) {
   const stats = await getSystemStats(db);
   return jsonResponse(stats);
+}
+
+// ── GitHub proxy handler ──────────────────────────────────────────────────────
+
+async function handleGithubDispatch(request) {
+  try {
+    const body = await parseJSON(request);
+    const { workflow, token, repo } = body;
+
+    if (!workflow || !token || !repo) {
+      return errorResponse('Missing required parameters: workflow, token, repo', 400);
+    }
+
+    const res = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'mytaxbot-linkedin-dashboard',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ref: 'main' }),
+    });
+
+    if (res.status === 204) {
+      return jsonResponse({ success: true });
+    } else {
+      const errText = await res.text();
+      let errMessage = res.statusText;
+      try {
+        const errData = JSON.parse(errText);
+        errMessage = errData.message || errMessage;
+      } catch (e) {}
+      return errorResponse(`GitHub API error (${res.status}): ${errMessage}`, res.status);
+    }
+  } catch (err) {
+    return errorResponse(`Network error contacting GitHub: ${err.message}`, 500);
+  }
 }

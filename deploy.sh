@@ -1,6 +1,6 @@
 #!/bin/bash
 # ══════════════════════════════════════════════════════════════
-# Liberfy LinkedIn Automation — Script de despliegue completo
+# MyTaxBot LinkedIn Automation — Script de despliegue completo
 # Ejecuta este script DESPUÉS de haber hecho login con Cloudflare
 # Uso: bash deploy.sh
 # ══════════════════════════════════════════════════════════════
@@ -24,7 +24,7 @@ WRANGLER="$HOME/.local/bin/wrangler"
 
 echo -e "${BOLD}"
 echo "╔══════════════════════════════════════════════════════╗"
-echo "║     Liberfy LinkedIn Automation — Deploy Setup       ║"
+echo "║     MyTaxBot LinkedIn Automation — Deploy Setup       ║"
 echo "╚══════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -39,7 +39,7 @@ log_ok "Wrangler $("$WRANGLER" --version 2>&1 | grep -oP '[\d.]+')"
 log_step "Creando base de datos Cloudflare D1..."
 cd "$(dirname "$0")/workers"
 
-DB_OUTPUT=$("$WRANGLER" d1 create liberfy_linkedin 2>&1) || true
+DB_OUTPUT=$("$WRANGLER" d1 create mytaxbot_linkedin 2>&1) || true
 echo "$DB_OUTPUT"
 
 # Extraer el database_id del output
@@ -47,7 +47,7 @@ DB_ID=$(echo "$DB_OUTPUT" | grep -oP 'database_id\s*=\s*"\K[^"]+' || echo "")
 
 if [ -z "$DB_ID" ]; then
   # Puede que ya exista — intentar obtener el ID
-  DB_ID=$("$WRANGLER" d1 list 2>&1 | grep "liberfy_linkedin" | awk '{print $NF}' || echo "")
+  DB_ID=$("$WRANGLER" d1 list 2>&1 | grep "mytaxbot_linkedin" | awk '{print $NF}' || echo "")
 fi
 
 if [ -z "$DB_ID" ]; then
@@ -65,7 +65,7 @@ log_ok "wrangler.toml actualizado"
 
 # ── Paso 4: Aplicar schema SQL ────────────────────────────────
 log_step "Aplicando schema SQL a D1..."
-"$WRANGLER" d1 execute liberfy_linkedin --file=schema.sql --remote
+"$WRANGLER" d1 execute mytaxbot_linkedin --file=schema.sql --remote
 log_ok "Schema aplicado correctamente"
 
 # ── Paso 5: Configurar secrets ────────────────────────────────
@@ -99,7 +99,7 @@ echo "$DEPLOY_OUTPUT"
 
 WORKER_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+workers\.dev' | head -1)
 if [ -z "$WORKER_URL" ]; then
-  echo -e "${YELLOW}Introduce la URL del Worker desplegado (ej: https://liberfy-linkedin.xxx.workers.dev):${NC}"
+  echo -e "${YELLOW}Introduce la URL del Worker desplegado (ej: https://mytaxbot-linkedin.xxx.workers.dev):${NC}"
   read -r WORKER_URL
 fi
 log_ok "Worker desplegado en: $WORKER_URL"
@@ -111,7 +111,7 @@ echo -e "${YELLOW}Para esto necesitas crear una app en LinkedIn Developer Portal
 echo -e "${YELLOW}Ve a: https://www.linkedin.com/developers/apps/new${NC}"
 echo ""
 echo -e "Instrucciones:"
-echo -e "  1. Crea la app (asociarla a tu página de Liberfy en LinkedIn)"
+echo -e "  1. Crea la app (asociarla a tu página de MyTaxBot en LinkedIn)"
 echo -e "  2. En 'Products', activa: 'Share on LinkedIn' y 'Sign In with LinkedIn using OpenID Connect'"
 echo -e "  3. En 'Auth', añade este Redirect URL:"
 echo -e "     ${BLUE}${WORKER_URL}/api/auth/callback${NC}"

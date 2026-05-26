@@ -13,7 +13,7 @@ press RSS feeds, and official agency feeds.
 BOE_API_BASE = "https://www.boe.es/datosabiertos/api"
 
 # {date} must be formatted as YYYYMMDD (e.g. '20240601')
-BOE_SUMARIO_URL = "https://www.boe.es/datosabiertos/api/sumario/{date}"
+BOE_SUMARIO_URL = "https://www.boe.es/datosabiertos/api/boe/sumario/{date}"
 
 # {id} is the BOE document identifier (e.g. 'BOE-A-2024-12345')
 BOE_DOCUMENTO_URL = "https://www.boe.es/datosabiertos/api/documento/id/{id}"
@@ -46,6 +46,9 @@ CCAA_RSS = {
     "cataluna": "https://portaldogc.gencat.cat/utilsEADOP/RSS/DOGC/RSS_RSS2_CA.xml",
     "andalucia": "https://www.juntadeandalucia.es/boja/rss.xml",
     "comunidad_valenciana": "https://www.dogv.gva.es/portal/rss.jsp",
+    "galicia": "https://www.xunta.gal/diario-oficial-galicia/dog.rss",
+    "canarias": "https://www.gobiernodecanarias.org/boc/rss/boc.xml",
+    "pais_vasco": "https://www.euskadi.eus/bopv2/datos/bopv.xml",
 }
 
 # ---------------------------------------------------------------------------
@@ -53,11 +56,15 @@ CCAA_RSS = {
 # ---------------------------------------------------------------------------
 
 NEWS_RSS = {
-    "expansion": "https://www.expansion.com/rss/economia.html",
+    "expansion": "https://sindicacion.expansion.com/rss/economia.xml",
     "eleconomista_autonomos": "https://www.eleconomista.es/rss/rss-autonomos-pymes.php",
-    "cinco_dias": "https://cincodias.elpais.com/rss/",
-    "idealista_news": "https://www.idealista.com/news/feed/",
+    "cinco_dias": "https://feeds.elpais.com/mrss-s/pages/ep/site/cincodias.com/seccion/economia/rss",
     "el_referente": "https://elreferente.es/feed/",
+    "pymes_y_autonomos": "https://www.pymesyautonomos.com/feed",
+    "autonomo_y_emprendedor": "https://www.autonomosyemprendedor.es/rss",
+    "libre_mercado": "https://feed.libertaddigital.com/libre-mercado.xml",
+    "el_pais_economia": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/seccion/economia/rss",
+    "el_confidencial_economia": "https://rss.elconfidencial.com/economia/",
 }
 
 # ---------------------------------------------------------------------------
@@ -65,7 +72,7 @@ NEWS_RSS = {
 # ---------------------------------------------------------------------------
 
 OFFICIAL_SOURCES = {
-    "aeat": "https://www.agenciatributaria.es/rss/novedades-noticias.xml",
+    "aeat": "https://sede.agenciatributaria.gob.es/Sede/todas-noticias.xml",
     "seguridad_social": "https://www.seg-social.es/wps/portal/wss/internet/RSS/RSSNoticias",
 }
 
@@ -82,8 +89,8 @@ REQUEST_RETRY_BACKOFF = 2.0   # seconds between retries (doubles each attempt)
 
 HEADERS = {
     "User-Agent": (
-        "LinkedInBot-Liberfy/1.0 (gestoría online; "
-        "contact: hola@liberfy.es)"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     ),
     "Accept": "application/json, application/xml, text/html;q=0.9, */*;q=0.8",
     "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",

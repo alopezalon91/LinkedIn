@@ -185,7 +185,7 @@ export async function getLinkedInUserUrn(accessToken) {
   const res = await fetch(LINKEDIN_ME_URL, {
     headers: {
       Authorization:          `Bearer ${accessToken}`,
-      'LinkedIn-Version':     '202401',
+      'LinkedIn-Version':     '202601',
     },
   });
 

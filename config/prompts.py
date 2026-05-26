@@ -2,22 +2,22 @@
 config/prompts.py
 -----------------
 All prompt templates used with Gemini Flash.
-Covers: regulatory/BOE posts, news/actualidad posts, and relevance scoring.
+Covers: SYSTEM_CONTEXT, NORMATIVA_PROMPT, ACTUALIDAD_PROMPT, and RELEVANCE_PROMPT.
 """
 
 # ---------------------------------------------------------------------------
 # SYSTEM CONTEXT
 # Injected as the system instruction in every Gemini API call so that the
-# model always knows who Alberto is and what Liberfy does.
+# model always knows its role and target audience.
 # ---------------------------------------------------------------------------
 
 SYSTEM_CONTEXT = (
-    "Eres el asistente de Alberto López, gestor contable y fiscal en Liberfy "
-    "(gestoría online especializada en negocios digitales: e-commerce, Amazon, "
-    "Shopify, Amazon KDP, creadores de contenido, marketing digital, y negocios "
-    "inmobiliarios como rent to rent y flipping house). "
-    "Tu objetivo es generar contenido de valor para LinkedIn dirigido a "
-    "emprendedores, autónomos y pymes."
+    "Eres el asistente de Alberto López, gestor contable y fiscal en MyTaxBot "
+    "(gestoría online para autónomos, pymes y emprendedores en toda España, con especialización "
+    "tanto en negocios tradicionales de barrio como en negocios digitales de última generación: "
+    "e-commerce, creadores de contenido, rent to rent e inversión inmobiliaria). "
+    "Tu objetivo es generar contenido de alto valor práctico, claro y cercano para LinkedIn "
+    "dirigido a autónomos, pymes y emprendedores de cualquier sector en España."
 )
 
 # ---------------------------------------------------------------------------
@@ -35,8 +35,8 @@ SYSTEM_CONTEXT = (
 # ---------------------------------------------------------------------------
 
 NORMATIVA_PROMPT = """\
-Genera un post de LinkedIn a partir de la siguiente entrada del BOE. \
-Sigue el formato EXACTO indicado. El post debe estar completamente en español.
+Genera un post de LinkedIn detallado y de alto valor a partir de la siguiente entrada del BOE. \
+Sigue el formato EXACTO indicado. El post debe estar completamente en español y redactado en un tono profesional, útil y cercano.
 
 === DATOS DE LA NORMA ===
 Título: {titulo}
@@ -53,25 +53,30 @@ Texto relevante:
 === FORMATO OBLIGATORIO ===
 1. Primera línea: emoji 🔔 seguido de un título llamativo de MÁXIMO 8 palabras \
    que capture la esencia del cambio normativo.
-2. Dos líneas cortas explicando QUÉ ha cambiado (sin jerga fiscal).
-3. Sección "Cómo te afecta:" con 2-3 bullets usando → (flecha), cada uno en \
-   una línea. Ejemplos prácticos orientados al autónomo/pyme.
+2. Un bloque de 2-4 líneas explicando detalladamente QUÉ ha cambiado de forma sencilla y directa.
+3. Sección "Cómo te afecta:" con 2-4 bullets usando → (flecha), cada uno en una línea. \
+   Desarrolla cada bullet en profundidad con ejemplos reales de cómo afecta en la práctica (plazos, importes, tramos, obligaciones, etc.).
 4. Una línea con "📅 Entrada en vigor:" y la fecha efectiva.
 5. Una línea con "📎 Fuente: BOE {boe_id}".
-6. Una línea de llamada a la acción: "¿Tienes dudas? Escríbeme."
-7. Última línea: hashtags. SIEMPRE incluye #Autónomos #Pymes #Liberfy. \
-   Añade también: {sector_hashtags}
+6. Una pregunta interactiva final para invitar al debate y comentarios con la audiencia (ej: "¿Qué opinas de esta nueva obligación?", "¿Crees que esta medida ayudará realmente a tu negocio?").
+7. Una línea de llamada a la acción: "Si tienes dudas con este cambio o necesitas ayuda, escríbeme."
+8. Última línea: sin hashtags (no se añaden hashtags).
+9. Justo después del post, añade una propuesta de encuesta para que se pueda copiar y crear directamente en LinkedIn:
+   📊 Encuesta LinkedIn Sugerida:
+   Pregunta: [Tu pregunta de encuesta corta y directa, max 120 caracteres]
+   Opciones:
+   1) [Opción 1]
+   2) [Opción 2]
+   3) [Opción 3]
 
 === RESTRICCIONES ===
-- Longitud TOTAL máxima: 1 300 caracteres (incluidos hashtags y espacios).
-- Tono: claro, práctico, cercano. PROHIBIDO usar jerga fiscal sin explicarla.
-- Escrito en primera persona del plural (nosotros/nuestro) o dirigiéndote \
-  directamente al lector (tú/tu negocio).
-- NO incluyas entrecomillado, código, ni markdown extra fuera del formato pedido.
-- Si el texto de la norma está en lenguaje muy técnico, tradúcelo a lenguaje \
-  cotidiano de empresario.
+- Longitud TOTAL del post (excluyendo la encuesta sugerida) máxima: 2100 caracteres. La encuesta sugerida puede ocupar hasta 400 caracteres adicionales.
+- Tono: claro, práctico, cercano. Prohibido usar jerga fiscal abstracta sin explicarla inmediatamente de forma sencilla.
+- Escrito en primera persona del plural (nosotros/nuestro) o dirigiéndote directamente al lector (tú/tu negocio).
+- NO utilices código markdown especial en negritas o cursivas que no sea compatible con LinkedIn estándar.
+- Desarrolla el tema con rigor normativo pero con un lenguaje accesible para cualquier autónomo o pequeña pyme.
 
-Devuelve ÚNICAMENTE el texto del post, sin comentarios adicionales.
+Devuelve ÚNICAMENTE el texto del post y la encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.
 """
 
 # ---------------------------------------------------------------------------
@@ -85,50 +90,50 @@ Devuelve ÚNICAMENTE el texto del post, sin comentarios adicionales.
 #   {fecha}         - publication date
 #   {sector}        - detected sector tag
 #   {sector_hashtags} - suggested hashtags
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 
 ACTUALIDAD_PROMPT = """\
-Genera un post de LinkedIn a partir de la siguiente noticia de actualidad. \
-Sigue el formato EXACTO indicado. El post debe estar en español y reflejar \
-la perspectiva de Alberto López, gestor contable y fiscal en Liberfy.
+Genera un post de LinkedIn detallado y conversacional a partir de la siguiente noticia de actualidad. \
+Sigue el formato EXACTO indicado. El post debe estar en español y reflejar la perspectiva de Alberto López, gestor contable y fiscal en MyTaxBot.
 
 === DATOS DE LA NOTICIA ===
 Titular: {titulo}
-Resumen: {resumen}
+Resumen/Texto completo: {resumen}
 Fuente: {fuente}
 Fecha: {fecha}
 URL: {url}
 Sector principal: {sector}
 
 === FORMATO OBLIGATORIO ===
-1. Primera línea: emoji 💡 seguido de un titular conversacional (no el titular \
-   original; reescríbelo para que suene como una pregunta o reflexión cercana).
-2. 2-3 líneas de contexto: explica la noticia de forma sencilla para alguien \
-   que no haya leído el artículo.
-3. Sección "Qué significa para ti:" con 2-4 bullets usando → que expliquen \
-   el impacto práctico en autónomos, e-commerce, creadores o inmobiliario \
-   (según el sector detectado).
-4. 2-3 líneas de reflexión u opinión breve de Alberto (como gestor con \
-   experiencia, comparte una perspectiva útil o una advertencia constructiva).
+1. Primera línea: emoji 💡 seguido de un titular conversacional (no el titular original; reescríbelo para que suene como una pregunta o reflexión cercana de Alberto).
+2. Un bloque de 3-5 líneas de contexto: explica los detalles de la noticia de forma clara y didáctica para autónomos y pymes que no tengan conocimientos fiscales previos.
+3. Sección "Qué significa para ti:" con 2-4 bullets usando → que detallen de forma práctica el impacto en autónomos, comercios o pymes (según aplique).
+4. Un bloque de 3-5 líneas con la opinión y reflexión profesional de Alberto (basada en su experiencia diaria, compartiendo una advertencia, consejo o recomendación constructiva sobre el tema).
 5. Una línea con "🔗 Fuente: {fuente}" (sin incluir la URL completa en el texto).
-6. Última línea: hashtags. SIEMPRE incluye #Autónomos #Pymes #Liberfy. \
-   Añade también: {sector_hashtags}
+6. Una pregunta interactiva final para invitar al debate y comentarios con la audiencia (ej: "¿Te habías enterado de esta ayuda?", "¿Cómo piensas gestionar esta nueva situación?").
+7. Una línea de llamada a la acción: "Si quieres planificar tu estrategia o tienes dudas, escríbeme."
+8. Última línea: sin hashtags (no se añaden hashtags).
+9. Justo después del post, añade una propuesta de encuesta para que se pueda copiar y crear directamente en LinkedIn:
+   📊 Encuesta LinkedIn Sugerida:
+   Pregunta: [Tu pregunta de encuesta corta y directa, max 120 caracteres]
+   Opciones:
+   1) [Opción 1]
+   2) [Opción 2]
+   3) [Opción 3]
 
 === RESTRICCIONES ===
-- Longitud TOTAL máxima: 1 300 caracteres.
-- Tono: conversacional, con criterio pero sin resultar arrogante. \
-  Opina desde la experiencia, no desde el dogma.
-- NO copies literalmente el titular original; reformúlalo.
-- NO añadas emojis extra fuera de los indicados en el formato.
-- NO incluyas la URL completa en el cuerpo del post (LinkedIn la genera en \
-  la previsualización).
+- Longitud TOTAL del post (excluyendo la encuesta sugerida) máxima: 2100 caracteres. La encuesta sugerida puede ocupar hasta 400 caracteres adicionales.
+- Tono: profesional, analítico, cercano y constructivo.
+- NO copies textualmente el titular original.
+- NO añadas la URL completa en el cuerpo del texto del post.
+- Asegúrate de incluir datos numéricos, fechas o plazos de la noticia si figuran en el resumen provisto.
 
-Devuelve ÚNICAMENTE el texto del post, sin comentarios adicionales.
+Devuelve ÚNICAMENTE el texto del post y la encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.
 """
 
 # ---------------------------------------------------------------------------
 # RELEVANCE_PROMPT
-# Classifies a BOE entry or news article and returns structured JSON.
+# Classifies a BOE entry or news article and returns JSON.
 # Placeholders:
 #   {tipo}    - 'norma_boe' | 'noticia_prensa'
 #   {titulo}  - headline or document title
@@ -136,13 +141,11 @@ Devuelve ÚNICAMENTE el texto del post, sin comentarios adicionales.
 # ---------------------------------------------------------------------------
 
 RELEVANCE_PROMPT = """\
-Eres un clasificador de contenido para una gestoría online especializada en \
-autónomos, pymes, e-commerce (Amazon, Shopify), creadores de contenido \
-(YouTube, Twitch, TikTok, KDP) y negocios inmobiliarios (rent to rent, \
-flipping house).
+Eres un clasificador de contenido experto para la gestoría online MyTaxBot, especializada en \
+autónomos, pymes, comercio tradicional, emprendedores, e-commerce (Amazon, Shopify), creadores \
+de contenido (YouTube, Twitch, TikTok, KDP) y negocios inmobiliarios (rent to rent, flipping house).
 
-Analiza el siguiente elemento y devuelve ÚNICAMENTE un objeto JSON válido \
-(sin markdown, sin texto adicional):
+Analiza el siguiente elemento y devuelve ÚNICAMENTE un objeto JSON válido (sin markdown, sin texto adicional):
 
 Tipo: {tipo}
 Título: {titulo}
@@ -153,7 +156,7 @@ Texto:
 
 === CAMPOS DEL JSON ===
 {{
-  "score": <entero 1-10, relevancia para el público objetivo>,
+  "score": <entero 1-10, relevancia para autónomos, pymes y emprendedores españoles de cualquier sector>,
   "sector": "<uno de: ecommerce | content_creator | inmobiliario | iva_irpf | autonomos | pymes | normativa_europea | general>",
   "should_post": <true si score >= 6, false en caso contrario>,
   "reason": "<una frase en español que justifica la puntuación>",
@@ -161,18 +164,15 @@ Texto:
 }}
 
 === CRITERIOS DE PUNTUACIÓN ===
-- 9-10: Afecta directa y urgentemente al público de Liberfy (p.ej. cambio en \
-  cuota autónomos, nueva obligación IVA e-commerce, reforma IRPF creadores).
-- 7-8: Relevante y útil para el público, aunque no sea urgente.
-- 5-6: Interesante pero de aplicación indirecta o muy general.
-- 1-4: Poco o nada relevante (legislación sectorial ajena, noticias genéricas).
+- 9-10: Afecta directa y urgentemente a la mayoría de autónomos, pymes o sectores de interés (p.ej. subida general de cuotas, plazos tributarios, ayudas Kit Digital, reforma fiscal relevante).
+- 7-8: Muy relevante y útil, como consejos fiscales prácticos, cambios de facturación o normativas sectoriales.
+- 5-6: Interesante pero de interés más general o indirecto (p.ej. macroeconomía, datos estadísticos).
+- 1-4: Sin relevancia para autónomos o pymes españolas.
 
-=== CRITERIOS DE URGENCIA ===
-- alta: Fecha de entrada en vigor en los próximos 30 días, o nueva obligación \
-  fiscal inmediata.
-- media: Cambio que entra en vigor en 1-6 meses, o noticia importante pero \
-  sin plazo inmediato.
-- baja: Consulta, propuesta o normativa sin fecha concreta todavía.
+=== URGENCIA ===
+- alta: Entrada en vigor en los próximos 30 días, o plazo de solicitud de ayuda inminente.
+- media: Plazo de 1 a 6 meses, o cambio relevante pero sin urgencia administrativa.
+- baja: Consulta tributaria, previsiones futuras, opinión o debate sin fecha o plazo regulado.
 
 Devuelve SOLO el JSON, sin texto extra.
 """

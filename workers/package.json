@@ -1,13 +1,13 @@
 {
-  "name": "liberfy-linkedin-workers",
+  "name": "mytaxbot-linkedin-workers",
   "version": "1.0.0",
-  "description": "Cloudflare Workers backend for the Liberfy LinkedIn automation system",
+  "description": "Cloudflare Workers backend for the MyTaxBot LinkedIn automation system",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "db:init": "wrangler d1 execute liberfy_linkedin --file=schema.sql",
-    "db:init:local": "wrangler d1 execute liberfy_linkedin --local --file=schema.sql",
-    "db:query": "wrangler d1 execute liberfy_linkedin --command",
+    "db:init": "wrangler d1 execute mytaxbot_linkedin --file=schema.sql",
+    "db:init:local": "wrangler d1 execute mytaxbot_linkedin --local --file=schema.sql",
+    "db:query": "wrangler d1 execute mytaxbot_linkedin --command",
     "secret:dashboard": "wrangler secret put DASHBOARD_SECRET",
     "secret:linkedin-id": "wrangler secret put LINKEDIN_CLIENT_ID",
     "secret:linkedin-secret": "wrangler secret put LINKEDIN_CLIENT_SECRET",

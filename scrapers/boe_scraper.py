@@ -21,7 +21,7 @@ from typing import Any, Optional
 import requests
 from bs4 import BeautifulSoup
 
-from config.sectors import text_matches_any_keyword, LIBERFY_FOCUS_KEYWORDS, get_sector_from_text
+from config.sectors import text_matches_any_keyword, MYTAXBOT_FOCUS_KEYWORDS, get_sector_from_text
 from config.sources import (
     BOE_SUMARIO_URL,
     BOE_DOCUMENTO_URL,
@@ -268,18 +268,18 @@ def filter_by_keywords(entries: list[dict], keywords: list[str] | None = None) -
     Quick keyword pre-filter. Returns only entries whose title contains at
     least one of the given keywords (case-insensitive).
 
-    Uses LIBERFY_FOCUS_KEYWORDS by default so we don't send irrelevant
+    Uses MYTAXBOT_FOCUS_KEYWORDS by default so we don't send irrelevant
     documents to the AI relevance scorer.
 
     Args:
         entries:  List of parsed BOE entry dicts.
-        keywords: Optional override keyword list. Defaults to LIBERFY_FOCUS_KEYWORDS.
+        keywords: Optional override keyword list. Defaults to MYTAXBOT_FOCUS_KEYWORDS.
 
     Returns:
         Filtered list of entries.
     """
     if keywords is None:
-        keywords = LIBERFY_FOCUS_KEYWORDS
+        keywords = MYTAXBOT_FOCUS_KEYWORDS
 
     filtered: list[dict] = []
     for entry in entries:
@@ -300,7 +300,7 @@ def run(date: Optional[str] = None) -> list[dict]:
 
     Pipeline:
         1. Fetch today's (or a given date's) BOE summary.
-        2. Pre-filter by Liberfy focus keywords.
+        2. Pre-filter by MyTaxBot focus keywords.
         3. Enrich each surviving entry with its full document text.
         4. Add a detected sector tag.
         5. Return the enriched, filtered list.
@@ -325,7 +325,7 @@ def run(date: Optional[str] = None) -> list[dict]:
     # Step 2 – keyword pre-filter (cheap, no API cost)
     relevant = filter_by_keywords(all_entries)
     if not relevant:
-        log.info("No entries matched Liberfy keywords for this date.")
+        log.info("No entries matched MyTaxBot keywords for this date.")
         return []
 
     # Step 3 & 4 – enrich with text and sector

@@ -4,7 +4,7 @@ scrapers/news_scraper.py
 RSS news scraper for press and official agency feeds.
 
 Fetches articles from NEWS_RSS + OFFICIAL_SOURCES, deduplicates, checks
-credibility, and applies Liberfy keyword pre-filtering.
+credibility, and applies MyTaxBot keyword pre-filtering.
 
 Main entry point: run() → list[dict]
 """
@@ -297,14 +297,14 @@ def check_credibility(articles: list[dict]) -> list[dict]:
 
 def keyword_prefilter(articles: list[dict]) -> list[dict]:
     """
-    Keeps only articles that contain at least one LIBERFY_FOCUS_KEYWORDS term
+    Keeps only articles that contain at least one MYTAXBOT_FOCUS_KEYWORDS term
     in their title or summary.
 
     Args:
         articles: Credibility-checked article list.
 
     Returns:
-        Filtered list relevant to Liberfy's niche.
+        Filtered list relevant to MyTaxBot's niche.
     """
     filtered: list[dict] = []
     for article in articles:
@@ -320,6 +320,40 @@ def keyword_prefilter(articles: list[dict]) -> list[dict]:
     return filtered
 
 
+def get_article_text(url: str, max_chars: int = 2000) -> str:
+    """
+    Fetches the HTML of the news article page and extracts clean text content.
+    """
+    try:
+        from bs4 import BeautifulSoup
+        import re
+        resp = requests.get(
+            url,
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+            allow_redirects=True,
+        )
+        if resp.status_code == 200:
+            soup = BeautifulSoup(resp.content, "lxml")
+            
+            # Remove scripts, styles, header, footer, nav, aside elements
+            for element in soup(["script", "style", "nav", "header", "footer", "aside"]):
+                element.decompose()
+                
+            # Extract paragraphs
+            paragraphs = soup.find_all("p")
+            text = " ".join([p.get_text(strip=True) for p in paragraphs])
+            
+            # Clean up extra spacing
+            text = re.sub(r'\s+', ' ', text).strip()
+            
+            if len(text) > 150:
+                return text[:max_chars]
+    except Exception as exc:
+        log.warning("Error fetching full article text for %s: %s", url, exc)
+    return ""
+
+
 def run() -> list[dict]:
     """
     Main entry point for the news scraper.
@@ -328,8 +362,9 @@ def run() -> list[dict]:
         1. Fetch all RSS feeds.
         2. Deduplicate fuzzy-similar stories.
         3. Credibility check (official OR ≥2 sources).
-        4. Keyword pre-filter (Liberfy focus keywords).
-        5. Return final list ready for AI relevance scoring.
+        4. Keyword pre-filter (MyTaxBot focus keywords).
+        5. Fetch full article body text (enrichment).
+        6. Return final list ready for AI relevance scoring.
 
     Returns:
         List of article dicts ready for ai/relevance_scorer.py.
@@ -350,6 +385,19 @@ def run() -> list[dict]:
 
     # Step 4 – keyword pre-filter
     relevant_articles = keyword_prefilter(credible_articles)
+
+    # Step 5 – enrich with full article text (only for relevant ones to save time/resources)
+    log.info("Enriching %d relevant articles with full text...", len(relevant_articles))
+    for article in relevant_articles:
+        url = article["url"]
+        log.info("Scraping full text for: %s", url)
+        texto = get_article_text(url)
+        if texto:
+            article["texto"] = texto
+            log.info("  → Successfully scraped %d characters of text", len(texto))
+        else:
+            log.info("  → Could not scrape full text, falling back to summary")
+            article["texto"] = article["summary"]
 
     # Convert sources_covering set to list for JSON serialisation
     for article in relevant_articles:

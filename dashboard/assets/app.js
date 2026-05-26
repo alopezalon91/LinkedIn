@@ -1,5 +1,5 @@
 /**
- * Liberfy LinkedIn Automation — Dashboard App
+ * MyTaxBot LinkedIn Automation — Dashboard App
  * Single JS module that powers all three dashboard pages.
  * Uses the Cloudflare Workers API (configured via WORKER_URL).
  */
@@ -9,10 +9,10 @@
 // ── Configuration ─────────────────────────────────────────
 const CONFIG = {
   // Replace with your actual Cloudflare Worker URL after deployment
-  WORKER_URL: localStorage.getItem('worker_url') || 'https://liberfy-linkedin.YOUR_SUBDOMAIN.workers.dev',
+  WORKER_URL: localStorage.getItem('worker_url') || 'https://mytaxbot-linkedin.YOUR_SUBDOMAIN.workers.dev',
   DASHBOARD_SECRET: localStorage.getItem('dashboard_secret') || '',
   LINKEDIN_NAME: 'Alberto López',
-  LINKEDIN_TITLE: 'Gestor contable y fiscal · Liberfy',
+  LINKEDIN_TITLE: 'Gestor contable y fiscal · MyTaxBot',
 };
 
 // Sector display names
@@ -91,17 +91,34 @@ const API = {
 
   getStats: () => API.request('/api/stats'),
 
-  // For triggering manual scraping runs via GitHub Actions API
-  triggerWorkflow: (workflow) => {
+  triggerWorkflow: async (workflow) => {
     const token = localStorage.getItem('github_token') || '';
-    const repo  = localStorage.getItem('github_repo') || '';
-    if (!token || !repo) { Toast.show('Configura el token de GitHub en Configuración', 'error'); return; }
-    return fetch(`https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref: 'main' }),
-    });
+    let repo  = localStorage.getItem('github_repo') || '';
+    if (!token || !repo) {
+      Toast.show('Configura el token de GitHub en Configuración', 'error');
+      return false;
+    }
+    
+    // Clean up repo string (support full URL, trailing/leading slashes, .git suffix)
+    repo = repo.trim();
+    if (repo.includes('github.com/')) {
+      repo = repo.split('github.com/')[1];
+    }
+    repo = repo.replace(/^\/+|\/+$/g, '').replace(/\.git$/, '');
+
+    try {
+      await API.request('/api/github/dispatch', {
+        method: 'POST',
+        body: JSON.stringify({ workflow, token, repo }),
+      });
+      return true;
+    } catch (err) {
+      Toast.show(`Error al iniciar workflow: ${err.message}`, 'error');
+      return false;
+    }
   },
+
+
 };
 
 // ── Toast Notifications ────────────────────────────────────
@@ -497,13 +514,18 @@ const Pages = {
 
       // Trigger BOE / news workflows
       document.getElementById('trigger-boe-btn')?.addEventListener('click', async () => {
-        await API.triggerWorkflow('boe_daily.yml');
-        Toast.show('BOE scraping iniciado en GitHub Actions', 'info');
+        const success = await API.triggerWorkflow('boe_daily.yml');
+        if (success) {
+          Toast.show('BOE scraping iniciado en GitHub Actions', 'success');
+        }
       });
       document.getElementById('trigger-news-btn')?.addEventListener('click', async () => {
-        await API.triggerWorkflow('news_scraper.yml');
-        Toast.show('Búsqueda de noticias iniciada en GitHub Actions', 'info');
+        const success = await API.triggerWorkflow('news_scraper.yml');
+        if (success) {
+          Toast.show('Búsqueda de noticias iniciada en GitHub Actions', 'success');
+        }
       });
+
 
     } catch (err) {
       Toast.show(`Error al cargar posts: ${err.message}`, 'error');

@@ -265,7 +265,7 @@ def main() -> int:
         0 on success, 1 on failure, 2 on config error.
     """
     parser = argparse.ArgumentParser(
-        description="LinkedIn automation system for Liberfy (Alberto López).",
+        description="LinkedIn automation system for MyTaxBot (Alberto López).",
     )
     parser.add_argument(
         "--module",
@@ -285,7 +285,7 @@ def main() -> int:
 
     log.info(
         "="*60 + "\n"
-        "  LinkedIn Automation — Liberfy\n"
+        "  LinkedIn Automation — MyTaxBot\n"
         "  Module: %s | Date: %s | DryRun: %s\n"
         "  %s\n" + "="*60,
         args.module.upper(),

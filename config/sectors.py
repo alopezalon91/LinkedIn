@@ -191,7 +191,7 @@ SECTOR_KEYWORDS: dict[str, list[str]] = {
 # ---------------------------------------------------------------------------
 # HASHTAG_MAP
 # Maps each sector to its recommended LinkedIn hashtags (beyond the always-
-# included #Autónomos #Pymes #Liberfy).
+# included #Autónomos #Pymes).
 # ---------------------------------------------------------------------------
 
 HASHTAG_MAP: dict[str, list[str]] = {
@@ -258,8 +258,8 @@ HASHTAG_MAP: dict[str, list[str]] = {
 }
 
 # ---------------------------------------------------------------------------
-# LIBERFY_FOCUS_KEYWORDS
-# Union of all high-priority keywords relevant to Liberfy's niche.
+# MYTAXBOT_FOCUS_KEYWORDS
+# Union of all high‑priority keywords relevant to MyTaxBot's niche.
 # Used as a fast first-pass filter to avoid sending irrelevant content to AI.
 # Sorted alphabetically for readability.
 # ---------------------------------------------------------------------------
@@ -268,7 +268,7 @@ _all_keywords: set[str] = set()
 for _kw_list in SECTOR_KEYWORDS.values():
     _all_keywords.update(_kw_list)
 
-LIBERFY_FOCUS_KEYWORDS: list[str] = sorted(_all_keywords)
+MYTAXBOT_FOCUS_KEYWORDS: list[str] = sorted(_all_keywords)
 
 # ---------------------------------------------------------------------------
 # Helper functions
@@ -300,16 +300,16 @@ def get_sector_from_text(text: str) -> str:
 def get_hashtags_for_sector(sector: str, max_tags: int = 4) -> str:
     """
     Returns a space-separated string of hashtags for a sector, always
-    including the Liberfy core hashtags.
+    including the core hashtags.
 
     Args:
         sector:   Sector key.
         max_tags: Max sector-specific tags to include (default 4).
 
     Returns:
-        Hashtag string, e.g. '#Autónomos #Pymes #Liberfy #IVA #IRPF'
+        Hashtag string, e.g. '#Autónomos #Pymes #IVA #IRPF'
     """
-    core = ["#Autónomos", "#Pymes", "#Liberfy"]
+    core = ["#Autónomos", "#Pymes"]
     sector_tags = HASHTAG_MAP.get(sector, HASHTAG_MAP["general"])[:max_tags]
     # Deduplicate while preserving order
     seen: set[str] = set()
@@ -323,8 +323,8 @@ def get_hashtags_for_sector(sector: str, max_tags: int = 4) -> str:
 
 def text_matches_any_keyword(text: str) -> bool:
     """
-    Returns True if text contains at least one LIBERFY_FOCUS_KEYWORDS term.
+    Returns True if text contains at least one MYTAXBOT_FOCUS_KEYWORDS term.
     Used as a cheap pre-filter before calling the Gemini API.
     """
     text_lower = text.lower()
-    return any(kw in text_lower for kw in LIBERFY_FOCUS_KEYWORDS)
+    return any(kw in text_lower for kw in MYTAXBOT_FOCUS_KEYWORDS)

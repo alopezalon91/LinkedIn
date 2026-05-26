@@ -1,6 +1,6 @@
-# 📊 Liberfy LinkedIn Automation
+# 📊 MyTaxBot LinkedIn Automation
 
-Sistema de automatización de contenido para LinkedIn de **Alberto López** (Liberfy).  
+Sistema de automatización de contenido para LinkedIn de **Alberto López** (MyTaxBot).  
 Genera y publica posts sobre normativa fiscal y noticias relevantes para autónomos, pymes, e-commerce y negocios inmobiliarios.
 
 **Coste: 0 €/mes** · **Stack: GitHub Actions + Cloudflare + Gemini Flash + LinkedIn API**
@@ -38,7 +38,7 @@ npm install -g wrangler
 wrangler login
 
 cd workers/
-wrangler d1 create liberfy_linkedin
+wrangler d1 create mytaxbot_linkedin
 # Copia el database_id que aparece y ponlo en wrangler.toml
 npm run db:init
 ```
@@ -55,7 +55,7 @@ wrangler secret put GEMINI_API_KEY     # tu key de Google AI Studio
 
 # Desplegar
 npm run deploy
-# Anota la URL del Worker: https://liberfy-linkedin.TU_SUBDOMAIN.workers.dev
+# Anota la URL del Worker: https://mytaxbot-linkedin.TU_SUBDOMAIN.workers.dev
 ```
 
 ### Paso 4: LinkedIn — Crear app y vincular cuenta
@@ -63,13 +63,13 @@ npm run deploy
 1. Ve a [linkedin.com/developers/apps/new](https://www.linkedin.com/developers/apps/new)
 2. Crea una app (necesitarás asociarla a una página de empresa — puedes crear una vacía)
 3. En la pestaña **Products**: activa **Share on LinkedIn** y **Sign In with LinkedIn using OpenID Connect**
-4. En la pestaña **Auth**: añade como Redirect URL → `https://liberfy-linkedin.TU_SUBDOMAIN.workers.dev/api/auth/callback`
+4. En la pestaña **Auth**: añade como Redirect URL → `https://mytaxbot-linkedin.TU_SUBDOMAIN.workers.dev/api/auth/callback`
 5. Configura los secrets del Worker con tus credenciales de LinkedIn:
 
 ```bash
 wrangler secret put LINKEDIN_CLIENT_ID      # de la pestaña Auth de tu LinkedIn App
 wrangler secret put LINKEDIN_CLIENT_SECRET  # de la pestaña Auth de tu LinkedIn App
-wrangler secret put LINKEDIN_REDIRECT_URI   # https://liberfy-linkedin.TU_SUBDOMAIN.workers.dev/api/auth/callback
+wrangler secret put LINKEDIN_REDIRECT_URI   # https://mytaxbot-linkedin.TU_SUBDOMAIN.workers.dev/api/auth/callback
 ```
 
 6. Vuelve a desplegar: `npm run deploy`
@@ -82,7 +82,7 @@ En tu repositorio de GitHub: **Settings → Secrets and variables → Actions**
 | Secret | Valor |
 |--------|-------|
 | `GEMINI_API_KEY` | Tu key de Google AI Studio |
-| `WORKER_URL` | `https://liberfy-linkedin.TU_SUBDOMAIN.workers.dev` |
+| `WORKER_URL` | `https://mytaxbot-linkedin.TU_SUBDOMAIN.workers.dev` |
 | `WORKER_SECRET` | El secret que generaste en el paso 3 |
 
 ### Paso 6: GitHub — Mueve los workflows
@@ -102,7 +102,7 @@ rmdir github/workflows github
 # → Build settings: Output directory = dashboard (sin build command)
 
 # Opción B: Con Wrangler
-wrangler pages publish dashboard --project-name liberfy-linkedin
+wrangler pages publish dashboard --project-name mytaxbot-linkedin
 ```
 
 ### Paso 8: Instalar dependencias Python (para desarrollo local)
@@ -140,7 +140,7 @@ Desde el dashboard (sidebar) puedes lanzar manualmente el scraper del BOE o de n
 ## 📁 Estructura del proyecto
 
 ```
-liberfy-linkedin/
+mytaxbot-linkedin/
 ├── .github/workflows/          # Cron jobs de GitHub Actions
 │   ├── boe_daily.yml           # BOE diario (Lun-Vie 7:30 UTC)
 │   ├── news_scraper.yml        # Noticias cada 6h
@@ -148,7 +148,7 @@ liberfy-linkedin/
 │
 ├── config/                     # Configuración del sistema
 │   ├── prompts.py              # Prompts para Gemini Flash
-│   ├── sectors.py              # Categorías y keywords de Liberfy
+│   ├── sectors.py              # Categorías y keywords de MyTaxBot
 │   └── sources.py              # URLs de BOE, RSS, prensa
 │
 ├── scrapers/                   # Módulos de extracción de datos
@@ -259,4 +259,4 @@ Actualmente está configurado para perfil personal. Para páginas de empresa se 
 
 ## 📄 Licencia
 
-Proyecto privado de uso personal. © 2025 Alberto López / Liberfy.
+Proyecto privado de uso personal. © 2025 Alberto López / MyTaxBot.

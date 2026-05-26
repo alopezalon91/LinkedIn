@@ -1,6 +1,6 @@
 -- ============================================================
--- Liberfy LinkedIn Automation — D1 Schema
--- Run: wrangler d1 execute liberfy_linkedin --file=schema.sql
+-- MyTaxBot LinkedIn Automation — D1 Schema
+-- Run: wrangler d1 execute mytaxbot_linkedin --file=schema.sql
 -- ============================================================
 
 -- Posts table

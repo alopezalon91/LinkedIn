@@ -41,7 +41,7 @@ log = logging.getLogger("relevance_scorer")
 # Gemini client initialisation
 # ---------------------------------------------------------------------------
 
-_MODEL_NAME = "gemini-1.5-flash"
+_MODEL_NAME = "gemini-2.5-flash"
 _model: genai.GenerativeModel | None = None
 
 def _get_model() -> genai.GenerativeModel:
@@ -161,7 +161,7 @@ def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict
 
 def score_boe_entry(entry: dict) -> dict:
     """
-    Scores a single BOE entry for relevance to Liberfy's audience.
+    Scores a single BOE entry for relevance to the audience.
 
     Args:
         entry: Dict with at least 'id', 'titulo', and optionally 'texto'.
@@ -184,7 +184,7 @@ def score_boe_entry(entry: dict) -> dict:
 
 def score_news_article(article: dict) -> dict:
     """
-    Scores a single news article for relevance to Liberfy's audience.
+    Scores a single news article for relevance to the audience.
 
     Args:
         article: Dict with at least 'id', 'title', and optionally 'summary'.
@@ -194,7 +194,7 @@ def score_news_article(article: dict) -> dict:
     """
     item_id = article.get("id", "unknown")
     titulo = article.get("title", "")
-    texto = article.get("summary", "")
+    texto = article.get("texto") or article.get("summary", "")
 
     return _call_gemini_score(
         item_id=item_id,

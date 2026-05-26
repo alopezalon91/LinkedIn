@@ -13,7 +13,7 @@ import { getPost, updatePost } from './posts.js';
 import { nowISO } from '../utils.js';
 
 const LINKEDIN_POSTS_URL = 'https://api.linkedin.com/rest/posts';
-const LINKEDIN_VERSION   = '202401'; // Pin to a stable monthly version
+const LINKEDIN_VERSION   = '202601'; // Pin to a stable monthly version
 
 // ─── Publish ──────────────────────────────────────────────────────────────────
 
@@ -108,11 +108,6 @@ export async function publishPost(db, env, postId) {
     linkedin_post_id: linkedinPostId ?? 'unknown',
   });
 
-  // Also persist published_at directly since updatePost may not expose it
-  await db.prepare('UPDATE posts SET published_at = ? WHERE id = ?')
-    .bind(publishedAt, postId)
-    .run();
-
   return {
     success:         true,
     linkedin_post_id: linkedinPostId,
@@ -129,19 +124,13 @@ export async function publishPost(db, env, postId) {
  */
 function buildPostPayload(authorUrn, text) {
   return {
-    author:       authorUrn,
+    author: authorUrn,
+    commentary: text,
+    visibility: 'PUBLIC',
+    distribution: {
+      feedDistribution: 'MAIN_FEED',
+    },
     lifecycleState: 'PUBLISHED',
-    specificContent: {
-      'com.linkedin.ugc.ShareContent': {
-        shareCommentary: {
-          text,
-        },
-        shareMediaCategory: 'NONE',
-      },
-    },
-    visibility: {
-      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
-    },
   };
 }
 
