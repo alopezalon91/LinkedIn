@@ -205,7 +205,7 @@ def run_news_module(query: Optional[str] = None) -> list[dict]:
         return []
 
     # Step 3 – AI relevance scoring
-    scored_articles = score_batch(articles, item_type="news")
+    scored_articles = score_batch(articles, item_type="news", force_keep_all=bool(query))
     if not scored_articles:
         log.info("No news articles passed relevance threshold.")
         return []
@@ -320,8 +320,8 @@ def main() -> int:
         posts = run_news_module(query=args.query)
 
     if not posts:
-        log.warning("No posts generated for this run.")
-        return 1
+        log.warning("No posts generated for this run. Exiting normally.")
+        return 0
 
     # Dispatch posts to Cloudflare / stdout
     learning = LearningModel()

@@ -234,6 +234,7 @@ def score_batch(
     items: list[dict],
     item_type: Literal["boe", "news"],
     rate_limit_sleep: float = 0.5,
+    force_keep_all: bool = False,
 ) -> list[dict]:
     """
     Scores a batch of items (BOE entries or news articles), applies rate
@@ -266,7 +267,7 @@ def score_batch(
 
         score_data = score_fn(item)
 
-        if score_data["should_post"]:
+        if score_data["should_post"] or force_keep_all:
             enriched = dict(item)
             enriched["_score_data"] = score_data
             enriched["ai_score"] = score_data["score"]
