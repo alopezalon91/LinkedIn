@@ -818,17 +818,17 @@ const Pages = {
       if (document.getElementById('total-decisions')) document.getElementById('total-decisions').textContent = learning.total_decisions ?? '—';
       if (document.getElementById('approval-rate')) document.getElementById('approval-rate').textContent = learning.approval_rate != null ? `${Math.round(learning.approval_rate * 100)}%` : '—';
       if (document.getElementById('edit-rate')) document.getElementById('edit-rate').textContent = learning.edit_rate != null ? `${Math.round(learning.edit_rate * 100)}%` : '—';
-      if (document.getElementById('weeks-to-auto')) document.getElementById('weeks-to-auto').textContent = learning.estimated_weeks_to_autopublish ?? '—';
+      if (document.getElementById('weeks-to-auto')) document.getElementById('weeks-to-auto').textContent = 'Manual';
 
       // Confidence gauge
       const conf = Math.round((learning.avg_confidence || 0) * 100);
       if (document.getElementById('confidence-pct')) document.getElementById('confidence-pct').textContent = `${conf}%`;
       if (document.getElementById('confidence-status')) {
         document.getElementById('confidence-status').textContent =
-          conf < 40 ? 'Aprendiendo tus preferencias…' :
-          conf < 70 ? 'Progresando bien' :
-          conf < 90 ? '¡Casi listo para autopublicar!' :
-          '🎉 Listo para autopublicación';
+          conf < 40 ? 'Aprendiendo preferencias…' :
+          conf < 70 ? 'Buen progreso del modelo' :
+          conf < 90 ? 'Modelo muy afinado' :
+          '🎯 Modelo optimizado';
       }
       if (document.getElementById('main-confidence-bar')) {
         setTimeout(() => { document.getElementById('main-confidence-bar').style.width = `${conf}%`; }, 200);

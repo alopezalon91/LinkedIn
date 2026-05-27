@@ -239,12 +239,7 @@ async function _aggregateBy(db, column) {
 // ─── Phase logic ──────────────────────────────────────────────────────────────
 
 function _derivePhase(totalDecisions, avgConfidence) {
-  if (
-    totalDecisions >= PHASE_THRESHOLDS.autopublicacion &&
-    avgConfidence  >= AUTO_PUBLISH_MIN_CONFIDENCE
-  ) {
-    return 'autopublicacion';
-  }
+  // Autopublicación desactivada por petición del usuario - se mantiene en control_total o sugerencias
   if (totalDecisions >= PHASE_THRESHOLDS.sugerencias) {
     return 'sugerencias';
   }
@@ -252,26 +247,6 @@ function _derivePhase(totalDecisions, avgConfidence) {
 }
 
 function _estimateWeeksToAutopublish(totalDecisions, approvalRate, avgConfidence) {
-  // Already there
-  if (
-    totalDecisions >= PHASE_THRESHOLDS.autopublicacion &&
-    avgConfidence  >= AUTO_PUBLISH_MIN_CONFIDENCE
-  ) return 0;
-
-  // Assume ~5 decisions/week based on typical usage
-  const DECISIONS_PER_WEEK = 5;
-
-  const decisionsNeeded = Math.max(
-    0,
-    PHASE_THRESHOLDS.autopublicacion - totalDecisions,
-  );
-  const weeksForDecisions = Math.ceil(decisionsNeeded / DECISIONS_PER_WEEK);
-
-  // Additional buffer if confidence is still low
-  const confidenceGap = AUTO_PUBLISH_MIN_CONFIDENCE - avgConfidence;
-  const weeksForConfidence = confidenceGap > 0
-    ? Math.ceil(confidenceGap / 0.02) // assume ~2% confidence gain/week
-    : 0;
-
-  return Math.max(weeksForDecisions, weeksForConfidence);
+  // Retorna null ya que no se va a autopublicar
+  return null;
 }

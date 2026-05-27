@@ -432,31 +432,17 @@ class LearningModel:
             1. Total recorded decisions ≥ AUTOPUBLISH_MIN_DECISIONS (50), AND
             2. Confidence for this post type > AUTOPUBLISH_MIN_CONFIDENCE (0.90).
 
-        This prevents autopublish from triggering on insufficient data.
+        [DEACTIVATED] By user request, automatic publishing is disabled.
+        Always returns False to force manual review.
 
         Args:
             post_metadata: Dict with sector, type, char_count.
 
         Returns:
-            bool
+            bool: Always False.
         """
-        decisions = self._data.get("decisions", [])
-        if len(decisions) < AUTOPUBLISH_MIN_DECISIONS:
-            log.debug(
-                "Autopublish skipped: only %d/%d decisions recorded.",
-                len(decisions), AUTOPUBLISH_MIN_DECISIONS,
-            )
-            return False
-
-        confidence = self.calculate_confidence(post_metadata)
-        should = confidence > AUTOPUBLISH_MIN_CONFIDENCE
-
-        log.info(
-            "Autopublish check: confidence=%.3f threshold=%.2f → %s",
-            confidence, AUTOPUBLISH_MIN_CONFIDENCE,
-            "YES" if should else "NO",
-        )
-        return should
+        log.info("Autopublish check: disabled by user request. Always manual review.")
+        return False
 
     def get_recent_rejection_reasons(self, limit: int = 5) -> list[dict[str, str]]:
         """
