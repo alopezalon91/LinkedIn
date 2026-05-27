@@ -174,11 +174,11 @@ def run_boe_module(date: str | None = None) -> list[dict]:
     return posts
 
 
-def run_news_module() -> list[dict]:
+def run_news_module(query: Optional[str] = None) -> list[dict]:
     """
     Full pipeline for the News/Actualidad module.
 
-        1. Scrape all RSS feeds + official sources.
+        1. Scrape all RSS feeds + official sources, or search keyword if query provided.
         2. Deduplicate + credibility filter.
         3. AI relevance scoring.
         4. Generate LinkedIn posts.
@@ -190,7 +190,7 @@ def run_news_module() -> list[dict]:
     log.info("▶ Running News module…")
 
     # Step 1+2 – Scrape, dedupe, filter
-    articles = news_run()
+    articles = news_run(query=query)
     if not articles:
         log.info("No news articles to process.")
         return []
@@ -278,6 +278,11 @@ def main() -> int:
         default=None,
         help="(BOE only) Date to scrape in YYYYMMDD format. Defaults to today.",
     )
+    parser.add_argument(
+        "--query",
+        default=None,
+        help="(News only) Search query/keywords to search news for.",
+    )
     args = parser.parse_args()
 
     # Override date from env var if CLI arg not given
@@ -286,10 +291,11 @@ def main() -> int:
     log.info(
         "="*60 + "\n"
         "  LinkedIn Automation — MyTaxBot\n"
-        "  Module: %s | Date: %s | DryRun: %s\n"
+        "  Module: %s | Date: %s | Query: %s | DryRun: %s\n"
         "  %s\n" + "="*60,
         args.module.upper(),
         date or "today",
+        args.query or "none",
         DRY_RUN,
         datetime.now(timezone.utc).isoformat(),
     )
@@ -302,7 +308,7 @@ def main() -> int:
     if args.module == "boe":
         posts = run_boe_module(date=date)
     else:
-        posts = run_news_module()
+        posts = run_news_module(query=args.query)
 
     if not posts:
         log.warning("No posts generated for this run.")

@@ -65,6 +65,16 @@ NEWS_RSS = {
     "libre_mercado": "https://feed.libertaddigital.com/libre-mercado.xml",
     "el_pais_economia": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/seccion/economia/rss",
     "el_confidencial_economia": "https://rss.elconfidencial.com/economia/",
+    "el_mundo_economia": "https://e00-elmundo.uecdn.es/elmundo/rss/economia.xml",
+    "abc_economia": "https://www.abc.es/rss/2.0/economia/",
+    "la_vanguardia_economia": "https://www.lavanguardia.com/rss/economia.xml",
+    "la_razon_economia": "https://www.larazon.es/rss/economia.xml",
+    "el_diario_economia": "https://www.eldiario.es/rss/economia/",
+    "fiscal_impuestos": "https://www.fiscal-impuestos.com/feed",
+    "iberley": "https://www.iberley.es/actualidad/feed",
+    "notariado": "https://www.notariado.org/portal/rss",
+    "lawtips_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UCvN_q9K40xP0n7l_rZcZ4Pg",
+    "abogado_tiktok_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UC292R249Hw97_38uE1f_B1A",
 }
 
 # ---------------------------------------------------------------------------
@@ -74,6 +84,8 @@ NEWS_RSS = {
 OFFICIAL_SOURCES = {
     "aeat": "https://sede.agenciatributaria.gob.es/Sede/todas-noticias.xml",
     "seguridad_social": "https://www.seg-social.es/wps/portal/wss/internet/RSS/RSSNoticias",
+    "hacienda_canaria": "https://tributos.gobierno-canarias.es/rss/novedades",
+    "banco_espana": "https://www.bde.es/wbe/es/noticias-eventos/actualidad/rss-noticias-notas-prensa.xml",
 }
 
 # All official source keys – used for credibility check bypass

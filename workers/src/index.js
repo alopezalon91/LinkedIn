@@ -366,10 +366,15 @@ async function handleStats(db) {
 async function handleGithubDispatch(request) {
   try {
     const body = await parseJSON(request);
-    const { workflow, token, repo } = body;
+    const { workflow, token, repo, inputs } = body;
 
     if (!workflow || !token || !repo) {
       return errorResponse('Missing required parameters: workflow, token, repo', 400);
+    }
+
+    const payload = { ref: 'main' };
+    if (inputs) {
+      payload.inputs = inputs;
     }
 
     const res = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`, {
@@ -380,7 +385,7 @@ async function handleGithubDispatch(request) {
         'User-Agent': 'mytaxbot-linkedin-dashboard',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ref: 'main' }),
+      body: JSON.stringify(payload),
     });
 
     if (res.status === 204) {

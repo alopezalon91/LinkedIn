@@ -91,7 +91,7 @@ const API = {
 
   getStats: () => API.request('/api/stats'),
 
-  triggerWorkflow: async (workflow) => {
+  triggerWorkflow: async (workflow, inputs = null) => {
     const token = localStorage.getItem('github_token') || '';
     let repo  = localStorage.getItem('github_repo') || '';
     if (!token || !repo) {
@@ -107,9 +107,13 @@ const API = {
     repo = repo.replace(/^\/+|\/+$/g, '').replace(/\.git$/, '');
 
     try {
+      const payload = { workflow, token, repo };
+      if (inputs) {
+        payload.inputs = inputs;
+      }
       await API.request('/api/github/dispatch', {
         method: 'POST',
-        body: JSON.stringify({ workflow, token, repo }),
+        body: JSON.stringify(payload),
       });
       return true;
     } catch (err) {
@@ -644,6 +648,19 @@ const Pages = {
         const success = await API.triggerWorkflow('news_scraper.yml');
         if (success) {
           Toast.show('Búsqueda de noticias iniciada en GitHub Actions', 'success');
+        }
+      });
+      document.getElementById('trigger-search-btn')?.addEventListener('click', async () => {
+        const input = document.getElementById('search-query-input');
+        const query = input ? input.value.trim() : '';
+        if (!query) {
+          Toast.show('Escribe una palabra clave para buscar', 'warning');
+          return;
+        }
+        const success = await API.triggerWorkflow('news_scraper.yml', { query });
+        if (success) {
+          Toast.show(`Búsqueda de "${query}" iniciada en GitHub Actions`, 'success');
+          if (input) input.value = '';
         }
       });
 

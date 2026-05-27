@@ -354,37 +354,51 @@ def get_article_text(url: str, max_chars: int = 2000) -> str:
     return ""
 
 
-def run() -> list[dict]:
+def run(query: Optional[str] = None) -> list[dict]:
     """
     Main entry point for the news scraper.
 
     Pipeline:
-        1. Fetch all RSS feeds.
+        1. Fetch all RSS feeds, or query Google News if a query string is provided.
         2. Deduplicate fuzzy-similar stories.
-        3. Credibility check (official OR ≥2 sources).
-        4. Keyword pre-filter (MyTaxBot focus keywords).
+        3. Credibility check (official OR ≥2 sources) - bypassed if query is set.
+        4. Keyword pre-filter (MyTaxBot focus keywords) - bypassed if query is set.
         5. Fetch full article body text (enrichment).
         6. Return final list ready for AI relevance scoring.
 
     Returns:
         List of article dicts ready for ai/relevance_scorer.py.
     """
-    log.info("=== News Scraper started ===")
+    if query:
+        log.info("=== News Search started for query: %s ===", query)
+        import urllib.parse
+        encoded_query = urllib.parse.quote(query)
+        search_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=es&gl=ES&ceid=ES:es"
+        all_articles = fetch_rss_feed(search_url, "Google News Search")
+        if not all_articles:
+            log.warning("No articles retrieved for query: %s", query)
+            return []
+        
+        # Step 2 – deduplicate
+        relevant_articles = deduplicate(all_articles)
+        # Note: we bypass credibility filter and keyword pre-filter for user-initiated search queries
+    else:
+        log.info("=== News Scraper started ===")
 
-    # Step 1 – fetch all feeds
-    all_articles = fetch_all_sources()
-    if not all_articles:
-        log.warning("No articles retrieved from any feed.")
-        return []
+        # Step 1 – fetch all feeds
+        all_articles = fetch_all_sources()
+        if not all_articles:
+            log.warning("No articles retrieved from any feed.")
+            return []
 
-    # Step 2 – deduplicate
-    unique_articles = deduplicate(all_articles)
+        # Step 2 – deduplicate
+        unique_articles = deduplicate(all_articles)
 
-    # Step 3 – credibility check
-    credible_articles = check_credibility(unique_articles)
+        # Step 3 – credibility check
+        credible_articles = check_credibility(unique_articles)
 
-    # Step 4 – keyword pre-filter
-    relevant_articles = keyword_prefilter(credible_articles)
+        # Step 4 – keyword pre-filter
+        relevant_articles = keyword_prefilter(credible_articles)
 
     # Step 5 – enrich with full article text (only for relevant ones to save time/resources)
     log.info("Enriching %d relevant articles with full text...", len(relevant_articles))

@@ -12,6 +12,11 @@ on:
         type: boolean
         required: false
         default: false
+      query:
+        description: 'Búsqueda por palabra clave (opcional)'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   scrape-news:
@@ -38,9 +43,14 @@ jobs:
           WORKER_URL:       ${{ secrets.WORKER_URL }}
           WORKER_SECRET:    ${{ secrets.WORKER_SECRET }}
           DRY_RUN:          ${{ github.event.inputs.dry_run || 'false' }}
+          SEARCH_QUERY:     ${{ github.event.inputs.query }}
         run: |
           echo "📰 Iniciando scraper de noticias — $(date '+%Y-%m-%d %H:%M UTC')"
-          python main.py --module news
+          if [ -n "$SEARCH_QUERY" ]; then
+            python main.py --module news --query "$SEARCH_QUERY"
+          else
+            python main.py --module news
+          fi
 
       - name: 📊 Resumen
         if: always()

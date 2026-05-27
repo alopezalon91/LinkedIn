@@ -46,6 +46,13 @@
       <span class="nav-icon">📰</span>
       Buscar noticias
     </button>
+    <!-- Búsqueda personalizada -->
+    <div style="padding: 0 16px; margin: 4px 0 12px 0;">
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="search-query-input" placeholder="Ej: anulación registro..." style="flex:1; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-sm); padding:6px 8px; font-size:11px; color:var(--text-primary); outline:none; box-sizing:border-box;" />
+        <button id="trigger-search-btn" style="background:rgba(255,255,255,0.08); border:1px solid var(--border); border-radius:var(--radius-sm); color:white; padding:6px 10px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; transition:all var(--transition);" title="Buscar por palabras">🔍</button>
+      </div>
+    </div>
     <a href="setup.html" class="nav-item">
       <span class="nav-icon">⚙️</span>
       Configuración
