@@ -185,6 +185,40 @@
   </div>
 </div>
 
+<!-- ── Modal: Rejection Reason ── -->
+<div class="modal-overlay" id="reject-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Rechazar Publicación</h2>
+      <button class="btn-icon" id="close-reject">✕</button>
+    </div>
+    <div class="modal-body" style="padding-top:10px">
+      <p style="margin-bottom:12px; color:var(--text-muted); font-size:14px">
+        Explica el motivo del rechazo para entrenar a la inteligencia artificial:
+      </p>
+      
+      <!-- Quick tags -->
+      <div class="rejection-tags" style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap">
+        <button class="rej-tag" data-text="Solo tiene el título, no tiene información de valor.">⚠️ Solo título</button>
+        <button class="rej-tag" data-text="La información no es correcta o se basa en malas fuentes.">❌ Info incorrecta</button>
+        <button class="rej-tag" data-text="Noticia desfasada o antigua.">📅 Desfasada</button>
+      </div>
+
+      <div style="position:relative">
+        <textarea id="reject-reason-input" class="form-input" rows="4" placeholder="Escribe aquí el motivo del rechazo o usa el micrófono..." style="width:100%; box-sizing:border-box; padding-right:45px; resize:vertical; background: rgba(255,255,255,0.03); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px;"></textarea>
+        <button id="reject-mic-btn" class="btn-icon" style="position:absolute; right:10px; bottom:12px; font-size:18px; width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; cursor:pointer; border:none; transition:all 0.2s;" title="Dictar motivo">🎙️</button>
+      </div>
+      <div id="mic-status" style="font-size:12px; color:var(--accent-red); margin-top:5px; display:none; align-items:center; gap:5px">
+        <span class="pulse-dot"></span> Grabando voz... Pulsa de nuevo el micrófono para parar.
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end">
+      <button class="btn btn-ghost" id="cancel-reject-btn">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-reject-btn">❌ Confirmar Rechazo</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Toast container ── -->
 <div class="toast-container" id="toast-container"></div>
 

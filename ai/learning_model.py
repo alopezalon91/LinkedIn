@@ -90,19 +90,71 @@ class LearningModel:
     # -----------------------------------------------------------------------
 
     def _load(self) -> dict:
-        """Loads decision data from local JSON file. Creates file if absent."""
+        """Loads decision data from Cloudflare D1 via Worker API, falling back to local JSON."""
+        worker_url = os.environ.get("CF_WORKER_URL", "")
+        worker_token = os.environ.get("CF_WORKER_TOKEN", "")
+
+        if worker_url:
+            try:
+                headers = {"Accept": "application/json"}
+                if worker_token:
+                    headers["Authorization"] = f"Bearer {worker_token}"
+
+                log.info("Pulling decisions history from Cloudflare D1...")
+                with httpx.Client(timeout=10) as client:
+                    resp = client.get(f"{worker_url.rstrip('/')}/api/decisions", headers=headers)
+                    if resp.status_code == 200:
+                        decisions = resp.json()
+                        mapped_decisions = []
+                        for d in decisions:
+                            mapped_decisions.append({
+                                "post_id": d.get("post_id"),
+                                "decision": d.get("decision"),
+                                "edit_ratio": d.get("edit_ratio", 0.0),
+                                "time_to_decide_seconds": d.get("time_to_decide_seconds", 0),
+                                "timestamp": d.get("created_at"),
+                                "sector": d.get("sector", "general"),
+                                "source_type": d.get("post_type", "unknown"),
+                                "source_name": d.get("source_name", "boe"),
+                                "char_count": d.get("char_count", 0),
+                                "ai_score": d.get("ai_score", 0),
+                                "ai_urgency": d.get("ai_urgency", "baja"),
+                                "rejection_reason": d.get("rejection_reason"),
+                                "content": d.get("content", ""),
+                            })
+                        log.info("Successfully fetched %d decisions from Cloudflare.", len(mapped_decisions))
+                        cached_data = {
+                            "decisions": mapped_decisions,
+                            "metadata": {
+                                "synced_at": datetime.now(timezone.utc).isoformat(),
+                                "created_at": datetime.now(timezone.utc).isoformat()
+                            }
+                        }
+                        # Save local cache
+                        try:
+                            with _LOCAL_JSON.open("w", encoding="utf-8") as f:
+                                json.dump(cached_data, f, ensure_ascii=False, indent=2)
+                        except OSError as e:
+                            log.warning("Could not write local cache: %s", e)
+
+                        return cached_data
+                    else:
+                        log.warning("Cloudflare decisions fetch returned HTTP %d", resp.status_code)
+            except Exception as exc:
+                log.warning("Could not pull decisions from Cloudflare: %s. Using local cache.", exc)
+
         if _LOCAL_JSON.exists():
             try:
                 with _LOCAL_JSON.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                     log.info(
-                        "Loaded %d decisions from %s",
+                        "Loaded %d decisions from local cache %s",
                         len(data.get("decisions", [])),
                         _LOCAL_JSON,
                     )
                     return data
             except (json.JSONDecodeError, OSError) as exc:
-                log.error("Could not load %s: %s. Starting fresh.", _LOCAL_JSON, exc)
+                log.error("Could not load local cache %s: %s. Starting fresh.", _LOCAL_JSON, exc)
 
         return {"decisions": [], "metadata": {"created_at": datetime.now(timezone.utc).isoformat()}}
 
@@ -395,3 +447,26 @@ class LearningModel:
             "YES" if should else "NO",
         )
         return should
+
+    def get_recent_rejection_reasons(self, limit: int = 5) -> list[dict[str, str]]:
+        """
+        Returns a list of recent rejected posts and why they were rejected.
+        
+        Each item is a dict with keys:
+            content - the original post content
+            reason  - the rejection reason/feedback
+            sector  - post sector
+            type    - post type (normativa/actualidad)
+        """
+        decisions = self._data.get("decisions", [])
+        rejections = []
+        for d in decisions:
+            if d.get("decision") == "rejected" and d.get("rejection_reason"):
+                rejections.append({
+                    "content": d.get("content", ""),
+                    "reason": d.get("rejection_reason", ""),
+                    "sector": d.get("sector", ""),
+                    "type": d.get("source_type", ""),
+                })
+        return rejections[:limit]
+

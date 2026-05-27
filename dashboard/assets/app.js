@@ -312,20 +312,61 @@ const PostActions = {
     }
   },
 
-  async reject(postId) {
+  reject(postId) {
+    const overlay = document.getElementById('reject-modal');
+    if (!overlay) {
+      PostActions.confirmReject(postId, 'Rechazado sin comentarios');
+      return;
+    }
+
+    // Reset fields
+    const reasonInput = document.getElementById('reject-reason-input');
+    if (reasonInput) reasonInput.value = '';
+
+    overlay.classList.add('visible');
+
+    // Bind quick tags
+    document.querySelectorAll('.rej-tag').forEach(btn => {
+      btn.onclick = () => {
+        if (reasonInput) {
+          reasonInput.value = btn.getAttribute('data-text');
+        }
+      };
+    });
+
+    document.getElementById('confirm-reject-btn').onclick = async () => {
+      const reason = reasonInput ? reasonInput.value.trim() : '';
+      overlay.classList.remove('visible');
+      stopMicRecording();
+      await PostActions.confirmReject(postId, reason || 'Rechazado sin comentarios');
+    };
+
+    document.getElementById('cancel-reject-btn').onclick = () => {
+      overlay.classList.remove('visible');
+      stopMicRecording();
+    };
+
+    document.getElementById('close-reject').onclick = () => {
+      overlay.classList.remove('visible');
+      stopMicRecording();
+    };
+  },
+
+  async confirmReject(postId, reason) {
     try {
       await API.rejectPost(postId);
       await API.recordFeedback({
         post_id: postId,
         decision: 'rejected',
         edit_ratio: 0,
+        rejection_reason: reason,
         post_type: State.posts.find(p => p.id === postId)?.type,
         sector: State.posts.find(p => p.id === postId)?.sector,
         source_name: State.posts.find(p => p.id === postId)?.source_name,
         ai_score: State.posts.find(p => p.id === postId)?.ai_score,
         char_count: (State.posts.find(p => p.id === postId)?.content || '').length,
       });
-      Toast.show('Post rechazado', 'info');
+      Toast.show('Post rechazado ❌', 'info');
       removePostCard(postId);
     } catch (err) {
       Toast.show(`Error: ${err.message}`, 'error');
@@ -715,6 +756,79 @@ function initHistoryModal() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('visible'); });
 }
 
+// ── Rejection Modal & Voice Recognition ─────────────────────
+let voiceRecognition = null;
+
+function initRejectModal() {
+  const overlay = document.getElementById('reject-modal');
+  if (!overlay) return;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.classList.remove('visible'); stopMicRecording(); } });
+  initVoiceRecognition();
+}
+
+function initVoiceRecognition() {
+  const micBtn = document.getElementById('reject-mic-btn');
+  const textInput = document.getElementById('reject-reason-input');
+  const statusEl = document.getElementById('mic-status');
+  if (!micBtn) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    micBtn.style.display = 'none'; // Speech recognition not supported in this browser
+    return;
+  }
+
+  voiceRecognition = new SpeechRecognition();
+  voiceRecognition.lang = 'es-ES';
+  voiceRecognition.continuous = false;
+  voiceRecognition.interimResults = false;
+
+  voiceRecognition.onstart = () => {
+    micBtn.classList.add('recording');
+    micBtn.textContent = '🛑';
+    if (statusEl) statusEl.style.display = 'flex';
+  };
+
+  voiceRecognition.onend = () => {
+    micBtn.classList.remove('recording');
+    micBtn.textContent = '🎙️';
+    if (statusEl) statusEl.style.display = 'none';
+  };
+
+  voiceRecognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+    if (event.error !== 'no-speech') {
+      Toast.show('Error al grabar voz: ' + event.error, 'error');
+    }
+    micBtn.classList.remove('recording');
+    micBtn.textContent = '🎙️';
+    if (statusEl) statusEl.style.display = 'none';
+  };
+
+  voiceRecognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    if (text && textInput) {
+      const prevVal = textInput.value.trim();
+      textInput.value = prevVal ? prevVal + ' ' + text : text;
+    }
+  };
+
+  micBtn.addEventListener('click', () => {
+    if (micBtn.classList.contains('recording')) {
+      voiceRecognition.stop();
+    } else {
+      voiceRecognition.start();
+    }
+  });
+}
+
+function stopMicRecording() {
+  const micBtn = document.getElementById('reject-mic-btn');
+  if (micBtn && micBtn.classList.contains('recording') && voiceRecognition) {
+    voiceRecognition.stop();
+  }
+}
+
 // ── App Entry Point ────────────────────────────────────────
 const App = {
   init(page) {
@@ -724,6 +838,7 @@ const App = {
       if (banner) banner.style.display = 'flex';
     }
     initModal();
+    initRejectModal();
     initHistoryModal();
     if (Pages[page]) Pages[page]();
   },

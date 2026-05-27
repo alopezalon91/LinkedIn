@@ -157,6 +157,12 @@ async function route(request, env, ctx, url, path, method) {
     return handleGithubDispatch(request);
   }
 
+  // ── Decisions List (for Python Learning Model Sync) ───────────────────────
+  if (path === '/api/decisions' && method === 'GET') {
+    return handleListDecisions(db);
+  }
+
+
   // ── 404 ───────────────────────────────────────────────────────────────────
   return errorResponse(`Route not found: ${method} ${path}`, 404);
 }
@@ -392,3 +398,21 @@ async function handleGithubDispatch(request) {
     return errorResponse(`Network error contacting GitHub: ${err.message}`, 500);
   }
 }
+
+// ── Decisions List handler ───────────────────────────────────────────────────
+
+async function handleListDecisions(db) {
+  try {
+    const res = await db.prepare(`
+      SELECT d.*, p.content 
+      FROM decisions d
+      LEFT JOIN posts p ON d.post_id = p.id
+      ORDER BY d.created_at DESC
+      LIMIT 50
+    `).all();
+    return jsonResponse(res.results ?? []);
+  } catch (err) {
+    return errorResponse(err.message, 500);
+  }
+}
+

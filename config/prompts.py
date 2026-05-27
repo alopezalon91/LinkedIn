@@ -54,14 +54,13 @@ Texto relevante:
 1. Primera línea: emoji 🔔 seguido de un título llamativo de MÁXIMO 8 palabras \
    que capture la esencia del cambio normativo.
 2. Un bloque de 2-4 líneas explicando detalladamente QUÉ ha cambiado de forma sencilla y directa.
-3. Sección "Cómo te afecta:" con 2-4 bullets usando → (flecha), cada uno en una línea. \
+3. Seción "Cómo te afecta:" con 2-4 bullets usando → (flecha), cada uno en una línea. \
    Desarrolla cada bullet en profundidad con ejemplos reales de cómo afecta en la práctica (plazos, importes, tramos, obligaciones, etc.).
 4. Una línea con "📅 Entrada en vigor:" y la fecha efectiva.
 5. Una línea con "📎 Fuente: BOE {boe_id}".
 6. Una pregunta interactiva final para invitar al debate y comentarios con la audiencia (ej: "¿Qué opinas de esta nueva obligación?", "¿Crees que esta medida ayudará realmente a tu negocio?").
-7. Una línea de llamada a la acción: "Si tienes dudas con este cambio o necesitas ayuda, escríbeme."
-8. Última línea: sin hashtags (no se añaden hashtags).
-9. Justo después del post, añade una propuesta de encuesta para que se pueda copiar y crear directamente en LinkedIn:
+7. Última línea: sin hashtags (no se añaden hashtags).
+8. Justo después del post, añade una propuesta de encuesta para que se pueda copiar y crear directamente en LinkedIn:
    📊 Encuesta LinkedIn Sugerida:
    Pregunta: [Tu pregunta de encuesta corta y directa, max 120 caracteres]
    Opciones:
@@ -75,6 +74,7 @@ Texto relevante:
 - Escrito en primera persona del plural (nosotros/nuestro) o dirigiéndote directamente al lector (tú/tu negocio).
 - NO utilices código markdown especial en negritas o cursivas que no sea compatible con LinkedIn estándar.
 - Desarrolla el tema con rigor normativo pero con un lenguaje accesible para cualquier autónomo o pequeña pyme.
+- No incluyas ninguna llamada a la acción comercial o promocional, ni ganchos de contacto como 'si tienes dudas escríbeme', 'te ayudamos', 'contacta con nosotros'. El objetivo del post debe ser exclusivamente informativo y de valor, sin intenciones de captar clientes directos.
 
 Devuelve ÚNICAMENTE el texto del post y la encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.
 """
@@ -111,9 +111,8 @@ Sector principal: {sector}
 4. Un bloque de 3-5 líneas con la opinión y reflexión profesional de Alberto (basada en su experiencia diaria, compartiendo una advertencia, consejo o recomendación constructiva sobre el tema).
 5. Una línea con "🔗 Fuente: {fuente}" (sin incluir la URL completa en el texto).
 6. Una pregunta interactiva final para invitar al debate y comentarios con la audiencia (ej: "¿Te habías enterado de esta ayuda?", "¿Cómo piensas gestionar esta nueva situación?").
-7. Una línea de llamada a la acción: "Si quieres planificar tu estrategia o tienes dudas, escríbeme."
-8. Última línea: sin hashtags (no se añaden hashtags).
-9. Justo después del post, añade una propuesta de encuesta para que se pueda copiar y crear directamente en LinkedIn:
+7. Última línea: sin hashtags (no se añaden hashtags).
+8. Justo después del post, añade una propuesta de encuesta para que se pueda copiar y crear directamente en LinkedIn:
    📊 Encuesta LinkedIn Sugerida:
    Pregunta: [Tu pregunta de encuesta corta y directa, max 120 caracteres]
    Opciones:
@@ -127,6 +126,7 @@ Sector principal: {sector}
 - NO copies textualmente el titular original.
 - NO añadas la URL completa en el cuerpo del texto del post.
 - Asegúrate de incluir datos numéricos, fechas o plazos de la noticia si figuran en el resumen provisto.
+- No incluyas ninguna llamada a la acción comercial o promocional, ni ganchos de contacto como 'si tienes dudas escríbeme', 'te ayudamos', 'contacta con nosotros'. El objetivo del post debe ser exclusivamente informativo y de valor, sin intenciones de captar clientes directos.
 
 Devuelve ÚNICAMENTE el texto del post y la encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.
 """

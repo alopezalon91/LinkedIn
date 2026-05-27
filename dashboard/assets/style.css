@@ -1048,3 +1048,52 @@ body {
   .stats-row { grid-template-columns: 1fr 1fr; }
   .page-title { font-size: 20px; }
 }
+
+/* ── Rejection Modal Details ── */
+.rejection-tags {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.rej-tag {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.rej-tag:hover {
+  background: rgba(255,255,255,0.12);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent-red);
+  border-radius: 50%;
+  animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.4; }
+  100% { transform: scale(0.9); opacity: 1; }
+}
+
+#reject-mic-btn.recording {
+  background: var(--accent-red) !important;
+  color: white !important;
+  border-color: var(--accent-red) !important;
+  box-shadow: 0 0 12px rgba(239,68,68,0.4);
+}
+

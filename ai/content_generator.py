@@ -251,6 +251,21 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
     sector = score_data.get("sector", boe_entry.get("sector", "general"))
     sector_hashtags = get_hashtags_for_sector(sector)
 
+    rejection_instructions = ""
+    try:
+        from ai.learning_model import LearningModel
+        learning = LearningModel()
+        rejections = learning.get_recent_rejection_reasons(limit=5)
+        if rejections:
+            rejection_instructions = "\n=== RECHAZOS RECIENTES A EVITAR ===\n"
+            rejection_instructions += "El usuario ha rechazado recientemente los siguientes posts. Evita cometer los mismos errores o escribir con un estilo/enfoque similar:\n"
+            for r in rejections:
+                snippet = r['content'][:200].replace('\n', ' ')
+                rejection_instructions += f"- Post rechazado: \"{snippet}...\"\n"
+                rejection_instructions += f"  Motivo del rechazo: {r['reason']}\n\n"
+    except Exception as e:
+        log.warning("Could not append rejection instructions to content generator: %s", e)
+
     prompt = NORMATIVA_PROMPT.format(
         titulo=boe_entry.get("titulo", ""),
         seccion=boe_entry.get("seccion", ""),
@@ -261,6 +276,8 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
         sector=sector,
         sector_hashtags=sector_hashtags,
     )
+    if rejection_instructions:
+        prompt += "\n" + rejection_instructions
 
     raw_content = _generate_post(prompt, source_id)
     final_content = truncate_if_needed(raw_content)
@@ -298,6 +315,21 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
     sector = score_data.get("sector", article.get("sector", "general"))
     sector_hashtags = get_hashtags_for_sector(sector)
 
+    rejection_instructions = ""
+    try:
+        from ai.learning_model import LearningModel
+        learning = LearningModel()
+        rejections = learning.get_recent_rejection_reasons(limit=5)
+        if rejections:
+            rejection_instructions = "\n=== RECHAZOS RECIENTES A EVITAR ===\n"
+            rejection_instructions += "El usuario ha rechazado recientemente los siguientes posts. Evita cometer los mismos errores o escribir con un estilo/enfoque similar:\n"
+            for r in rejections:
+                snippet = r['content'][:200].replace('\n', ' ')
+                rejection_instructions += f"- Post rechazado: \"{snippet}...\"\n"
+                rejection_instructions += f"  Motivo del rechazo: {r['reason']}\n\n"
+    except Exception as e:
+        log.warning("Could not append rejection instructions to content generator: %s", e)
+
     prompt = ACTUALIDAD_PROMPT.format(
         titulo=article.get("title", ""),
         resumen=article.get("texto") or article.get("summary", "Sin resumen disponible"),
@@ -307,6 +339,8 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
         sector=sector,
         sector_hashtags=sector_hashtags,
     )
+    if rejection_instructions:
+        prompt += "\n" + rejection_instructions
 
     raw_content = _generate_post(prompt, source_id)
     final_content = truncate_if_needed(raw_content)

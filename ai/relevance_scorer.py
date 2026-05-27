@@ -95,11 +95,29 @@ def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict
         log.debug("Cache hit for %s", item_id)
         return _score_cache[item_id]
 
+    rejection_instructions = ""
+    try:
+        from ai.learning_model import LearningModel
+        learning = LearningModel()
+        rejections = learning.get_recent_rejection_reasons(limit=5)
+        if rejections:
+            rejection_instructions = "\n=== RECHAZOS RECIENTES A EVITAR ===\n"
+            rejection_instructions += "El usuario ha rechazado recientemente los siguientes posts. Evita cometer los mismos errores o puntuar alto contenidos similares:\n"
+            for r in rejections:
+                snippet = r['content'][:150].replace('\n', ' ')
+                rejection_instructions += f"- Post rechazado: \"{snippet}...\"\n"
+                rejection_instructions += f"  Motivo del rechazo: {r['reason']}\n\n"
+    except Exception as e:
+        log.warning("Could not append rejection instructions to relevance scorer: %s", e)
+
     prompt = RELEVANCE_PROMPT.format(
         tipo=tipo,
         titulo=titulo,
         texto=texto[:1000],  # limit to 1 000 chars to save tokens
     )
+    if rejection_instructions:
+        prompt += "\n" + rejection_instructions
+
 
     default_result = {
         "score": 0,

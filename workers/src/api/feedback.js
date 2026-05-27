@@ -34,7 +34,7 @@ const AUTO_PUBLISH_MIN_CONFIDENCE = 0.80;
  * }
  */
 export async function recordFeedback(db, data) {
-  const { post_id, decision, edited_content, time_to_decide_seconds } = data;
+  const { post_id, decision, edited_content, rejection_reason, time_to_decide_seconds } = data;
 
   if (!post_id)  throw new Error('post_id is required');
   if (!decision) throw new Error('decision is required');
@@ -61,8 +61,8 @@ export async function recordFeedback(db, data) {
     INSERT INTO decisions (
       id, post_id, decision, edit_ratio,
       time_to_decide_seconds, post_type, sector,
-      source_name, ai_score, char_count, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      source_name, ai_score, char_count, rejection_reason, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     id,
     post_id,
@@ -74,6 +74,7 @@ export async function recordFeedback(db, data) {
     post.source_name ?? null,
     post.ai_score    ?? null,
     post.char_count  ?? null,
+    rejection_reason ?? null,
     now,
   ).run();
 
