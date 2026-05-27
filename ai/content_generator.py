@@ -274,6 +274,10 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
     except Exception as e:
         log.warning("Could not append user preference instructions to content generator: %s", e)
 
+    meses = ["", "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+    hoy_date = datetime.now()
+    hoy_str = f"{hoy_date.day} de {meses[hoy_date.month]} de {hoy_date.year}"
+
     prompt = NORMATIVA_PROMPT.format(
         titulo=boe_entry.get("titulo", ""),
         seccion=boe_entry.get("seccion", ""),
@@ -283,6 +287,7 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
         texto=boe_entry.get("texto", "Sin texto disponible"),
         sector=sector,
         sector_hashtags=sector_hashtags,
+        hoy=hoy_str,
     )
     if rejection_instructions:
         prompt += "\n" + rejection_instructions
@@ -346,6 +351,10 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
     except Exception as e:
         log.warning("Could not append user preference instructions to content generator: %s", e)
 
+    meses = ["", "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+    hoy_date = datetime.now()
+    hoy_str = f"{hoy_date.day} de {meses[hoy_date.month]} de {hoy_date.year}"
+
     prompt = ACTUALIDAD_PROMPT.format(
         titulo=article.get("title", ""),
         resumen=article.get("texto") or article.get("summary", "Sin resumen disponible"),
@@ -354,6 +363,7 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
         fecha=article.get("published", ""),
         sector=sector,
         sector_hashtags=sector_hashtags,
+        hoy=hoy_str,
     )
     if rejection_instructions:
         prompt += "\n" + rejection_instructions

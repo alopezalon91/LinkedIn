@@ -49,6 +49,16 @@ CCAA_RSS = {
     "galicia": "https://www.xunta.gal/diario-oficial-galicia/dog.rss",
     "canarias": "https://www.gobiernodecanarias.org/boc/rss/boc.xml",
     "pais_vasco": "https://www.euskadi.eus/bopv2/datos/bopv.xml",
+    "aragon": "http://www.boa.aragon.es/cgi-bin/boa/rss.xml",
+    "asturias": "https://sede.asturias.es/bopa/rss.xml",
+    "baleares": "https://intranet.caib.es/eboibfront/es/rss",
+    "cantabria": "https://boc.cantabria.es/boces/rss",
+    "castilla_la_mancha": "https://docm.castillalamancha.es/portaldocm/rss.do",
+    "castilla_y_leon": "https://bocyl.jcyl.es/rss",
+    "extremadura": "https://doe.juntaex.es/rss.php",
+    "la_rioja": "https://web.larioja.org/bor-rss",
+    "murcia": "https://www.borm.es/rss",
+    "navarra": "https://bon.navarra.es/es/rss",
 }
 
 # ---------------------------------------------------------------------------
@@ -56,6 +66,13 @@ CCAA_RSS = {
 # ---------------------------------------------------------------------------
 
 NEWS_RSS = {
+    # ─── Medios Especializados (Fiscal, Contable, Pymes) ────────
+    "supercontable": "https://www.supercontable.com/rss/",
+    "infoautonomos": "https://www.infoautonomos.com/feed/",
+    "pymes_y_autonomos": "https://www.pymesyautonomos.com/feed",
+    "iberley": "https://www.iberley.es/feed",
+    "cef": "https://www.cef.es/feed",
+
     # ─── 20 Medios Digitales Generalistas Importantes ────────────────
     "el_pais": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/seccion/economia",
     "el_mundo": "https://e00-elmundo.uecdn.es/elmundo/rss/portada.xml",

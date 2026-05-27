@@ -57,19 +57,12 @@ Texto relevante:
 3. Seción "Cómo te afecta:" con 2-4 bullets usando → (flecha), cada uno en una línea. \
    Desarrolla cada bullet en profundidad con ejemplos reales de cómo afecta en la práctica (plazos, importes, tramos, obligaciones, etc.).
 4. Una línea con "📅 Entrada en vigor:" y la fecha efectiva.
-5. Una línea con "📎 Fuente: BOE {boe_id}".
-6. Una pregunta interactiva final para invitar al debate y comentarios con la audiencia (ej: "¿Qué opinas de esta nueva obligación?", "¿Crees que esta medida ayudará realmente a tu negocio?").
-7. Última línea: sin hashtags (no se añaden hashtags).
-8. Justo después del post, añade una propuesta de encuesta para que se pueda copiar y crear directamente en LinkedIn:
-   📊 Encuesta LinkedIn Sugerida:
-   Pregunta: [Tu pregunta de encuesta corta y directa, max 120 caracteres]
-   Opciones:
-   1) [Opción 1]
-   2) [Opción 2]
-   3) [Opción 3]
+5. Una pregunta interactiva final para invitar al debate y comentarios con la audiencia (ej: "¿Qué opinas de esta nueva obligación?", "¿Crees que esta medida ayudará realmente a tu negocio?").
+6. Última línea: sin hashtags (no se añaden hashtags).
 
 === RESTRICCIONES ===
-- Longitud TOTAL del post (excluyendo la encuesta sugerida) máxima: 2100 caracteres. La encuesta sugerida puede ocupar hasta 400 caracteres adicionales.
+- ADAPTACIÓN TEMPORAL: Hoy es {hoy}. Si la noticia menciona "hoy" referida a otra fecha, adáptalo para que concuerde.
+- Longitud TOTAL del post máxima: 2100 caracteres.
 - Tono: claro, práctico, cercano. Prohibido usar jerga fiscal abstracta sin explicarla inmediatamente de forma sencilla.
 - Escrito en primera persona del plural (nosotros/nuestro) o dirigiéndote directamente al lector (tú/tu negocio).
 - NO utilices código markdown especial en negritas o cursivas que no sea compatible con LinkedIn estándar.
@@ -81,7 +74,7 @@ Texto relevante:
   c) Siempre advertir que este tipo de decisiones requieren asesoría profesional individualizada.
   d) No afirmar ventajas fiscales sin mencionar también los requisitos y riesgos legales asociados.
 
-Devuelve ÚNICAMENTE el texto del post y la encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.
+Devuelve ÚNICAMENTE el texto del post, sin encuestas sugeridas, sin mención a la fuente y sin comentarios introductorios ni explicaciones adicionales.
 """
 
 # ---------------------------------------------------------------------------
@@ -121,19 +114,12 @@ Si la noticia es de carácter tecnológico o de innovación (por ejemplo, sobre 
 2. Un bloque de 3-5 líneas de contexto: explica los detalles de la noticia de forma clara y didáctica para autónomos y pymes que no tengan conocimientos fiscales previos.
 3. Sección "Qué significa para ti:" con 2-4 bullets usando → que detallen de forma práctica el impacto en autónomos, comercios o pymes (según aplique).
 4. Un bloque de 3-5 líneas con la opinión y reflexión profesional de Alberto (basada en su experiencia diaria, compartiendo una advertencia, consejo o recomendación constructiva sobre el tema).
-5. Una línea con "🔗 Fuente: {fuente}" (sin incluir la URL completa en el texto).
-6. Una pregunta interactiva final para invitar al debate y comentarios con la audiencia (ej: "¿Te habías enterado de esta ayuda?", "¿Cómo piensas gestionar esta nueva situación?").
-7. Última línea: sin hashtags (no se añaden hashtags).
-8. Justo después del post, añade una propuesta de encuesta para que se pueda copiar y crear directamente en LinkedIn:
-   📊 Encuesta LinkedIn Sugerida:
-   Pregunta: [Tu pregunta de encuesta corta y directa, max 120 caracteres]
-   Opciones:
-   1) [Opción 1]
-   2) [Opción 2]
-   3) [Opción 3]
+5. Una pregunta interactiva final para invitar al debate y comentarios con la audiencia (ej: "¿Te habías enterado de esta ayuda?", "¿Cómo piensas gestionar esta nueva situación?").
+6. Última línea: sin hashtags (no se añaden hashtags).
 
 === RESTRICCIONES ===
-- Longitud TOTAL del post (excluyendo la encuesta sugerida) máxima: 2100 caracteres. La encuesta sugerida puede ocupar hasta 400 caracteres adicionales.
+- ADAPTACIÓN TEMPORAL: Hoy es {hoy}. Si la noticia menciona "hoy" referida a su fecha de publicación, adáptalo (ej. "el pasado 21 de mayo") para que tenga sentido a día de hoy.
+- Longitud TOTAL del post máxima: 2100 caracteres.
 - Tono: profesional, analítico, cercano y constructivo.
 - NO copies textualmente el titular original.
 - NO añadas la URL completa en el cuerpo del texto del post.
@@ -145,7 +131,7 @@ Si la noticia es de carácter tecnológico o de innovación (por ejemplo, sobre 
   c) Dejar SIEMPRE claro que estas estrategias requieren análisis personalizado por un asesor fiscal cualificado.
   d) No presentar como "sencillas" o "fáciles" estrategias que tienen requisitos muy exigentes (p.ej. 183 días de residencia efectiva, justificación de actividad real, riesgo de simulación, etc.).
 
-Devuelve ÚNICAMENTE el texto del post y la encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.
+Devuelve ÚNICAMENTE el texto del post, sin encuestas sugeridas, sin mención a la fuente y sin comentarios introductorios ni explicaciones adicionales.
 """
 
 # ---------------------------------------------------------------------------
@@ -184,7 +170,7 @@ Texto:
 - 9-10: Afecta directa y urgentemente a la mayoría de autónomos, pymes o sectores de interés (p.ej. subida general de cuotas, plazos tributarios, ayudas Kit Digital, reforma fiscal relevante).
 - 7-8: Muy relevante y útil, como consejos fiscales prácticos, cambios de facturación o normativas sectoriales. También se incluyen aquí contenidos de calidad sobre fiscalidad internacional provenientes de fuentes de alto rigor técnico (Garrigues Blog Tributario, Legal Today Fiscalidad Internacional, Fixcal, Nómadas Fiscales, OCDE, EUR-Lex).
 - 5-6: Interesante pero de interés más general o indirecto (p.ej. macroeconomía, datos estadísticos).
-- 1-4: Sin relevancia para autónomos o pymes españolas.
+- 1-4: Sin relevancia para autónomos o pymes españolas, O BIEN, noticias y artículos excesivamente técnicos, teóricos o procedimentales orientados a profesionales del sector (asesores, gestores, auditores, contables) que no aportan valor práctico y directo al público general o dueños de negocios.
 
 Nota especial para sector fiscal_internacional: Usar este sector cuando el contenido trate sobre residencia fiscal, convenios de doble imposición, estructuras internacionales, Ley Beckham, Pillar 2 OCDE, exit tax, o análisis de jurisdicciones (Andorra, Emiratos, Malta, Chipre, etc.). Este sector se trabaja con máximo rigor.
 
