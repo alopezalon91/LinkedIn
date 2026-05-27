@@ -16,3 +16,6 @@ CORS_ORIGIN = "https://linkedin-2cg.pages.dev"
 #   LINKEDIN_CLIENT_ID     — From LinkedIn Developer App
 #   LINKEDIN_CLIENT_SECRET — From LinkedIn Developer App
 #   LINKEDIN_REDIRECT_URI  — e.g. https://mytaxbot-linkedin.workers.dev/api/auth/callback
+
+[triggers]
+crons = ["0 * * * *"]

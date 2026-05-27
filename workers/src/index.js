@@ -81,6 +81,36 @@ export default {
       );
     }
   },
+
+  async scheduled(event, env, ctx) {
+    const db = env.DB;
+    console.log('[worker] Running scheduled cron trigger at', new Date().toISOString());
+    try {
+      // Find posts where status is 'scheduled' and scheduled_at is in the past (or exactly now)
+      const { results } = await db.prepare(`
+        SELECT id FROM posts 
+        WHERE status = 'scheduled' 
+          AND scheduled_at <= datetime('now')
+      `).all();
+
+      if (!results || results.length === 0) {
+        console.log('[worker] No scheduled posts due for publication.');
+        return;
+      }
+
+      console.log(`[worker] Found ${results.length} post(s) due for publication. Publishing...`);
+      for (const row of results) {
+        try {
+          await publishPost(db, env, row.id);
+          console.log(`[worker] Successfully published scheduled post: ${row.id}`);
+        } catch (err) {
+          console.error(`[worker] Failed to publish scheduled post ${row.id}:`, err);
+        }
+      }
+    } catch (err) {
+      console.error('[worker] Error in scheduled task:', err);
+    }
+  },
 };
 
 // ─── Router ───────────────────────────────────────────────────────────────────

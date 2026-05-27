@@ -33,6 +33,7 @@ const State = {
   filteredPosts: [],
   stats: null,
   analytics: null,
+  currentView: 'pending',
   currentFilter: 'all',
   currentUrgency: 'all',
   searchQuery: '',
@@ -256,6 +257,7 @@ function renderPostCard(post) {
       <div class="post-meta">
         ${sourceInfo ? `📎 ${sourceInfo} · ` : ''}${createdAt}
         ${post.ai_score ? ` · Score IA: ${post.ai_score}/10` : ''}
+        ${post.scheduled_at ? `<br>📅 Programado para: ${formatDate(post.scheduled_at)}` : ''}
       </div>
       <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">
         👁 Preview
@@ -266,9 +268,12 @@ function renderPostCard(post) {
       <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">
         ❌ Rechazar
       </button>
-      <button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">
-        ✅ Aprobar
-      </button>
+      ${State.currentView === 'scheduled'
+        ? `<button class="btn btn-primary btn-sm" onclick="PostActions.approve('${post.id}')">✅ Publicar Ahora</button>
+           <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
+        : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
+           <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
+      }
     </div>
   `;
 
@@ -294,6 +299,36 @@ function renderPostCard(post) {
 
 // ── Post Actions ───────────────────────────────────────────
 const PostActions = {
+  openScheduleModal(postId) {
+    const modal = document.getElementById('schedule-modal');
+    modal.style.display = 'flex';
+    document.getElementById('confirm-schedule-btn').onclick = async () => {
+      const date = document.getElementById('schedule-date').value;
+      const time = document.getElementById('schedule-time').value;
+      if (!date || !time) {
+        Toast.show('Selecciona fecha y hora', 'warning');
+        return;
+      }
+      
+      const isoStr = new Date(`${date}T${time}`).toISOString();
+      const editor = document.getElementById(`editor-${postId}`);
+      const isEditing = editor && editor.classList.contains('visible');
+      const editedContent = isEditing ? editor.value : null;
+
+      try {
+        if (editedContent) {
+          await API.approvePost(postId, editedContent); // Save edits first
+        }
+        await API.schedulePost(postId, isoStr);
+        Toast.show('Post programado ✅', 'success');
+        modal.style.display = 'none';
+        removePostCard(postId);
+      } catch(e) {
+        Toast.show('Error al programar: ' + e.message, 'error');
+      }
+    };
+  },
+
   async approve(postId) {
     const btn = document.getElementById(`approve-btn-${postId}`);
     const editor = document.getElementById(`editor-${postId}`);
@@ -720,8 +755,9 @@ const Pages = {
 
   async queue() {
     try {
+      const statusFilter = State.currentView === 'history' ? 'published' : State.currentView;
       const [postsRes, statsRes] = await Promise.all([
-        API.getPosts({ status: 'pending' }),
+        API.getPosts({ status: statusFilter }),
         API.getStats().catch(() => null),
       ]);
 
@@ -743,6 +779,18 @@ const Pages = {
       checkEmpty();
 
       // Filter button events
+      document.querySelectorAll('.view-tab').forEach(btn => {
+        // Clear old listeners by cloning
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', () => {
+          document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
+          newBtn.classList.add('active');
+          State.currentView = newBtn.dataset.view;
+          Pages.queue(); // reload view
+        });
+      });
+
       document.querySelectorAll('[data-filter]').forEach(btn => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
