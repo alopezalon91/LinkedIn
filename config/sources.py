@@ -56,23 +56,49 @@ CCAA_RSS = {
 # ---------------------------------------------------------------------------
 
 NEWS_RSS = {
+    # ─── 20 Medios Digitales Generalistas Importantes ────────────────
+    "el_pais": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/seccion/economia",
+    "el_mundo": "https://e00-elmundo.uecdn.es/elmundo/rss/portada.xml",
+    "el_confidencial": "https://rss.elconfidencial.com/espana/",
+    "abc": "https://www.abc.es/rss/2.0/portada/",
+    "la_vanguardia": "https://www.lavanguardia.com/rss/home.xml",
+    "el_espanol": "https://www.elespanol.com/rss/",
+    "el_diario": "https://www.eldiario.es/rss/",
+    "20_minutos": "https://www.20minutos.es/rss/",
+    "la_razon": "https://www.larazon.es/rss/portada.xml",
+    "huffpost": "https://www.huffingtonpost.es/feed/index.xml",
+    "vozpopuli": "https://www.vozpopuli.com/rss/",
+    "libertad_digital": "https://feed.libertaddigital.com/portada.xml",
+    "okdiario": "https://okdiario.com/feed",
+    "the_objective": "https://theobjective.com/feed/",
+    "el_debate": "https://www.eldebate.com/rss/feed.xml",
+    "el_independiente": "https://www.elindependiente.com/feed/",
+    "publico": "https://www.publico.es/rss/",
+    "infolibre": "https://www.infolibre.es/rss/",
+    "el_plural": "https://www.elplural.com/rss/",
+    "ara": "https://www.ara.cat/rss/",
+
+    # ─── 10 Medios Especializados (Economía, Autónomos, Pymes) ───────
     "expansion": "https://sindicacion.expansion.com/rss/economia.xml",
     "eleconomista_autonomos": "https://www.eleconomista.es/rss/rss-autonomos-pymes.php",
     "cinco_dias": "https://feeds.elpais.com/mrss-s/pages/ep/site/cincodias.com/seccion/economia/rss",
-    "el_referente": "https://elreferente.es/feed/",
-    "pymes_y_autonomos": "https://www.pymesyautonomos.com/feed",
     "autonomo_y_emprendedor": "https://www.autonomosyemprendedor.es/rss",
+    "pymes_y_autonomos": "https://www.pymesyautonomos.com/feed",
     "libre_mercado": "https://feed.libertaddigital.com/libre-mercado.xml",
-    "el_pais_economia": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/seccion/economia/rss",
-    "el_confidencial_economia": "https://rss.elconfidencial.com/economia/",
-    "el_mundo_economia": "https://e00-elmundo.uecdn.es/elmundo/rss/economia.xml",
-    "abc_economia": "https://www.abc.es/rss/2.0/economia/",
-    "la_vanguardia_economia": "https://www.lavanguardia.com/rss/economia.xml",
-    "la_razon_economia": "https://www.larazon.es/rss/economia.xml",
-    "el_diario_economia": "https://www.eldiario.es/rss/economia/",
-    "fiscal_impuestos": "https://www.fiscal-impuestos.com/feed",
     "iberley": "https://www.iberley.es/actualidad/feed",
-    "notariado": "https://www.notariado.org/portal/rss",
+    "fiscal_impuestos": "https://www.fiscal-impuestos.com/feed",
+    "el_referente": "https://elreferente.es/feed/",
+    "cepymenews": "https://cepymenews.es/feed/",
+
+    # ─── 6 Medios de Noticias Tecnológicas (mínimo 5) ────────────────
+    "xataka": "https://www.xataka.com/feed",
+    "genbeta": "https://www.genbeta.com/feed",
+    "computerhoy": "https://computerhoy.com/rss.xml",
+    "muycomputer": "https://www.muycomputer.com/feed/",
+    "silicon_es": "https://www.silicon.es/feed",
+    "hipertextual": "https://hipertextual.com/feed",
+
+    # ─── Canales de Creadores de Contenido (YouTube) ─────────────────
     "lawtips_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UCvN_q9K40xP0n7l_rZcZ4Pg",
     "abogado_tiktok_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UC292R249Hw97_38uE1f_B1A",
 }
@@ -84,8 +110,8 @@ NEWS_RSS = {
 OFFICIAL_SOURCES = {
     "aeat": "https://sede.agenciatributaria.gob.es/Sede/todas-noticias.xml",
     "seguridad_social": "https://www.seg-social.es/wps/portal/wss/internet/RSS/RSSNoticias",
-    "hacienda_canaria": "https://tributos.gobierno-canarias.es/rss/novedades",
-    "banco_espana": "https://www.bde.es/wbe/es/noticias-eventos/actualidad/rss-noticias-notas-prensa.xml",
+    "hacienda_canaria": "https://www3.gobiernodecanarias.org/noticias/feed/",
+    "banco_espana": "https://www.bde.es/wbe/es/noticias/rss/noticias.xml",
 }
 
 # All official source keys – used for credibility check bypass

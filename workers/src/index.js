@@ -37,6 +37,7 @@ import {
   approvePost,
   rejectPost,
   schedulePost,
+  regeneratePost,
 } from './api/posts.js';
 
 import { publishPost }                              from './api/publish.js';
@@ -119,11 +120,11 @@ async function route(request, env, ctx, url, path, method) {
     return errorResponse('Method not allowed', 405);
   }
 
-  // ── Post sub-actions: /api/posts/:id/approve|reject|schedule ──────────────
-  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|schedule)$/);
+  // ── Post sub-actions: /api/posts/:id/approve|reject|schedule|regenerate ────
+  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|schedule|regenerate)$/);
   if (subActionMatch && method === 'POST') {
     const [, postId, action] = subActionMatch;
-    return handlePostAction(db, request, postId, action);
+    return handlePostAction(db, env, request, postId, action);
   }
 
   // Single post
@@ -288,13 +289,14 @@ async function handleUpdatePost(db, request, postId) {
   }
 }
 
-async function handlePostAction(db, request, postId, action) {
+async function handlePostAction(db, env, request, postId, action) {
   const body = await parseJSON(request);
 
   switch (action) {
     case 'approve':  return _handleApprove(db, postId, body.content_edited ?? null);
     case 'reject':   return _handleReject(db, postId);
     case 'schedule': return _handleSchedule(db, postId, body.scheduled_at);
+    case 'regenerate': return _handleRegenerate(db, env, postId, body.instructions);
     default:         return errorResponse(`Unknown action: ${action}`, 400);
   }
 }
@@ -320,6 +322,18 @@ async function _handleReject(db, postId) {
 async function _handleSchedule(db, postId, scheduledAt) {
   try {
     const post = await schedulePost(db, postId, scheduledAt);
+    return jsonResponse(post);
+  } catch (err) {
+    return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
+  }
+}
+
+async function _handleRegenerate(db, env, postId, instructions) {
+  try {
+    if (!instructions) {
+      return errorResponse('instructions are required for post regeneration', 400);
+    }
+    const post = await regeneratePost(db, env, postId, instructions);
     return jsonResponse(post);
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);

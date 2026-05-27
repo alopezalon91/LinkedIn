@@ -258,6 +258,30 @@ HASHTAG_MAP: dict[str, list[str]] = {
 }
 
 # ---------------------------------------------------------------------------
+# TECH_KEYWORDS
+# Technology, AI, software, and automation terms to let tech feeds pass the pre-filter.
+# ---------------------------------------------------------------------------
+
+TECH_KEYWORDS: list[str] = [
+    "inteligencia artificial",
+    "automatización",
+    "automatizar",
+    "software",
+    "digitalización",
+    "digitalizar",
+    "herramienta digital",
+    "tecnología",
+    "chatgpt",
+    "openai",
+    "copilot",
+    "gemini",
+    "automatiza",
+    "asistente virtual",
+    "no-code",
+    "nocode",
+]
+
+# ---------------------------------------------------------------------------
 # MYTAXBOT_FOCUS_KEYWORDS
 # Union of all high‑priority keywords relevant to MyTaxBot's niche.
 # Used as a fast first-pass filter to avoid sending irrelevant content to AI.
@@ -267,6 +291,7 @@ HASHTAG_MAP: dict[str, list[str]] = {
 _all_keywords: set[str] = set()
 for _kw_list in SECTOR_KEYWORDS.values():
     _all_keywords.update(_kw_list)
+_all_keywords.update(TECH_KEYWORDS)
 
 MYTAXBOT_FOCUS_KEYWORDS: list[str] = sorted(_all_keywords)
 

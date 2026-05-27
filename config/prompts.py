@@ -93,7 +93,7 @@ Devuelve ÚNICAMENTE el texto del post y la encuesta sugerida, sin comentarios i
 # --------------------------------------------------------------------------
 
 ACTUALIDAD_PROMPT = """\
-Genera un post de LinkedIn detallado y conversacional a partir de la siguiente noticia de actualidad. \
+Genera un post de LinkedIn detallado, reflexivo y altamente adaptado a partir de la siguiente noticia de actualidad. \
 Sigue el formato EXACTO indicado. El post debe estar en español y reflejar la perspectiva de Alberto López, gestor contable y fiscal en MyTaxBot.
 
 === DATOS DE LA NOTICIA ===
@@ -103,6 +103,13 @@ Fuente: {fuente}
 Fecha: {fecha}
 URL: {url}
 Sector principal: {sector}
+
+=== ENFOQUE DE ADAPTACIÓN (CRÍTICO) ===
+Si la noticia es de carácter tecnológico o de innovación (por ejemplo, sobre Inteligencia Artificial, nuevos softwares de gestión, automatización o digitalización de procesos):
+- NO te limites a resumir o copiar/pegar los aspectos técnicos o teóricos de la noticia.
+- Debes reenfocar y conectar esa tecnología directamente con los sectores de interés de los clientes de Alberto: autónomos de a pie, comercios, tiendas online (e-commerce), creadores de contenido o gestión de alquileres / inversión inmobiliaria (como rent-to-rent o flipping house).
+- Ejemplo práctico: Si la noticia trata sobre una nueva IA que redacta contratos o gestiona inquilinos, enfoca el post (especialmente la sección de "Qué significa para ti" y la opinión de Alberto) en cómo un emprendedor de rent-to-rent puede implementarlo para automatizar el trato con inquilinos, reducir horas de gestión y optimizar su facturación.
+- Traduce los conceptos abstractos y técnicos a un beneficio o impacto operacional, contable o fiscal real y cotidiano para el negocio de nuestros lectores.
 
 === FORMATO OBLIGATORIO ===
 1. Primera línea: emoji 💡 seguido de un titular conversacional (no el titular original; reescríbelo para que suene como una pregunta o reflexión cercana de Alberto).

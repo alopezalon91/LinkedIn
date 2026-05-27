@@ -231,8 +231,21 @@ function renderPostCard(post) {
       </button>
 
       <!-- Editor (hidden by default) -->
-      <textarea class="post-editor" id="editor-${post.id}" maxlength="1300">${post.content || ''}</textarea>
-      <div class="char-counter ok" id="counter-${post.id}">${(post.content || '').length} / 1300 caracteres</div>
+      <textarea class="post-editor" id="editor-${post.id}" maxlength="2500">${post.content_edited || post.content || ''}</textarea>
+      <div class="char-counter ok" id="counter-${post.id}">${(post.content_edited || post.content || '').length} / 2500 caracteres</div>
+
+      <!-- AI Rewrite Section (visible only when editing) -->
+      <div class="ai-rewrite-section" id="ai-rewrite-section-${post.id}" style="display:none; margin-top:12px; padding:12px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:6px;">
+        <label style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:6px;">🪄 Redactar de nuevo con Inteligencia Artificial:</label>
+        <div style="display:flex; gap:8px; position:relative; align-items:center; width:100%;">
+          <input type="text" id="ai-instructions-${post.id}" placeholder="Ej: Enfócalo para el sector inmobiliario..." style="flex:1; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:4px; padding:8px 36px 8px 8px; color:var(--text-primary); font-size:13px; outline:none;" />
+          <button id="ai-mic-btn-${post.id}" onclick="PostActions.startVoiceRewrite('${post.id}')" style="position:absolute; right:115px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;" title="Dictar instrucciones">🎙️</button>
+          <button class="btn btn-primary btn-sm" id="ai-rewrite-btn-${post.id}" onclick="PostActions.regenerateWithIA('${post.id}')" style="flex-shrink:0;">🪄 Rehacer post</button>
+        </div>
+        <div id="ai-rewrite-status-${post.id}" style="font-size:11px; color:var(--accent-red); margin-top:6px; display:none; align-items:center; gap:5px;">
+          <span class="pulse-dot"></span> Grabando voz... Pulsa de nuevo el micrófono para parar.
+        </div>
+      </div>
 
       <div class="hashtags-preview" id="tags-${post.id}">
         ${renderHashtags(post.hashtags)}
@@ -272,8 +285,8 @@ function renderPostCard(post) {
   const counter = card.querySelector(`#counter-${post.id}`);
   editor.addEventListener('input', () => {
     const len = editor.value.length;
-    counter.textContent = `${len} / 1300 caracteres`;
-    counter.className = `char-counter ${len <= 1100 ? 'ok' : len <= 1300 ? 'warn' : 'over'}`;
+    counter.textContent = `${len} / 2500 caracteres`;
+    counter.className = `char-counter ${len <= 2100 ? 'ok' : len <= 2500 ? 'warn' : 'over'}`;
   });
 
   return card;
@@ -462,12 +475,14 @@ const PostActions = {
     const preview = document.getElementById(`preview-${postId}`);
     const expandBtn = document.getElementById(`expand-btn-${postId}`);
     const editBtn = document.getElementById(`edit-btn-${postId}`);
+    const rewriteSec = document.getElementById(`ai-rewrite-section-${postId}`);
     const isEditing = editor.classList.toggle('visible');
 
     if (isEditing) {
       preview.style.display = 'none';
       expandBtn.style.display = 'none';
       editBtn.innerHTML = '✅ Aplicar edición';
+      if (rewriteSec) rewriteSec.style.display = 'block';
       editor.focus();
     } else {
       const newContent = editor.value;
@@ -475,6 +490,7 @@ const PostActions = {
       preview.style.display = '';
       expandBtn.style.display = '';
       editBtn.innerHTML = '✏️ Editar';
+      if (rewriteSec) rewriteSec.style.display = 'none';
     }
   },
 
@@ -492,6 +508,125 @@ const PostActions = {
       document.getElementById('preview-modal').classList.remove('visible');
       PostActions.approve(postId);
     };
+  },
+
+  startVoiceRewrite(postId) {
+    const micBtn = document.getElementById(`ai-mic-btn-${postId}`);
+    const textInput = document.getElementById(`ai-instructions-${postId}`);
+    const statusEl = document.getElementById(`ai-rewrite-status-${postId}`);
+    if (!micBtn) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      micBtn.style.display = 'none';
+      Toast.show('Dictado no soportado en este navegador', 'error');
+      return;
+    }
+
+    if (window.rewriteVoiceRecognition && window.activeRewritePostId) {
+      const isSame = window.activeRewritePostId === postId;
+      window.rewriteVoiceRecognition.stop();
+      if (isSame) return;
+    }
+
+    window.activeRewritePostId = postId;
+    window.rewriteVoiceRecognition = new SpeechRecognition();
+    window.rewriteVoiceRecognition.lang = 'es-ES';
+    window.rewriteVoiceRecognition.continuous = false;
+    window.rewriteVoiceRecognition.interimResults = false;
+
+    window.rewriteVoiceRecognition.onstart = () => {
+      micBtn.classList.add('recording');
+      micBtn.textContent = '🛑';
+      if (statusEl) {
+        statusEl.style.display = 'flex';
+      }
+    };
+
+    window.rewriteVoiceRecognition.onend = () => {
+      micBtn.classList.remove('recording');
+      micBtn.textContent = '🎙️';
+      if (statusEl) statusEl.style.display = 'none';
+      window.rewriteVoiceRecognition = null;
+      window.activeRewritePostId = null;
+    };
+
+    window.rewriteVoiceRecognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error !== 'no-speech') {
+        Toast.show('Error al grabar voz: ' + event.error, 'error');
+      }
+      micBtn.classList.remove('recording');
+      micBtn.textContent = '🎙️';
+      if (statusEl) statusEl.style.display = 'none';
+      window.rewriteVoiceRecognition = null;
+      window.activeRewritePostId = null;
+    };
+
+    window.rewriteVoiceRecognition.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      if (text && textInput) {
+        const prevVal = textInput.value.trim();
+        textInput.value = prevVal ? prevVal + ' ' + text : text;
+      }
+    };
+
+    window.rewriteVoiceRecognition.start();
+  },
+
+  async regenerateWithIA(postId) {
+    const input = document.getElementById(`ai-instructions-${postId}`);
+    const instructions = input ? input.value.trim() : '';
+    if (!instructions) {
+      Toast.show('Por favor, indica primero qué quieres cambiar del post', 'warning');
+      return;
+    }
+
+    const rewriteBtn = document.getElementById(`ai-rewrite-btn-${postId}`);
+    const statusEl = document.getElementById(`ai-rewrite-status-${postId}`);
+    const editor = document.getElementById(`editor-${postId}`);
+
+    try {
+      if (rewriteBtn) {
+        rewriteBtn.disabled = true;
+        rewriteBtn.innerHTML = '<div class="loading-spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; margin-right:5px;"></div> Procesando...';
+      }
+      if (statusEl) {
+        statusEl.style.color = 'var(--accent-blue)';
+        statusEl.innerHTML = '<span class="pulse-dot" style="background-color:var(--accent-blue);"></span> Reescribiendo post con Gemini...';
+        statusEl.style.display = 'flex';
+      }
+
+      const response = await API.request(`/api/posts/${postId}/regenerate`, {
+        method: 'POST',
+        body: JSON.stringify({ instructions })
+      });
+
+      // Update state and UI
+      const postIdx = State.posts.findIndex(p => p.id === postId);
+      if (postIdx !== -1) {
+        State.posts[postIdx].content_edited = response.content_edited;
+      }
+
+      if (editor) {
+        editor.value = response.content_edited || response.content;
+        editor.dispatchEvent(new Event('input'));
+      }
+
+      if (input) input.value = '';
+      Toast.show('Post reescrito con IA exitosamente 🪄', 'success');
+
+    } catch (err) {
+      Toast.show(`Error al rehacer post: ${err.message}`, 'error');
+    } finally {
+      if (rewriteBtn) {
+        rewriteBtn.disabled = false;
+        rewriteBtn.innerHTML = '🪄 Rehacer post';
+      }
+      if (statusEl) {
+        statusEl.style.display = 'none';
+      }
+    }
   },
 };
 

@@ -288,3 +288,92 @@ function deserialisePost(row) {
 function safeJsonParse(str, fallback) {
   try { return JSON.parse(str); } catch { return fallback; }
 }
+
+// ─── Regenerate / Rewrite Post with IA ────────────────────────────────────────
+
+export async function regeneratePost(db, env, id, instructions) {
+  const post = await getPost(db, id);
+  if (!post) throw new Error(`Post not found: ${id}`);
+
+  if (!env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not configured on the Worker.');
+  }
+
+  const systemInstruction = `Eres el asistente de Alberto López, gestor contable y fiscal en MyTaxBot (gestoría online para autónomos, pymes y emprendedores en toda España). Tu objetivo es reescribir una publicación de LinkedIn a partir de un borrador existente y de las nuevas instrucciones de Alberto.
+Mantén la estructura del post original (titular llamativo con emoji, sección "Qué significa para ti" con bullets, opinión de Alberto, pregunta de debate y encuesta de LinkedIn) pero adapta el enfoque, el tono o el público objetivo según las nuevas instrucciones de Alberto.
+NO incluyas ninguna llamada a la acción comercial o promocional (como 'escríbeme', 'te ayudamos'). El post debe ser puramente informativo y de valor.`;
+
+  const prompt = `=== POST ORIGINAL ===
+${post.content_edited || post.content}
+
+=== INSTRUCCIONES DE REESCRITURA DE ALBERTO ===
+${instructions}
+
+Por favor, reescribe el post completo siguiendo las instrucciones de Alberto y respetando el formato original. Devuelve únicamente el texto del post reescrito y la nueva encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: systemInstruction }]
+      },
+      contents: [{
+        role: 'user',
+        parts: [{ text: prompt }]
+      }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 2048
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  const rewrittenText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!rewrittenText) {
+    throw new Error('Gemini API returned an empty or invalid response.');
+  }
+
+  const cleanRewrittenText = rewrittenText.trim();
+
+  // Update the post content in D1
+  const updatedPost = await updatePost(db, id, {
+    content_edited: cleanRewrittenText
+  });
+
+  // Record this as an "edited" decision with the instructions as edit_reason
+  const decisionId = generateUUID();
+  const now = nowISO();
+  const charCount = cleanRewrittenText.length;
+
+  await db.prepare(`
+    INSERT INTO decisions (
+      id, post_id, decision, edit_ratio,
+      time_to_decide_seconds, post_type, sector,
+      source_name, ai_score, char_count, rejection_reason, edit_reason, created_at
+    ) VALUES (?, ?, 'edited', ?, NULL, ?, ?, ?, ?, ?, NULL, ?, ?)
+  `).bind(
+    decisionId,
+    id,
+    0.5,
+    post.type,
+    post.sector,
+    post.source_name || null,
+    post.ai_score    || null,
+    charCount,
+    `IA Rewrite: ${instructions}`,
+    now
+  ).run();
+
+  return updatedPost;
+}
