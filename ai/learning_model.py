@@ -96,8 +96,8 @@ class LearningModel:
         if LearningModel._cached_data is not None:
             return LearningModel._cached_data
 
-        worker_url = os.environ.get("CF_WORKER_URL", "")
-        worker_token = os.environ.get("CF_WORKER_TOKEN", "")
+        worker_url = (os.environ.get("CF_WORKER_URL") or os.environ.get("WORKER_URL", "")).rstrip("/")
+        worker_token = os.environ.get("CF_WORKER_TOKEN") or os.environ.get("WORKER_SECRET", "")
 
         data = None
         if worker_url:
@@ -185,11 +185,11 @@ class LearningModel:
 
         Silently logs errors; never raises (non-blocking).
         """
-        worker_url = os.environ.get("CF_WORKER_URL", "")
-        worker_token = os.environ.get("CF_WORKER_TOKEN", "")
+        worker_url = (os.environ.get("CF_WORKER_URL") or os.environ.get("WORKER_URL", "")).rstrip("/")
+        worker_token = os.environ.get("CF_WORKER_TOKEN") or os.environ.get("WORKER_SECRET", "")
 
         if not worker_url:
-            log.debug("CF_WORKER_URL not set; skipping Cloudflare sync.")
+            log.debug("CF_WORKER_URL / WORKER_URL not set; skipping Cloudflare sync.")
             return
 
         try:

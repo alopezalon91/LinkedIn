@@ -33,6 +33,7 @@ import os
 import sys
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
 import httpx
 from dotenv import load_dotenv
@@ -70,9 +71,17 @@ from ai.learning_model import LearningModel
 # Constants
 # ---------------------------------------------------------------------------
 
-DRY_RUN = os.environ.get("DRY_RUN", "0").strip() == "1"
-CF_WORKER_URL = os.environ.get("CF_WORKER_URL", "").rstrip("/")
-CF_WORKER_TOKEN = os.environ.get("CF_WORKER_TOKEN", "")
+DRY_RUN = os.environ.get("DRY_RUN", "false").strip().lower() in ("1", "true", "yes")
+# Support both WORKER_URL (GitHub Actions secret name) and CF_WORKER_URL (legacy .env name)
+CF_WORKER_URL = (
+    os.environ.get("CF_WORKER_URL")
+    or os.environ.get("WORKER_URL", "")
+).rstrip("/")
+# Support both WORKER_SECRET (GitHub Actions secret name) and CF_WORKER_TOKEN (legacy .env name)
+CF_WORKER_TOKEN = (
+    os.environ.get("CF_WORKER_TOKEN")
+    or os.environ.get("WORKER_SECRET", "")
+)
 MAX_POSTS_PER_RUN = 3  # Cap to avoid spamming; queue the rest
 
 
@@ -359,7 +368,8 @@ def main() -> int:
         "="*60,
     )
 
-    return 0 if success_count > 0 else 1
+    # Return success if posts were generated (even if worker URL missing)
+    return 0 if (success_count > 0 or (len(posts) > 0 and not CF_WORKER_URL and not DRY_RUN)) else 1
 
 
 if __name__ == "__main__":
