@@ -82,6 +82,8 @@ class LearningModel:
     }
     """
 
+    _cached_data: dict | None = None
+
     def __init__(self) -> None:
         self._data = self._load()
 
@@ -91,9 +93,13 @@ class LearningModel:
 
     def _load(self) -> dict:
         """Loads decision data from Cloudflare D1 via Worker API, falling back to local JSON."""
+        if LearningModel._cached_data is not None:
+            return LearningModel._cached_data
+
         worker_url = os.environ.get("CF_WORKER_URL", "")
         worker_token = os.environ.get("CF_WORKER_TOKEN", "")
 
+        data = None
         if worker_url:
             try:
                 headers = {"Accept": "application/json"}
@@ -137,13 +143,13 @@ class LearningModel:
                         except OSError as e:
                             log.warning("Could not write local cache: %s", e)
 
-                        return cached_data
+                        data = cached_data
                     else:
                         log.warning("Cloudflare decisions fetch returned HTTP %d", resp.status_code)
             except Exception as exc:
                 log.warning("Could not pull decisions from Cloudflare: %s. Using local cache.", exc)
 
-        if _LOCAL_JSON.exists():
+        if data is None and _LOCAL_JSON.exists():
             try:
                 with _LOCAL_JSON.open("r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -152,11 +158,14 @@ class LearningModel:
                         len(data.get("decisions", [])),
                         _LOCAL_JSON,
                     )
-                    return data
             except (json.JSONDecodeError, OSError) as exc:
                 log.error("Could not load local cache %s: %s. Starting fresh.", _LOCAL_JSON, exc)
 
-        return {"decisions": [], "metadata": {"created_at": datetime.now(timezone.utc).isoformat()}}
+        if data is None:
+            data = {"decisions": [], "metadata": {"created_at": datetime.now(timezone.utc).isoformat()}}
+
+        LearningModel._cached_data = data
+        return data
 
     def _save(self) -> None:
         """Persists decision data to local JSON file."""
