@@ -98,9 +98,38 @@ NEWS_RSS = {
     "silicon_es": "https://www.silicon.es/feed",
     "hipertextual": "https://hipertextual.com/feed",
 
-    # ─── Canales de Creadores de Contenido (YouTube) ─────────────────
+    # ─── Fiscalidad Internacional — Grandes Despachos y Expertos ────────
+    # Garrigues — Blog Tributario (feed real verificado)
+    "garrigues_tributario": "https://blogtributario.garrigues.com/feed",
+    # Legal Today — Blog de Fiscalidad Internacional (feed real verificado)
+    "legal_today_fiscal": "https://www.legaltoday.com/feed/",
+    # Leialta — Fiscalidad Internacional para empresas (WordPress feed)
+    "leialta_fiscal": "https://leialta.com/feed/",
+    # Lince Fiscal — Fiscalidad para autónomos con clientes internacionales
+    "lince_fiscal": "https://lincefiscal.com/feed/",
+
+    # ─── Canales de Creadores de Contenido Jurídico-Fiscal (YouTube) ─────
+    # (ya integrados anteriormente)
     "lawtips_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UCvN_q9K40xP0n7l_rZcZ4Pg",
     "abogado_tiktok_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UC292R249Hw97_38uE1f_B1A",
+
+    # ─── 7 Creadores de Contenido Financiero (YouTube) ───────────────────
+    # Fixcal / Álex Algarci — Fiscalidad internacional, cambio de residencia fiscal
+    "fixcal_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UCiUNJf8WN06DWttAritFtqg",
+    # Juan Ramón Rallo — Economista liberal, política económica y finanzas
+    "juan_rallo_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UCX583S-3q5l6iWvK6oW-X9A",
+    # Arte de Invertir (Alejandro Estebaranz) — Value investing, bolsa
+    "arte_invertir_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UCm6iZJqJ8Qj8j3D8-76_k-g",
+    # Pablo Gil Trader — Análisis macroeconómico y trading
+    "pablo_gil_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=@pablogiltrader",
+    # Bolsa General (David Galán) — Análisis técnico y fundamental
+    "bolsa_general_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UCmU9b04Ym19_OvsSdt7rRYg",
+    # Rankia — Educación financiera e inversión en español
+    "rankia_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UC7f_Tush-CCwkb5hQNAuzdw",
+    # Nómadas Fiscales — Residencia fiscal internacional, expatriados
+    "nomadas_fiscales_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=UCG_9J5O8-T-R-nB1V43pI3g",
+    # Javi Linares — Finanzas personales, inversión, método LINVEST
+    "javi_linares_youtube": "https://www.youtube.com/feeds/videos.xml?channel_id=@Javierlinares",
 }
 
 # ---------------------------------------------------------------------------
@@ -112,6 +141,10 @@ OFFICIAL_SOURCES = {
     "seguridad_social": "https://www.seg-social.es/wps/portal/wss/internet/RSS/RSSNoticias",
     "hacienda_canaria": "https://www3.gobiernodecanarias.org/noticias/feed/",
     "banco_espana": "https://www.bde.es/wbe/es/noticias/rss/noticias.xml",
+    # Despachos internacionales — Fiscalidad Internacional de alto rigor
+    "garrigues_tributario": "https://blogtributario.garrigues.com/feed",
+    "cuatrecasas": "https://www.cuatrecasas.com/es/spain/publicaciones/publicaciones.rss",
+    "legal_today_fiscal": "https://www.legaltoday.com/feed/",
 }
 
 # All official source keys – used for credibility check bypass

@@ -75,6 +75,11 @@ Texto relevante:
 - NO utilices código markdown especial en negritas o cursivas que no sea compatible con LinkedIn estándar.
 - Desarrolla el tema con rigor normativo pero con un lenguaje accesible para cualquier autónomo o pequeña pyme.
 - No incluyas ninguna llamada a la acción comercial o promocional, ni ganchos de contacto como 'si tienes dudas escríbeme', 'te ayudamos', 'contacta con nosotros'. El objetivo del post debe ser exclusivamente informativo y de valor, sin intenciones de captar clientes directos.
+- ⚠️ RIGOR EN FISCALIDAD INTERNACIONAL: Si el tema involucra fiscalidad internacional (cambio de residencia fiscal, convenios de doble imposición, estructuras offshore, tributación de expatriados, directivas UE, precios de transferencia, country-by-country reporting, Pilar 2 OCDE), DEBES:
+  a) Citar únicamente fuentes de máxima autoridad: BOE, AEAT, OCDE, EUR-Lex, Tribunal Supremo, TEAC o grandes despachos como Garrigues.
+  b) Usar lenguaje de alta precisión técnica y evitar simplificaciones que puedan inducir a error.
+  c) Siempre advertir que este tipo de decisiones requieren asesoría profesional individualizada.
+  d) No afirmar ventajas fiscales sin mencionar también los requisitos y riesgos legales asociados.
 
 Devuelve ÚNICAMENTE el texto del post y la encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.
 """
@@ -134,6 +139,11 @@ Si la noticia es de carácter tecnológico o de innovación (por ejemplo, sobre 
 - NO añadas la URL completa en el cuerpo del texto del post.
 - Asegúrate de incluir datos numéricos, fechas o plazos de la noticia si figuran en el resumen provisto.
 - No incluyas ninguna llamada a la acción comercial o promocional, ni ganchos de contacto como 'si tienes dudas escríbeme', 'te ayudamos', 'contacta con nosotros'. El objetivo del post debe ser exclusivamente informativo y de valor, sin intenciones de captar clientes directos.
+- ⚠️ RIGOR EN FISCALIDAD INTERNACIONAL: Si el contenido proviene de fuentes especializadas (como Garrigues, Fixcal, Nómadas Fiscales, Legal Today fiscalidad internacional, OCDE) o trata de residencia fiscal, doble imposición, estructuras societarias, Ley Beckham, régimen de impatriados o impuesto de salida (exit tax), DEBES:
+  a) Mantener máximo rigor técnico y exactitud en los datos normativos citados.
+  b) Explicar los conceptos sin perder precisión: el lector debe obtener información veraz aunque compleja.
+  c) Dejar SIEMPRE claro que estas estrategias requieren análisis personalizado por un asesor fiscal cualificado.
+  d) No presentar como "sencillas" o "fáciles" estrategias que tienen requisitos muy exigentes (p.ej. 183 días de residencia efectiva, justificación de actividad real, riesgo de simulación, etc.).
 
 Devuelve ÚNICAMENTE el texto del post y la encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.
 """
@@ -164,7 +174,7 @@ Texto:
 === CAMPOS DEL JSON ===
 {{
   "score": <entero 1-10, relevancia para autónomos, pymes y emprendedores españoles de cualquier sector>,
-  "sector": "<uno de: ecommerce | content_creator | inmobiliario | iva_irpf | autonomos | pymes | normativa_europea | general>",
+  "sector": "<uno de: ecommerce | content_creator | inmobiliario | iva_irpf | autonomos | pymes | normativa_europea | fiscal_internacional | general>",
   "should_post": <true si score >= 6, false en caso contrario>,
   "reason": "<una frase en español que justifica la puntuación>",
   "urgency": "<alta | media | baja>"
@@ -172,9 +182,11 @@ Texto:
 
 === CRITERIOS DE PUNTUACIÓN ===
 - 9-10: Afecta directa y urgentemente a la mayoría de autónomos, pymes o sectores de interés (p.ej. subida general de cuotas, plazos tributarios, ayudas Kit Digital, reforma fiscal relevante).
-- 7-8: Muy relevante y útil, como consejos fiscales prácticos, cambios de facturación o normativas sectoriales.
+- 7-8: Muy relevante y útil, como consejos fiscales prácticos, cambios de facturación o normativas sectoriales. También se incluyen aquí contenidos de calidad sobre fiscalidad internacional provenientes de fuentes de alto rigor técnico (Garrigues Blog Tributario, Legal Today Fiscalidad Internacional, Fixcal, Nómadas Fiscales, OCDE, EUR-Lex).
 - 5-6: Interesante pero de interés más general o indirecto (p.ej. macroeconomía, datos estadísticos).
 - 1-4: Sin relevancia para autónomos o pymes españolas.
+
+Nota especial para sector fiscal_internacional: Usar este sector cuando el contenido trate sobre residencia fiscal, convenios de doble imposición, estructuras internacionales, Ley Beckham, Pillar 2 OCDE, exit tax, o análisis de jurisdicciones (Andorra, Emiratos, Malta, Chipre, etc.). Este sector se trabaja con máximo rigor.
 
 === URGENCIA ===
 - alta: Entrada en vigor en los próximos 30 días, o plazo de solicitud de ayuda inminente.
