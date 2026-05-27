@@ -29,25 +29,43 @@ export async function listPosts(db, params = {}) {
   const conditions = [];
   const bindings   = [];
 
-  if (status) { conditions.push('status = ?');  bindings.push(status); }
-  if (type)   { conditions.push('type = ?');    bindings.push(type);   }
-  if (sector) { conditions.push('sector = ?');  bindings.push(sector); }
+  if (status) {
+    if (status === 'all') {
+      conditions.push("p.status != 'pending'");
+    } else {
+      conditions.push('p.status = ?');
+      bindings.push(status);
+    }
+  }
+  if (type)   { conditions.push('p.type = ?');    bindings.push(type);   }
+  if (sector) { conditions.push('p.sector = ?');  bindings.push(sector); }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   // Urgency ordering: alta > media > baja, then AI score DESC
   const orderBy = `
     ORDER BY
-      CASE urgency WHEN 'alta' THEN 1 WHEN 'media' THEN 2 ELSE 3 END,
-      ai_score DESC,
-      created_at DESC
+      CASE p.urgency WHEN 'alta' THEN 1 WHEN 'media' THEN 2 ELSE 3 END,
+      p.ai_score DESC,
+      p.created_at DESC
   `;
 
   const [rowsResult, countResult] = await Promise.all([
-    db.prepare(`SELECT * FROM posts ${where} ${orderBy} LIMIT ? OFFSET ?`)
+    db.prepare(`
+      SELECT p.*, d.rejection_reason, d.edit_reason
+      FROM posts p
+      LEFT JOIN (
+        SELECT post_id, rejection_reason, edit_reason,
+               ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY created_at DESC) as rn
+        FROM decisions
+      ) d ON p.id = d.post_id AND d.rn = 1
+      ${where}
+      ${orderBy}
+      LIMIT ? OFFSET ?
+    `)
       .bind(...bindings, limit, offset)
       .all(),
-    db.prepare(`SELECT COUNT(*) AS total FROM posts ${where}`)
+    db.prepare(`SELECT COUNT(*) AS total FROM posts p ${where}`)
       .bind(...bindings)
       .first(),
   ]);
@@ -72,7 +90,16 @@ export async function listPosts(db, params = {}) {
  * Fetch a single post by ID. Returns null if not found.
  */
 export async function getPost(db, id) {
-  const row = await db.prepare('SELECT * FROM posts WHERE id = ?').bind(id).first();
+  const row = await db.prepare(`
+    SELECT p.*, d.rejection_reason, d.edit_reason
+    FROM posts p
+    LEFT JOIN (
+      SELECT post_id, rejection_reason, edit_reason,
+             ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY created_at DESC) as rn
+      FROM decisions
+    ) d ON p.id = d.post_id AND d.rn = 1
+    WHERE p.id = ?
+  `).bind(id).first();
   return row ? deserialisePost(row) : null;
 }
 

@@ -790,52 +790,171 @@ const Pages = {
         API.getPosts({ status: 'all', limit: 200 }),
         API.getStats().catch(() => null),
       ]);
-      const posts = allPosts.posts || [];
+      
+      State.historyPosts = allPosts.posts || [];
+      State.historyStatusFilter = 'all';
+      State.historyTypeFilter = 'all';
+      State.historySearchQuery = '';
 
       // Stats
-      const published = posts.filter(p => p.status === 'published').length;
-      const normativa = posts.filter(p => p.type === 'normativa' && p.status === 'published').length;
-      const actualidad = posts.filter(p => p.type === 'actualidad' && p.status === 'published').length;
-      const rejected = posts.filter(p => p.status === 'rejected').length;
+      const published = State.historyPosts.filter(p => p.status === 'published').length;
+      const normativa = State.historyPosts.filter(p => p.type === 'normativa' && p.status === 'published').length;
+      const actualidad = State.historyPosts.filter(p => p.type === 'actualidad' && p.status === 'published').length;
+      const rejected = State.historyPosts.filter(p => p.status === 'rejected').length;
       if (document.getElementById('hist-published')) document.getElementById('hist-published').textContent = published;
       if (document.getElementById('hist-normativa')) document.getElementById('hist-normativa').textContent = normativa;
       if (document.getElementById('hist-actualidad')) document.getElementById('hist-actualidad').textContent = actualidad;
       if (document.getElementById('hist-rejected')) document.getElementById('hist-rejected').textContent = rejected;
 
-      // Pending count
+      // Pending count in sidebar
       if (document.getElementById('pending-count')) {
         document.getElementById('pending-count').textContent = statsRes?.posts?.pending || '—';
       }
 
-      // Table
-      const tbody = document.getElementById('history-body');
-      if (!tbody) return;
-      if (posts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:40px">Sin historial todavía</td></tr>';
-        return;
+      // Bind filter events
+      const filterBar = document.querySelector('.filter-bar');
+      if (filterBar) {
+        // Status filters
+        filterBar.querySelectorAll('[data-status]').forEach(btn => {
+          btn.onclick = () => {
+            filterBar.querySelectorAll('[data-status]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            State.historyStatusFilter = btn.dataset.status;
+            applyHistoryFilters();
+          };
+        });
+
+        // Type filters
+        filterBar.querySelectorAll('[data-type]').forEach(btn => {
+          btn.onclick = () => {
+            filterBar.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            State.historyTypeFilter = btn.dataset.type;
+            applyHistoryFilters();
+          };
+        });
       }
-      tbody.innerHTML = posts.map(post => {
-        const preview = (post.content_edited || post.content || '').slice(0, 80) + '…';
-        return `
-          <tr>
-            <td style="padding-left:20px; color:var(--text-muted)">${formatDate(post.published_at || post.created_at)}</td>
-            <td>${renderTypeBadge(post.type)}</td>
-            <td>${renderSectorBadge(post.sector)}</td>
-            <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${(post.content||'').replace(/"/g,'')}">${preview}</td>
-            <td style="color:var(--text-muted); font-size:12px">${post.source_name || '—'}</td>
-            <td>${renderStatusPill(post.status)}</td>
-            <td>
-              ${post.status === 'published' && post.linkedin_post_id ? `<a href="https://www.linkedin.com/feed/update/${post.linkedin_post_id}" target="_blank" class="btn btn-ghost btn-sm">🔗 Ver</a>` : ''}
-            </td>
-          </tr>
-        `;
-      }).join('');
+
+      // Search box binding
+      const searchInput = document.getElementById('hist-search');
+      if (searchInput) {
+        searchInput.oninput = (e) => {
+          State.historySearchQuery = e.target.value.toLowerCase().trim();
+          applyHistoryFilters();
+        };
+      }
+
+      // Initial render
+      applyHistoryFilters();
 
     } catch (err) {
       Toast.show(`Error al cargar historial: ${err.message}`, 'error');
     }
   },
 };
+
+// ── History page dynamic filtering ───────────────────────────
+function applyHistoryFilters() {
+  const tbody = document.getElementById('history-body');
+  if (!tbody) return;
+
+  const filtered = (State.historyPosts || []).filter(post => {
+    // Status filter
+    const matchStatus = State.historyStatusFilter === 'all' || post.status === State.historyStatusFilter;
+    
+    // Type filter
+    const matchType = State.historyTypeFilter === 'all' || post.type === State.historyTypeFilter;
+
+    // Search query
+    const content = (post.content_edited || post.content || '').toLowerCase();
+    const sector = (post.sector || '').toLowerCase();
+    const source = (post.source_name || '').toLowerCase();
+    const matchSearch = !State.historySearchQuery || 
+                        content.includes(State.historySearchQuery) || 
+                        sector.includes(State.historySearchQuery) || 
+                        source.includes(State.historySearchQuery);
+
+    return matchStatus && matchType && matchSearch;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:40px">Sin resultados para esta selección</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(post => {
+    const preview = (post.content_edited || post.content || '').slice(0, 80) + '…';
+    return `
+      <tr style="cursor:pointer;" class="history-row" data-id="${post.id}">
+        <td style="padding-left:20px; color:var(--text-muted)">${formatDate(post.published_at || post.created_at)}</td>
+        <td>${renderTypeBadge(post.type)}</td>
+        <td>${renderSectorBadge(post.sector)}</td>
+        <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="Ver detalle">${preview}</td>
+        <td style="color:var(--text-muted); font-size:12px">${post.source_name || '—'}</td>
+        <td>${renderStatusPill(post.status)}</td>
+        <td>
+          ${post.status === 'published' && post.linkedin_post_id ? `<a href="https://www.linkedin.com/feed/update/${post.linkedin_post_id}" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">🔗 Ver</a>` : ''}
+          ${post.status === 'rejected' && post.rejection_reason ? `<span class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); alert('Motivo de rechazo: ${post.rejection_reason.replace(/'/g, "\\'")}')">💬 Motivo</span>` : ''}
+          ${post.status === 'edited' && post.edit_reason ? `<span class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); alert('Cambios explicados: ${post.edit_reason.replace(/'/g, "\\'")}')">📝 Motivo</span>` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Bind click listener on rows to open detail modal
+  tbody.querySelectorAll('.history-row').forEach(row => {
+    row.onclick = () => {
+      const postId = row.dataset.id;
+      const post = State.historyPosts.find(p => p.id === postId);
+      if (post) {
+        showPostDetailModal(post);
+      }
+    };
+  });
+}
+
+function showPostDetailModal(post) {
+  const overlay = document.getElementById('post-modal');
+  const titleEl = document.getElementById('modal-title');
+  const bodyEl = document.getElementById('modal-body');
+  if (!overlay || !bodyEl) return;
+
+  if (titleEl) {
+    titleEl.textContent = `Detalle del Post — Estado: ${post.status.toUpperCase()}`;
+  }
+
+  let feedbackSection = '';
+  if (post.status === 'rejected' && post.rejection_reason) {
+    feedbackSection = `
+      <div style="background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.2); border-radius:6px; padding:12px; margin-top:16px">
+        <strong style="color:var(--accent-red); font-size:13px; display:block; margin-bottom:4px">❌ Motivo del rechazo:</strong>
+        <span style="font-size:13px; color:var(--text-secondary)">${post.rejection_reason}</span>
+      </div>
+    `;
+  } else if (post.status === 'edited' && post.edit_reason) {
+    feedbackSection = `
+      <div style="background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.2); border-radius:6px; padding:12px; margin-top:16px">
+        <strong style="color:var(--accent-blue); font-size:13px; display:block; margin-bottom:4px">📝 Cambios explicados:</strong>
+        <span style="font-size:13px; color:var(--text-secondary)">${post.edit_reason}</span>
+      </div>
+    `;
+  }
+
+  bodyEl.innerHTML = `
+    <div style="font-size:14px; color:var(--text-primary); line-height:1.6; white-space:pre-wrap; max-height:400px; overflow-y:auto; padding-right:10px">
+      ${post.content_edited || post.content}
+    </div>
+    ${feedbackSection}
+    <div style="margin-top:20px; padding-top:12px; border-top:1px solid var(--border); font-size:12px; color:var(--text-muted); display:grid; grid-template-columns: 1fr 1fr; gap:10px">
+      <div><strong>Sector:</strong> ${post.sector}</div>
+      <div><strong>Fuente:</strong> ${post.source_name || '—'}</div>
+      <div><strong>Score de relevancia:</strong> ${post.ai_score}/10</div>
+      <div><strong>Fecha de creación:</strong> ${formatDate(post.created_at)}</div>
+    </div>
+  `;
+
+  overlay.classList.add('visible');
+}
 
 // ── Preview Modal ──────────────────────────────────────────
 function initModal() {
