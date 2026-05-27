@@ -100,15 +100,23 @@ def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict
         from ai.learning_model import LearningModel
         learning = LearningModel()
         rejections = learning.get_recent_rejection_reasons(limit=5)
-        if rejections:
-            rejection_instructions = "\n=== RECHAZOS RECIENTES A EVITAR ===\n"
-            rejection_instructions += "El usuario ha rechazado recientemente los siguientes posts. Evita cometer los mismos errores o puntuar alto contenidos similares:\n"
-            for r in rejections:
-                snippet = r['content'][:150].replace('\n', ' ')
-                rejection_instructions += f"- Post rechazado: \"{snippet}...\"\n"
-                rejection_instructions += f"  Motivo del rechazo: {r['reason']}\n\n"
+        edits = learning.get_recent_edit_reasons(limit=5)
+        if rejections or edits:
+            rejection_instructions = "\n=== APRENDIZAJE DE DECISIONES DEL USUARIO ===\n"
+            if rejections:
+                rejection_instructions += "El usuario ha RECHAZADO recientemente los siguientes posts. Evita puntuar alto contenidos similares:\n"
+                for r in rejections:
+                    snippet = r['content'][:150].replace('\n', ' ')
+                    rejection_instructions += f"- Post rechazado: \"{snippet}...\"\n"
+                    rejection_instructions += f"  Motivo del rechazo: {r['reason']}\n\n"
+            if edits:
+                rejection_instructions += "El usuario ha EDITADO recientemente los siguientes posts por los siguientes motivos:\n"
+                for e in edits:
+                    snippet = e['content'][:150].replace('\n', ' ')
+                    rejection_instructions += f"- Post original: \"{snippet}...\"\n"
+                    rejection_instructions += f"  Corrección y motivo: {e['reason']}\n\n"
     except Exception as e:
-        log.warning("Could not append rejection instructions to relevance scorer: %s", e)
+        log.warning("Could not append user preferences to relevance scorer: %s", e)
 
     prompt = RELEVANCE_PROMPT.format(
         tipo=tipo,

@@ -256,15 +256,23 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
         from ai.learning_model import LearningModel
         learning = LearningModel()
         rejections = learning.get_recent_rejection_reasons(limit=5)
-        if rejections:
-            rejection_instructions = "\n=== RECHAZOS RECIENTES A EVITAR ===\n"
-            rejection_instructions += "El usuario ha rechazado recientemente los siguientes posts. Evita cometer los mismos errores o escribir con un estilo/enfoque similar:\n"
-            for r in rejections:
-                snippet = r['content'][:200].replace('\n', ' ')
-                rejection_instructions += f"- Post rechazado: \"{snippet}...\"\n"
-                rejection_instructions += f"  Motivo del rechazo: {r['reason']}\n\n"
+        edits = learning.get_recent_edit_reasons(limit=5)
+        if rejections or edits:
+            rejection_instructions = "\n=== APRENDIZAJE DE DECISIONES DEL USUARIO ===\n"
+            if rejections:
+                rejection_instructions += "El usuario ha RECHAZADO recientemente los siguientes posts. Evita cometer los mismos errores o escribir con un estilo/enfoque similar:\n"
+                for r in rejections:
+                    snippet = r['content'][:200].replace('\n', ' ')
+                    rejection_instructions += f"- Post rechazado: \"{snippet}...\"\n"
+                    rejection_instructions += f"  Motivo del rechazo: {r['reason']}\n\n"
+            if edits:
+                rejection_instructions += "El usuario ha EDITADO recientemente los siguientes posts. Aprende de lo que corrigió y por qué para adaptarte a sus preferencias de estilo:\n"
+                for e in edits:
+                    snippet = e['content'][:200].replace('\n', ' ')
+                    rejection_instructions += f"- Post original: \"{snippet}...\"\n"
+                    rejection_instructions += f"  Corrección y motivo: {e['reason']}\n\n"
     except Exception as e:
-        log.warning("Could not append rejection instructions to content generator: %s", e)
+        log.warning("Could not append user preference instructions to content generator: %s", e)
 
     prompt = NORMATIVA_PROMPT.format(
         titulo=boe_entry.get("titulo", ""),
@@ -320,15 +328,23 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
         from ai.learning_model import LearningModel
         learning = LearningModel()
         rejections = learning.get_recent_rejection_reasons(limit=5)
-        if rejections:
-            rejection_instructions = "\n=== RECHAZOS RECIENTES A EVITAR ===\n"
-            rejection_instructions += "El usuario ha rechazado recientemente los siguientes posts. Evita cometer los mismos errores o escribir con un estilo/enfoque similar:\n"
-            for r in rejections:
-                snippet = r['content'][:200].replace('\n', ' ')
-                rejection_instructions += f"- Post rechazado: \"{snippet}...\"\n"
-                rejection_instructions += f"  Motivo del rechazo: {r['reason']}\n\n"
+        edits = learning.get_recent_edit_reasons(limit=5)
+        if rejections or edits:
+            rejection_instructions = "\n=== APRENDIZAJE DE DECISIONES DEL USUARIO ===\n"
+            if rejections:
+                rejection_instructions += "El usuario ha RECHAZADO recientemente los siguientes posts. Evita cometer los mismos errores o escribir con un estilo/enfoque similar:\n"
+                for r in rejections:
+                    snippet = r['content'][:200].replace('\n', ' ')
+                    rejection_instructions += f"- Post rechazado: \"{snippet}...\"\n"
+                    rejection_instructions += f"  Motivo del rechazo: {r['reason']}\n\n"
+            if edits:
+                rejection_instructions += "El usuario ha EDITADO recientemente los siguientes posts. Aprende de lo que corrigió y por qué para adaptarte a sus preferencias de estilo:\n"
+                for e in edits:
+                    snippet = e['content'][:200].replace('\n', ' ')
+                    rejection_instructions += f"- Post original: \"{snippet}...\"\n"
+                    rejection_instructions += f"  Corrección y motivo: {e['reason']}\n\n"
     except Exception as e:
-        log.warning("Could not append rejection instructions to content generator: %s", e)
+        log.warning("Could not append user preference instructions to content generator: %s", e)
 
     prompt = ACTUALIDAD_PROMPT.format(
         titulo=article.get("title", ""),

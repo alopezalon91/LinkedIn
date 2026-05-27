@@ -126,6 +126,7 @@ class LearningModel:
                                 "ai_score": d.get("ai_score", 0),
                                 "ai_urgency": d.get("ai_urgency", "baja"),
                                 "rejection_reason": d.get("rejection_reason"),
+                                "edit_reason": d.get("edit_reason"),
                                 "content": d.get("content", ""),
                             })
                         log.info("Successfully fetched %d decisions from Cloudflare.", len(mapped_decisions))
@@ -478,4 +479,26 @@ class LearningModel:
                     "type": d.get("source_type", ""),
                 })
         return rejections[:limit]
+
+    def get_recent_edit_reasons(self, limit: int = 5) -> list[dict[str, str]]:
+        """
+        Returns a list of recent edited posts and why they were edited.
+        
+        Each item is a dict with keys:
+            content - the original post content
+            reason  - the edit explanation/reason
+            sector  - post sector
+            type    - post type (normativa/actualidad)
+        """
+        decisions = self._data.get("decisions", [])
+        edits = []
+        for d in decisions:
+            if d.get("decision") == "edited" and d.get("edit_reason"):
+                edits.append({
+                    "content": d.get("content", ""),
+                    "reason": d.get("edit_reason", ""),
+                    "sector": d.get("sector", ""),
+                    "type": d.get("source_type", ""),
+                })
+        return edits[:limit]
 

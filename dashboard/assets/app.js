@@ -284,31 +284,111 @@ const PostActions = {
     const editedContent = isEditing ? editor.value : null;
 
     const originalContent = State.posts.find(p => p.id === postId)?.content || '';
-    const editRatio = editedContent
-      ? Math.round((levenshteinRatio(originalContent, editedContent)) * 100) / 100
-      : 0;
+    const hasEdits = editedContent && editedContent.trim() !== originalContent.trim();
+
+    if (hasEdits) {
+      PostActions.showEditFeedbackModal(postId, editedContent);
+      return;
+    }
 
     try {
-      btn.disabled = true;
-      btn.innerHTML = '<div class="loading-spinner"></div>';
-      await API.approvePost(postId, editedContent);
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loading-spinner"></div>';
+      }
+      await API.approvePost(postId, null);
       await API.recordFeedback({
         post_id: postId,
-        decision: editedContent ? 'edited' : 'approved',
-        edit_ratio: editRatio,
+        decision: 'approved',
+        edit_ratio: 0,
         time_to_decide_seconds: null,
         post_type: State.posts.find(p => p.id === postId)?.type,
         sector: State.posts.find(p => p.id === postId)?.sector,
         source_name: State.posts.find(p => p.id === postId)?.source_name,
         ai_score: State.posts.find(p => p.id === postId)?.ai_score,
-        char_count: (editedContent || originalContent).length,
+        char_count: originalContent.length,
       });
       Toast.show('Post aprobado ✅', 'success');
       removePostCard(postId);
     } catch (err) {
       Toast.show(`Error: ${err.message}`, 'error');
-      btn.disabled = false;
-      btn.innerHTML = '✅ Aprobar';
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '✅ Aprobar';
+      }
+    }
+  },
+
+  showEditFeedbackModal(postId, editedContent) {
+    const overlay = document.getElementById('edit-feedback-modal');
+    if (!overlay) {
+      PostActions.confirmApproveWithEdits(postId, editedContent, 'Editado sin comentarios');
+      return;
+    }
+
+    const reasonInput = document.getElementById('edit-reason-input');
+    if (reasonInput) reasonInput.value = '';
+
+    overlay.classList.add('visible');
+
+    // Bind quick tags inside edit modal
+    overlay.querySelectorAll('.rej-tag').forEach(btn => {
+      btn.onclick = () => {
+        if (reasonInput) {
+          reasonInput.value = btn.getAttribute('data-text');
+        }
+      };
+    });
+
+    document.getElementById('confirm-edit-feedback-btn').onclick = async () => {
+      const reason = reasonInput ? reasonInput.value.trim() : '';
+      overlay.classList.remove('visible');
+      stopEditMicRecording();
+      await PostActions.confirmApproveWithEdits(postId, editedContent, reason || 'Editado sin comentarios');
+    };
+
+    document.getElementById('cancel-edit-feedback-btn').onclick = () => {
+      overlay.classList.remove('visible');
+      stopEditMicRecording();
+    };
+
+    document.getElementById('close-edit-feedback').onclick = () => {
+      overlay.classList.remove('visible');
+      stopEditMicRecording();
+    };
+  },
+
+  async confirmApproveWithEdits(postId, editedContent, reason) {
+    const btn = document.getElementById(`approve-btn-${postId}`);
+    const originalContent = State.posts.find(p => p.id === postId)?.content || '';
+    const editRatio = Math.round((levenshteinRatio(originalContent, editedContent)) * 100) / 100;
+
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loading-spinner"></div>';
+      }
+      await API.approvePost(postId, editedContent);
+      await API.recordFeedback({
+        post_id: postId,
+        decision: 'edited',
+        edit_ratio: editRatio,
+        edit_reason: reason,
+        time_to_decide_seconds: null,
+        post_type: State.posts.find(p => p.id === postId)?.type,
+        sector: State.posts.find(p => p.id === postId)?.sector,
+        source_name: State.posts.find(p => p.id === postId)?.source_name,
+        ai_score: State.posts.find(p => p.id === postId)?.ai_score,
+        char_count: editedContent.length,
+      });
+      Toast.show('Post aprobado con cambios ✅', 'success');
+      removePostCard(postId);
+    } catch (err) {
+      Toast.show(`Error: ${err.message}`, 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '✅ Aprobar';
+      }
     }
   },
 
@@ -829,6 +909,79 @@ function stopMicRecording() {
   }
 }
 
+// ── Edit Feedback Modal & Voice Recognition ─────────────────
+let editVoiceRecognition = null;
+
+function initEditFeedbackModal() {
+  const overlay = document.getElementById('edit-feedback-modal');
+  if (!overlay) return;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.classList.remove('visible'); stopEditMicRecording(); } });
+  initEditVoiceRecognition();
+}
+
+function initEditVoiceRecognition() {
+  const micBtn = document.getElementById('edit-mic-btn');
+  const textInput = document.getElementById('edit-reason-input');
+  const statusEl = document.getElementById('edit-mic-status');
+  if (!micBtn) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    micBtn.style.display = 'none';
+    return;
+  }
+
+  editVoiceRecognition = new SpeechRecognition();
+  editVoiceRecognition.lang = 'es-ES';
+  editVoiceRecognition.continuous = false;
+  editVoiceRecognition.interimResults = false;
+
+  editVoiceRecognition.onstart = () => {
+    micBtn.classList.add('recording');
+    micBtn.textContent = '🛑';
+    if (statusEl) statusEl.style.display = 'flex';
+  };
+
+  editVoiceRecognition.onend = () => {
+    micBtn.classList.remove('recording');
+    micBtn.textContent = '🎙️';
+    if (statusEl) statusEl.style.display = 'none';
+  };
+
+  editVoiceRecognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+    if (event.error !== 'no-speech') {
+      Toast.show('Error al grabar voz: ' + event.error, 'error');
+    }
+    micBtn.classList.remove('recording');
+    micBtn.textContent = '🎙️';
+    if (statusEl) statusEl.style.display = 'none';
+  };
+
+  editVoiceRecognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    if (text && textInput) {
+      const prevVal = textInput.value.trim();
+      textInput.value = prevVal ? prevVal + ' ' + text : text;
+    }
+  };
+
+  micBtn.addEventListener('click', () => {
+    if (micBtn.classList.contains('recording')) {
+      editVoiceRecognition.stop();
+    } else {
+      editVoiceRecognition.start();
+    }
+  });
+}
+
+function stopEditMicRecording() {
+  const micBtn = document.getElementById('edit-mic-btn');
+  if (micBtn && micBtn.classList.contains('recording') && editVoiceRecognition) {
+    editVoiceRecognition.stop();
+  }
+}
+
 // ── App Entry Point ────────────────────────────────────────
 const App = {
   init(page) {
@@ -839,6 +992,7 @@ const App = {
     }
     initModal();
     initRejectModal();
+    initEditFeedbackModal();
     initHistoryModal();
     if (Pages[page]) Pages[page]();
   },

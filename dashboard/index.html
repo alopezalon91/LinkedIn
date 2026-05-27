@@ -219,6 +219,41 @@
   </div>
 </div>
 
+<!-- ── Modal: Edit Reason ── -->
+<div class="modal-overlay" id="edit-feedback-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Explicar Cambios Realizados</h2>
+      <button class="btn-icon" id="close-edit-feedback">✕</button>
+    </div>
+    <div class="modal-body" style="padding-top:10px">
+      <p style="margin-bottom:12px; color:var(--text-muted); font-size:14px">
+        Indica qué has editado y por qué, para entrenar a la inteligencia artificial:
+      </p>
+      
+      <!-- Quick tags -->
+      <div class="rejection-tags" style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap">
+        <button class="rej-tag" data-text="Eliminar CTA / autobombo / referencias comerciales directas.">🚫 Eliminar CTA/Ventas</button>
+        <button class="rej-tag" data-text="Corregir datos de la noticia, cifras, importes o plazos.">📊 Corregir datos</button>
+        <button class="rej-tag" data-text="Cambiar el tono para que sea más informativo y menos agresivo.">🗣️ Cambiar tono</button>
+        <button class="rej-tag" data-text="Acortar el texto o resumir explicaciones demasiado largas.">✂️ Acortar/Resumir</button>
+      </div>
+
+      <div style="position:relative">
+        <textarea id="edit-reason-input" class="form-input" rows="4" placeholder="Ej: He borrado el último párrafo porque mencionaba a MyTaxBot y no quiero hacer captación..." style="width:100%; box-sizing:border-box; padding-right:45px; resize:vertical; background: rgba(255,255,255,0.03); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px;"></textarea>
+        <button id="edit-mic-btn" class="btn-icon" style="position:absolute; right:10px; bottom:12px; font-size:18px; width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; cursor:pointer; border:none; transition:all 0.2s;" title="Dictar cambios">🎙️</button>
+      </div>
+      <div id="edit-mic-status" style="font-size:12px; color:var(--accent-red); margin-top:5px; display:none; align-items:center; gap:5px">
+        <span class="pulse-dot"></span> Grabando voz... Pulsa de nuevo el micrófono para parar.
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end">
+      <button class="btn btn-ghost" id="cancel-edit-feedback-btn">Cancelar</button>
+      <button class="btn btn-success" id="confirm-edit-feedback-btn">✓ Guardar y Aprobar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Toast container ── -->
 <div class="toast-container" id="toast-container"></div>
 

@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS decisions (
   ai_score REAL,                            -- Copied from post for fast analytics
   char_count INTEGER,                       -- Copied from post for fast analytics
   rejection_reason TEXT,                    -- Reason provided by user when rejecting
+  edit_reason TEXT,                         -- Reason/explanation provided by user when editing
   created_at TEXT NOT NULL
 );
 
