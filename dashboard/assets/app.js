@@ -234,6 +234,13 @@ function renderPostCard(post) {
       <!-- Editor (hidden by default) -->
       <textarea class="post-editor" id="editor-${post.id}" maxlength="2500">${post.content_edited || post.content || ''}</textarea>
       <div class="char-counter ok" id="counter-${post.id}">${(post.content_edited || post.content || '').length} / 2500 caracteres</div>
+      ${post.content_edited ? `
+        <div style="margin-top: 8px;">
+          <button class="btn btn-ghost btn-sm" onclick="PostActions.undoRegenerate('${post.id}')" style="color: var(--accent-amber); font-size: 12px; padding: 4px 8px;">
+            ↩️ Deshacer cambios
+          </button>
+        </div>
+      ` : ''}
 
       <!-- AI Rewrite Section (visible only when editing) -->
       <div class="ai-rewrite-section" id="ai-rewrite-section-${post.id}" style="display:none; margin-top:12px; padding:12px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:6px;">
@@ -262,6 +269,7 @@ function renderPostCard(post) {
       <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">
         👁 Preview
       </button>
+      ${post.media_base64 ? `<button class="btn btn-ghost btn-sm" onclick="PostActions.showPDF('${post.id}', '${post.media_base64}')">📄 Ver PDF</button>` : ''}
       <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">
         ✏️ Editar
       </button>
@@ -299,6 +307,19 @@ function renderPostCard(post) {
 
 // ── Post Actions ───────────────────────────────────────────
 const PostActions = {
+  showPDF(postId, base64) {
+    const pdfWindow = window.open("");
+    if (pdfWindow) {
+      pdfWindow.document.write(
+        `<iframe width='100%' height='100%' style='border:none;margin:0;padding:0;' src='data:application/pdf;base64,${base64}'></iframe>`
+      );
+      pdfWindow.document.body.style.margin = "0";
+      pdfWindow.document.title = "Carrusel PDF";
+    } else {
+      Toast.show('Por favor, permite los popups para ver el PDF.', 'warning');
+    }
+  },
+
   openScheduleModal(postId) {
     const modal = document.getElementById('schedule-modal');
     modal.style.display = 'flex';
@@ -650,6 +671,9 @@ const PostActions = {
 
       if (input) input.value = '';
       Toast.show('Post reescrito con IA exitosamente 🪄', 'success');
+      
+      // Re-render to show the Undo button
+      renderQueue();
 
     } catch (err) {
       Toast.show(`Error al rehacer post: ${err.message}`, 'error');
@@ -661,6 +685,35 @@ const PostActions = {
       if (statusEl) {
         statusEl.style.display = 'none';
       }
+    }
+  },
+
+  async undoRegenerate(postId) {
+    const editor = document.getElementById(`editor-${postId}`);
+    const postIdx = State.posts.findIndex(p => p.id === postId);
+    if (postIdx === -1) return;
+    const post = State.posts[postIdx];
+    
+    try {
+      await API.request(`/api/posts/${postId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ content_edited: null })
+      });
+      
+      // Update state
+      post.content_edited = null;
+      
+      if (editor) {
+        editor.value = post.content;
+        editor.dispatchEvent(new Event('input'));
+      }
+      
+      Toast.show('Cambios deshechos. Volviendo a la versión original.', 'success');
+      
+      // Re-render the queue to remove the undo button
+      renderQueue();
+    } catch (err) {
+      Toast.show(`Error al deshacer cambios: ${err.message}`, 'error');
     }
   },
 };

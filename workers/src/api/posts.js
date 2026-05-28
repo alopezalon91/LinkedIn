@@ -52,7 +52,7 @@ export async function listPosts(db, params = {}) {
 
   const [rowsResult, countResult] = await Promise.all([
     db.prepare(`
-      SELECT p.*, d.rejection_reason, d.edit_reason
+      SELECT p.*, p.media_base64, d.rejection_reason, d.edit_reason
       FROM posts p
       LEFT JOIN (
         SELECT post_id, rejection_reason, edit_reason,
@@ -91,7 +91,7 @@ export async function listPosts(db, params = {}) {
  */
 export async function getPost(db, id) {
   const row = await db.prepare(`
-    SELECT p.*, d.rejection_reason, d.edit_reason
+    SELECT p.*, p.media_base64, d.rejection_reason, d.edit_reason
     FROM posts p
     LEFT JOIN (
       SELECT post_id, rejection_reason, edit_reason,
@@ -140,14 +140,14 @@ export async function createPost(db, data) {
       id, type, sector, status, content, content_edited,
       source_id, source_url, source_name,
       urgency, ai_score, confidence_score,
-      char_count, hashtags,
+      char_count, hashtags, media_base64,
       scheduled_at, published_at, linkedin_post_id,
       created_at, updated_at
     ) VALUES (
       ?, ?, ?, 'pending', ?, NULL,
       ?, ?, ?,
       ?, ?, ?,
-      ?, ?,
+      ?, ?, ?,
       NULL, NULL, NULL,
       ?, ?
     )
@@ -164,6 +164,7 @@ export async function createPost(db, data) {
     data.confidence_score ?? null,
     charCount,
     hashtags,
+    data.media_base64 ?? null,
     now,
     now,
   ).run();

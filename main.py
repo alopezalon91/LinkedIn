@@ -166,19 +166,30 @@ def run_boe_module(date: str | None = None) -> list[dict]:
 
     # Step 3 – Generate posts (cap to MAX_POSTS_PER_RUN)
     posts: list[dict] = []
-    for entry in scored_entries[:MAX_POSTS_PER_RUN]:
+    
+    def _gen_post(entry):
         score_data = entry.get("_score_data", {})
         try:
             post = generate_normativa_post(entry, score_data)
             post["post_id"] = str(uuid.uuid4())
-            posts.append(post)
             log.info(
                 "Generated normativa post: %s (score=%d urgency=%s chars=%d valid=%s)",
                 post["post_id"][:8], post["ai_score"], post["ai_urgency"],
                 post["char_count"], post["valid"],
             )
+            return post
         except RuntimeError as exc:
             log.error("Post generation failed for BOE entry %s: %s", entry.get("id"), exc)
+            return None
+
+    import concurrent.futures
+    items_to_generate = scored_entries[:MAX_POSTS_PER_RUN]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [executor.submit(_gen_post, entry) for entry in items_to_generate]
+        for future in concurrent.futures.as_completed(futures):
+            res = future.result()
+            if res:
+                posts.append(res)
 
     return posts
 
@@ -212,22 +223,33 @@ def run_news_module(query: Optional[str] = None) -> list[dict]:
 
     # Step 4 – Generate posts
     posts: list[dict] = []
-    for article in scored_articles[:MAX_POSTS_PER_RUN]:
+    
+    def _gen_post(article):
         score_data = article.get("_score_data", {})
         try:
             post = generate_actualidad_post(article, score_data)
             post["post_id"] = str(uuid.uuid4())
-            posts.append(post)
             log.info(
                 "Generated actualidad post: %s (score=%d source=%s chars=%d valid=%s)",
                 post["post_id"][:8], post["ai_score"],
                 post.get("source_name", "?"), post["char_count"], post["valid"],
             )
+            return post
         except RuntimeError as exc:
             log.error(
                 "Post generation failed for article %s: %s",
                 article.get("id"), exc,
             )
+            return None
+
+    import concurrent.futures
+    items_to_generate = scored_articles[:MAX_POSTS_PER_RUN]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [executor.submit(_gen_post, article) for article in items_to_generate]
+        for future in concurrent.futures.as_completed(futures):
+            res = future.result()
+            if res:
+                posts.append(res)
 
     return posts
 

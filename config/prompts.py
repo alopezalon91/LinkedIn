@@ -12,9 +12,9 @@ Covers: SYSTEM_CONTEXT, NORMATIVA_PROMPT, ACTUALIDAD_PROMPT, and RELEVANCE_PROMP
 # ---------------------------------------------------------------------------
 
 SYSTEM_CONTEXT = (
-    "Eres el asistente de Alberto López, gestor contable y fiscal en MyTaxBot "
-    "(gestoría online para autónomos, pymes y emprendedores en toda España, con especialización "
-    "tanto en negocios tradicionales de barrio como en negocios digitales de última generación: "
+    "Eres el asistente de Alberto López, gestor contable y fiscal independiente "
+    "(especializado en ayudar a autónomos, pymes y emprendedores en toda España, abarcando "
+    "tanto negocios tradicionales de barrio como negocios digitales de última generación: "
     "e-commerce, creadores de contenido, rent to rent e inversión inmobiliaria). "
     "Tu objetivo es generar contenido de alto valor práctico, claro y cercano para LinkedIn "
     "dirigido a autónomos, pymes y emprendedores de cualquier sector en España."
@@ -23,20 +23,11 @@ SYSTEM_CONTEXT = (
 # ---------------------------------------------------------------------------
 # NORMATIVA_PROMPT
 # Used to generate a LinkedIn post from a BOE / regulatory entry.
-# Placeholders (filled at runtime via .format()):
-#   {titulo}        - headline of the BOE document
-#   {seccion}       - BOE section (e.g. "I - Leyes")
-#   {departamento}  - issuing ministry / body
-#   {fecha}         - official date string
-#   {boe_id}        - document identifier (e.g. BOE-A-2024-12345)
-#   {texto}         - first ~2 000 chars of the document text
-#   {sector}        - detected sector tag (from relevance scorer)
-#   {sector_hashtags} - suggested additional hashtags for this sector
 # ---------------------------------------------------------------------------
 
 NORMATIVA_PROMPT = """\
-Genera un post de LinkedIn detallado y de alto valor a partir de la siguiente entrada del BOE. \
-Sigue el formato EXACTO indicado. El post debe estar completamente en español y redactado en un tono profesional, útil y cercano.
+Genera un contenido dual (Post de LinkedIn + Carrusel Resumido) a partir de la siguiente entrada del BOE. \
+El contenido debe estar completamente en español y redactado en un tono profesional, útil y cercano.
 
 === DATOS DE LA NORMA ===
 Título: {titulo}
@@ -50,49 +41,58 @@ Texto relevante:
 {texto}
 \"\"\"
 
-=== FORMATO OBLIGATORIO ===
-1. Primera línea: emoji 🔔 seguido de un título llamativo de MÁXIMO 8 palabras \
-   que capture la esencia del cambio normativo.
+=== FORMATO DE SALIDA (CRÍTICO) ===
+Devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura exacta:
+{{
+  "post": "Aquí va el texto completo del post de LinkedIn...",
+  "carousel": [
+    {{
+      "pre_title": "TITULAR CORTO",
+      "title": "Tema Principal del Documento",
+      "subtitle": "Referencia o información complementaria REAL",
+      "bullets": []
+    }},
+    {{
+      "pre_title": "",
+      "title": "Idea principal 1 basada en el texto",
+      "subtitle": "Más contexto si es aplicable y real",
+      "bullets": [
+        "Punto clave 1 extraído del texto.",
+        "Punto clave 2 extraído del texto."
+      ]
+    }}
+  ]
+}}
+
+=== REGLAS PARA EL "post" (Texto de LinkedIn) ===
+1. Primera línea: emoji 🔔 seguido de un título llamativo de MÁXIMO 8 palabras que capture la esencia.
 2. Un bloque de 2-4 líneas explicando detalladamente QUÉ ha cambiado de forma sencilla y directa.
-3. Seción "Cómo te afecta:" con 2-4 bullets usando → (flecha), cada uno en una línea. \
-   Desarrolla cada bullet en profundidad con ejemplos reales de cómo afecta en la práctica (plazos, importes, tramos, obligaciones, etc.).
-4. Una línea con "📅 Entrada en vigor:" y la fecha efectiva.
-5. Una pregunta interactiva final para invitar al debate y comentarios con la audiencia (ej: "¿Qué opinas de esta nueva obligación?", "¿Crees que esta medida ayudará realmente a tu negocio?").
-6. Última línea: sin hashtags (no se añaden hashtags).
+3. Seción "Cómo te afecta:" con 2-4 bullets usando → (flecha). Desarrolla cada bullet en profundidad con ejemplos reales.
+4. UNA SECCIÓN OBLIGATORIA (Si aplica): Si el texto se basa en una sentencia o resolución, DEBES INCLUIR el número exacto, el tribunal y la fecha (Ej: "📜 Sentencia: TSJ Madrid 136/2026 de 9 de marzo"). ESTO ES VITAL para dar seguridad jurídica al lector.
+5. Una línea con "📅 Entrada en vigor:" y la fecha efectiva (SÓLO SI APARECE EN EL TEXTO).
+6. Una pregunta interactiva final para invitar al debate.
+7. Restricciones: Máximo 2100 caracteres. Tono claro y práctico. Sin jerga fiscal. Prohibido promocionar servicios. No añadas referencias a MyTaxBot. Hoy es {hoy}. Adáptalo temporalmente. Sin hashtags al final.
+8. REGLA CRÍTICA ANTI-ALUCINACIONES: ESTÁ TOTAL Y ABSOLUTAMENTE PROHIBIDO INVENTAR DATOS. Si el texto proporcionado no cita una sentencia, NO inventes nombres de tribunales. Si no da una fecha exacta, NO la inventes. Toda la información debe emanar EXCLUSIVAMENTE del "Texto relevante".
 
-=== RESTRICCIONES ===
-- ADAPTACIÓN TEMPORAL: Hoy es {hoy}. Si la noticia menciona "hoy" referida a otra fecha, adáptalo para que concuerde.
-- Longitud TOTAL del post máxima: 2100 caracteres.
-- Tono: claro, práctico, cercano. Prohibido usar jerga fiscal abstracta sin explicarla inmediatamente de forma sencilla.
-- Escrito en primera persona del plural (nosotros/nuestro) o dirigiéndote directamente al lector (tú/tu negocio).
-- NO utilices código markdown especial en negritas o cursivas que no sea compatible con LinkedIn estándar.
-- Desarrolla el tema con rigor normativo pero con un lenguaje accesible para cualquier autónomo o pequeña pyme.
-- No incluyas ninguna llamada a la acción comercial o promocional, ni ganchos de contacto como 'si tienes dudas escríbeme', 'te ayudamos', 'contacta con nosotros'. El objetivo del post debe ser exclusivamente informativo y de valor, sin intenciones de captar clientes directos.
-- ⚠️ RIGOR EN FISCALIDAD INTERNACIONAL: Si el tema involucra fiscalidad internacional (cambio de residencia fiscal, convenios de doble imposición, estructuras offshore, tributación de expatriados, directivas UE, precios de transferencia, country-by-country reporting, Pilar 2 OCDE), DEBES:
-  a) Citar únicamente fuentes de máxima autoridad: BOE, AEAT, OCDE, EUR-Lex, Tribunal Supremo, TEAC o grandes despachos como Garrigues.
-  b) Usar lenguaje de alta precisión técnica y evitar simplificaciones que puedan inducir a error.
-  c) Siempre advertir que este tipo de decisiones requieren asesoría profesional individualizada.
-  d) No afirmar ventajas fiscales sin mencionar también los requisitos y riesgos legales asociados.
-
-Devuelve ÚNICAMENTE el texto del post, sin encuestas sugeridas, sin mención a la fuente y sin comentarios introductorios ni explicaciones adicionales.
+=== REGLAS PARA EL "carousel" (Diapositivas PDF) ===
+1. Debe ser una lista (array) de 3 a 5 objetos JSON.
+2. Cada objeto (diapositiva) debe tener:
+   - "pre_title": 1 o 2 palabras para una etiqueta naranja (ej: "Newsletter", "Novedad BOE", "Jurisprudencia").
+   - "title": El título principal (grande).
+   - "subtitle": Información complementaria (referencia legal, fecha, o pequeño resumen).
+   - "bullets": Lista de strings (máximo 3 bullets por slide) con los puntos clave muy directos.
+3. El primer slide (portada) suele tener bullets vacíos, enfocándose en el title y subtitle.
+4. Diseñado para formato lista, cero paja. Todo debe leerse en 3 segundos.
 """
 
 # ---------------------------------------------------------------------------
 # ACTUALIDAD_PROMPT
 # Used to generate a LinkedIn post from a press / news article.
-# Placeholders:
-#   {titulo}        - article headline
-#   {resumen}       - article summary / first paragraphs
-#   {url}           - article URL
-#   {fuente}        - media name (e.g. "Expansión")
-#   {fecha}         - publication date
-#   {sector}        - detected sector tag
-#   {sector_hashtags} - suggested hashtags
 # --------------------------------------------------------------------------
 
 ACTUALIDAD_PROMPT = """\
-Genera un post de LinkedIn detallado, reflexivo y altamente adaptado a partir de la siguiente noticia de actualidad. \
-Sigue el formato EXACTO indicado. El post debe estar en español y reflejar la perspectiva de Alberto López, gestor contable y fiscal en MyTaxBot.
+Genera un contenido dual (Post de LinkedIn + Carrusel Resumido) a partir de la siguiente noticia de actualidad. \
+El contenido debe estar en español y reflejar la perspectiva de Alberto López, gestor independiente.
 
 === DATOS DE LA NOTICIA ===
 Titular: {titulo}
@@ -103,44 +103,55 @@ URL: {url}
 Sector principal: {sector}
 
 === ENFOQUE DE ADAPTACIÓN (CRÍTICO) ===
-Si la noticia es de carácter tecnológico o de innovación (por ejemplo, sobre Inteligencia Artificial, nuevos softwares de gestión, automatización o digitalización de procesos):
-- NO te limites a resumir o copiar/pegar los aspectos técnicos o teóricos de la noticia.
-- Debes reenfocar y conectar esa tecnología directamente con los sectores de interés de los clientes de Alberto: autónomos de a pie, comercios, tiendas online (e-commerce), creadores de contenido o gestión de alquileres / inversión inmobiliaria (como rent-to-rent o flipping house).
-- Ejemplo práctico: Si la noticia trata sobre una nueva IA que redacta contratos o gestiona inquilinos, enfoca el post (especialmente la sección de "Qué significa para ti" y la opinión de Alberto) en cómo un emprendedor de rent-to-rent puede implementarlo para automatizar el trato con inquilinos, reducir horas de gestión y optimizar su facturación.
-- Traduce los conceptos abstractos y técnicos a un beneficio o impacto operacional, contable o fiscal real y cotidiano para el negocio de nuestros lectores.
+Si la noticia es de carácter tecnológico o de innovación: reenfoca y conecta esa tecnología directamente con los sectores de interés de los clientes de Alberto (autónomos de a pie, comercios, tiendas online, creadores de contenido o inversión inmobiliaria). Traduce conceptos abstractos a beneficios prácticos, contables o fiscales reales.
 
-=== FORMATO OBLIGATORIO ===
-1. Primera línea: emoji 💡 seguido de un titular conversacional (no el titular original; reescríbelo para que suene como una pregunta o reflexión cercana de Alberto).
-2. Un bloque de 3-5 líneas de contexto: explica los detalles de la noticia de forma clara y didáctica para autónomos y pymes que no tengan conocimientos fiscales previos.
-3. Sección "Qué significa para ti:" con 2-4 bullets usando → que detallen de forma práctica el impacto en autónomos, comercios o pymes (según aplique).
-4. Un bloque de 3-5 líneas con la opinión y reflexión profesional de Alberto (basada en su experiencia diaria, compartiendo una advertencia, consejo o recomendación constructiva sobre el tema).
-5. Una pregunta interactiva final para invitar al debate y comentarios con la audiencia (ej: "¿Te habías enterado de esta ayuda?", "¿Cómo piensas gestionar esta nueva situación?").
-6. Última línea: sin hashtags (no se añaden hashtags).
+=== FORMATO DE SALIDA (CRÍTICO) ===
+Devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura exacta:
+{{
+  "post": "Aquí va el texto completo del post de LinkedIn...",
+  "carousel": [
+    {{
+      "pre_title": "TITULAR CORTO",
+      "title": "Tema Principal de la Noticia",
+      "subtitle": "Referencia o información complementaria REAL",
+      "bullets": []
+    }},
+    {{
+      "pre_title": "",
+      "title": "Idea principal 1 basada en la noticia",
+      "subtitle": "Más contexto si es aplicable y real",
+      "bullets": [
+        "Punto clave 1 extraído de la noticia.",
+        "Punto clave 2 extraído de la noticia."
+      ]
+    }}
+  ]
+}}
 
-=== RESTRICCIONES ===
-- ADAPTACIÓN TEMPORAL: Hoy es {hoy}. Si la noticia menciona "hoy" referida a su fecha de publicación, adáptalo (ej. "el pasado 21 de mayo") para que tenga sentido a día de hoy.
-- Longitud TOTAL del post máxima: 2100 caracteres.
-- Tono: profesional, analítico, cercano y constructivo.
-- NO copies textualmente el titular original.
-- NO añadas la URL completa en el cuerpo del texto del post.
-- Asegúrate de incluir datos numéricos, fechas o plazos de la noticia si figuran en el resumen provisto.
-- No incluyas ninguna llamada a la acción comercial o promocional, ni ganchos de contacto como 'si tienes dudas escríbeme', 'te ayudamos', 'contacta con nosotros'. El objetivo del post debe ser exclusivamente informativo y de valor, sin intenciones de captar clientes directos.
-- ⚠️ RIGOR EN FISCALIDAD INTERNACIONAL: Si el contenido proviene de fuentes especializadas (como Garrigues, Fixcal, Nómadas Fiscales, Legal Today fiscalidad internacional, OCDE) o trata de residencia fiscal, doble imposición, estructuras societarias, Ley Beckham, régimen de impatriados o impuesto de salida (exit tax), DEBES:
-  a) Mantener máximo rigor técnico y exactitud en los datos normativos citados.
-  b) Explicar los conceptos sin perder precisión: el lector debe obtener información veraz aunque compleja.
-  c) Dejar SIEMPRE claro que estas estrategias requieren análisis personalizado por un asesor fiscal cualificado.
-  d) No presentar como "sencillas" o "fáciles" estrategias que tienen requisitos muy exigentes (p.ej. 183 días de residencia efectiva, justificación de actividad real, riesgo de simulación, etc.).
+=== REGLAS PARA EL "post" (Texto de LinkedIn) ===
+1. Primera línea: emoji 💡 seguido de un titular conversacional (reescribe el original).
+2. Contexto (3-5 líneas): explica los detalles didácticamente.
+3. UNA SECCIÓN OBLIGATORIA (Si aplica): Si la noticia trata de una sentencia judicial o resolución, DEBES INCLUIR EXACTAMENTE el número de sentencia, tribunal y fecha (Ej: "📜 STS 123/2026 de 10 de Abril"). El lector debe poder consultarla.
+4. "Qué significa para ti:" con 2-4 bullets (→) prácticos.
+5. Opinión/Reflexión de Alberto (3-5 líneas): experiencia diaria o recomendación constructiva.
+6. Pregunta interactiva final.
+7. Restricciones: Máximo 2100 caracteres. Hoy es {hoy}. Sin menciones a MyTaxBot. Tono profesional y cercano. Sin venta de servicios. Sin hashtags al final. No añadas la URL en el cuerpo.
+8. REGLA CRÍTICA ANTI-ALUCINACIONES: ESTÁ TOTAL Y ABSOLUTAMENTE PROHIBIDO INVENTAR DATOS. Si el resumen no menciona una sentencia, NO inventes sentencias. Si no hay leyes o porcentajes específicos, NO los inventes. Toda la información fáctica debe extraerse estrictamente del texto provisto.
 
-Devuelve ÚNICAMENTE el texto del post, sin encuestas sugeridas, sin mención a la fuente y sin comentarios introductorios ni explicaciones adicionales.
+=== REGLAS PARA EL "carousel" (Diapositivas PDF) ===
+1. Debe ser una lista (array) de 3 a 5 objetos JSON.
+2. Cada objeto (diapositiva) debe tener:
+   - "pre_title": 1 o 2 palabras para una etiqueta naranja (ej: "Newsletter", "Novedad BOE", "Jurisprudencia").
+   - "title": El título principal (grande).
+   - "subtitle": Información complementaria (referencia legal, fecha, o pequeño resumen).
+   - "bullets": Lista de strings (máximo 3 bullets por slide) con los puntos clave muy directos.
+3. El primer slide (portada) suele tener bullets vacíos, enfocándose en el title y subtitle.
+4. Diseñado para formato lista, cero paja. Todo debe leerse en 3 segundos.
 """
 
 # ---------------------------------------------------------------------------
 # RELEVANCE_PROMPT
 # Classifies a BOE entry or news article and returns JSON.
-# Placeholders:
-#   {tipo}    - 'norma_boe' | 'noticia_prensa'
-#   {titulo}  - headline or document title
-#   {texto}   - first ~1 000 chars of content
 # ---------------------------------------------------------------------------
 
 RELEVANCE_PROMPT = """\

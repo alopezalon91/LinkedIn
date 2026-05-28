@@ -265,53 +265,20 @@ def deduplicate(articles: list[dict]) -> list[dict]:
 
 def check_credibility(articles: list[dict]) -> list[dict]:
     """
-    Keeps only credible articles:
-    - Official source articles always pass.
-    - Non-official articles must be covered by ≥2 different sources.
-
-    Args:
-        articles: Deduplicated article list (must have 'sources_covering' field).
-
-    Returns:
-        Filtered list of credible articles.
+    Skipped check_credibility to allow general news to pass.
     """
-    credible: list[dict] = []
-    for article in articles:
-        sources_covering = article.get("sources_covering", {article["source"]})
-        if article["is_official"] or len(sources_covering) >= MIN_SOURCES_FOR_CREDIBILITY:
-            credible.append(article)
-        else:
-            log.debug(
-                "Dropped (single-source, non-official): %s [%s]",
-                article["title"][:60],
-                article["source"],
-            )
-
-    log.info(
-        "Credibility filter: %d/%d articles passed",
-        len(credible),
-        len(articles),
-    )
-    return credible
+    return articles
 
 
 def keyword_prefilter(articles: list[dict]) -> list[dict]:
     """
-    Keeps only articles that contain at least one MYTAXBOT_FOCUS_KEYWORDS term
-    in their title or summary.
-
-    Args:
-        articles: Credibility-checked article list.
-
-    Returns:
-        Filtered list relevant to MyTaxBot's niche.
+    Uses Gemini Flash to batch-filter relevant news (business, economy, taxes, politics)
+    instead of relying on strict hardcoded keywords.
     """
-    filtered: list[dict] = []
-    for article in articles:
-        combined = f"{article.get('title', '')} {article.get('summary', '')}"
-        if text_matches_any_keyword(combined):
-            filtered.append(article)
-
+    from ai.relevance_scorer import batch_prefilter
+    log.info("Sending %d articles to Gemini Batch pre-filter...", len(articles))
+    filtered = batch_prefilter(articles)
+    
     log.info(
         "Keyword pre-filter: %d/%d articles passed",
         len(filtered),

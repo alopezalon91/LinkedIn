@@ -17,6 +17,7 @@ import logging
 import os
 import re
 import sys
+import json
 from datetime import datetime, timezone
 from typing import Any
 
@@ -24,6 +25,7 @@ import google.generativeai as genai
 
 from config.prompts import NORMATIVA_PROMPT, ACTUALIDAD_PROMPT, SYSTEM_CONTEXT
 from config.sectors import get_hashtags_for_sector
+from ai.pdf_generator import create_carousel_pdf
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -190,9 +192,9 @@ def _extract_hashtags(text: str) -> list[str]:
 # Internal post generator
 # ---------------------------------------------------------------------------
 
-def _generate_post(prompt: str, source_id: str) -> str:
+def _generate_post(prompt: str, source_id: str) -> dict:
     """
-    Sends the prompt to Gemini and returns the raw text response.
+    Sends the prompt to Gemini, requests JSON output, and returns the parsed dict.
     Raises RuntimeError on failure.
 
     Args:
@@ -200,27 +202,77 @@ def _generate_post(prompt: str, source_id: str) -> str:
         source_id: Identifier used for logging.
 
     Returns:
-        Raw post text from Gemini.
+        Dict with keys: "post" (str) and "carousel" (list[str]).
     """
     try:
         model = _get_model()
-        response = model.generate_content(prompt)
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(response_mime_type="application/json")
+        )
         text = response.text.strip()
-
-        # Strip any accidental markdown fencing
+        
+        # Sometimes the model still outputs markdown fences despite mime type config
         if text.startswith("```"):
             parts = text.split("```")
             text = parts[1] if len(parts) > 1 else text
-            if text.startswith("text") or text.startswith("markdown"):
+            if text.startswith("json"):
                 text = text.split("\n", 1)[1] if "\n" in text else text
-
-        log.info("Generated post for %s (%d chars)", source_id, len(text))
-        return text
+                
+        data = json.loads(text)
+        log.info("Generated post & carousel for %s", source_id)
+        return data
 
     except Exception as exc:
         log.error("Gemini generation error for %s: %s", source_id, exc)
         raise RuntimeError(f"Gemini generation failed: {exc}") from exc
 
+def _verify_and_correct_post(original_text: str, generated_json: dict, source_id: str) -> dict:
+    """
+    Second-pass AI validation. Checks for hallucinations by strictly comparing
+    the generated content with the original text.
+    """
+    prompt = f"""
+    Eres un auditor legal estricto. Tu trabajo es comparar un Post generado por IA (formato JSON)
+    y el Texto Original del que proviene.
+    
+    Tu objetivo: Detectar "alucinaciones" (datos, sentencias judiciales, fechas, tribunales o
+    leyes concretas mencionadas en el Post o el Carrusel que NO aparecen en el Texto Original).
+    
+    Si encuentras información inventada, ELIMÍNALA o corrígela para que el resultado sea 100% fiel.
+    
+    === TEXTO ORIGINAL ===
+    {original_text}
+    
+    === POST GENERADO (JSON) ===
+    {json.dumps(generated_json, ensure_ascii=False)}
+    
+    Devuelve ÚNICAMENTE el objeto JSON corregido con la misma estructura exacta ("post" y "carousel").
+    Si no hay alucinaciones, devuelve el JSON tal cual.
+    """
+    
+    try:
+        model = _get_model()
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(response_mime_type="application/json", temperature=0.0)
+        )
+        text = response.text.strip()
+        
+        if text.startswith("```"):
+            parts = text.split("```")
+            text = parts[1] if len(parts) > 1 else text
+            if text.startswith("json"):
+                text = text.split("\n", 1)[1] if "\n" in text else text
+                
+        corrected_data = json.loads(text)
+        log.info("Post verified & corrected for %s", source_id)
+        return corrected_data
+
+    except Exception as exc:
+        log.error("Gemini verification error for %s: %s", source_id, exc)
+        # Fallback to original if verification fails
+        return generated_json
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -293,7 +345,14 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
         prompt += "\n" + rejection_instructions
 
     raw_content = _generate_post(prompt, source_id)
-    final_content = truncate_if_needed(raw_content)
+    # Double validation pass
+    original_text = boe_entry.get("texto", "Sin texto disponible")
+    verified_content = _verify_and_correct_post(original_text, raw_content, source_id)
+    
+    post_text = verified_content.get("post", raw_content.get("post", ""))
+    carousel_slides = verified_content.get("carousel", raw_content.get("carousel", []))
+    
+    final_content = truncate_if_needed(post_text)
     validation = validate_post(final_content)
 
     return {
@@ -310,6 +369,7 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
         "ai_score": score_data.get("score", 0),
         "ai_urgency": score_data.get("urgency", "baja"),
         "ai_reason": score_data.get("reason", ""),
+        "media_base64": create_carousel_pdf(carousel_slides) if carousel_slides else "",
     }
 
 
@@ -369,7 +429,14 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
         prompt += "\n" + rejection_instructions
 
     raw_content = _generate_post(prompt, source_id)
-    final_content = truncate_if_needed(raw_content)
+    # Double validation pass
+    original_text = article.get("texto") or article.get("summary", "Sin resumen disponible")
+    verified_content = _verify_and_correct_post(original_text, raw_content, source_id)
+    
+    post_text = verified_content.get("post", raw_content.get("post", ""))
+    carousel_slides = verified_content.get("carousel", raw_content.get("carousel", []))
+    
+    final_content = truncate_if_needed(post_text)
     validation = validate_post(final_content)
 
     return {
@@ -387,4 +454,5 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
         "ai_score": score_data.get("score", 0),
         "ai_urgency": score_data.get("urgency", "baja"),
         "ai_reason": score_data.get("reason", ""),
+        "media_base64": create_carousel_pdf(carousel_slides) if carousel_slides else "",
     }

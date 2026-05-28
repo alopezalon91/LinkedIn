@@ -98,6 +98,7 @@ NEWS_RSS = {
     # ─── 10 Medios Especializados (Economía, Autónomos, Pymes) ───────
     "expansion": "https://sindicacion.expansion.com/rss/economia.xml",
     "eleconomista_autonomos": "https://www.eleconomista.es/rss/rss-autonomos-pymes.php",
+    "eleconomista_general": "https://www.eleconomista.es/rss/rss-nacional.php",
     "cinco_dias": "https://feeds.elpais.com/mrss-s/pages/ep/site/cincodias.com/seccion/economia/rss",
     "autonomo_y_emprendedor": "https://www.autonomosyemprendedor.es/rss",
     "pymes_y_autonomos": "https://www.pymesyautonomos.com/feed",

@@ -19,6 +19,7 @@ import logging
 import os
 import sys
 import time
+import sqlite3
 from typing import Any, Literal
 
 import google.generativeai as genai
@@ -26,7 +27,7 @@ import google.generativeai as genai
 from config.prompts import RELEVANCE_PROMPT, SYSTEM_CONTEXT
 
 # ---------------------------------------------------------------------------
-# Logging
+# Logging & SQLite Cache Setup
 # ---------------------------------------------------------------------------
 
 logging.basicConfig(
@@ -36,6 +37,35 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 log = logging.getLogger("relevance_scorer")
+
+CACHE_DB = os.path.join(os.path.dirname(__file__), "..", "cache.db")
+
+def _init_db():
+    with sqlite3.connect(CACHE_DB) as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS score_cache (
+                item_id TEXT PRIMARY KEY,
+                score_data TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+_init_db()
+
+def _get_cached_score(item_id: str) -> dict | None:
+    with sqlite3.connect(CACHE_DB) as conn:
+        cur = conn.execute("SELECT score_data FROM score_cache WHERE item_id = ?", (item_id,))
+        row = cur.fetchone()
+        if row:
+            return json.loads(row[0])
+    return None
+
+def _set_cached_score(item_id: str, data: dict):
+    with sqlite3.connect(CACHE_DB) as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO score_cache (item_id, score_data) VALUES (?, ?)",
+            (item_id, json.dumps(data))
+        )
 
 # ---------------------------------------------------------------------------
 # Gemini client initialisation
@@ -72,28 +102,58 @@ def _get_model() -> genai.GenerativeModel:
 _score_cache: dict[str, dict] = {}
 
 
+def batch_prefilter(articles: list[dict], batch_size: int = 50) -> list[dict]:
+    """
+    Takes a list of raw articles and uses Gemini Flash to quickly identify which ones
+    might be relevant to business, economy, taxes, or politics that affect business.
+    Returns the filtered list of articles.
+    """
+    model = _get_model()
+    relevant_ids = set()
+    
+    for i in range(0, len(articles), batch_size):
+        batch = articles[i:i+batch_size]
+        prompt = (
+            "Eres un filtro rápido. A continuación tienes una lista de titulares de noticias con un ID.\n"
+            "Devuelve ÚNICAMENTE un array JSON con los IDs de las noticias que estén relacionadas con economía, "
+            "política (que pueda afectar a leyes o impuestos), empresas, autónomos, tecnología o deducciones. "
+            "Ante la duda, INCLUYE el ID.\n\n"
+        )
+        for article in batch:
+            prompt += f"- ID: {article['id']} | Titular: {article['title']}\n"
+            
+        try:
+            response = model.generate_content(
+                prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
+            data = json.loads(response.text)
+            if isinstance(data, list):
+                for item in data:
+                    relevant_ids.add(str(item))
+        except Exception as e:
+            log.error("Batch prefilter error: %s", e)
+            # If error, fail open (keep all) to avoid losing news
+            for article in batch:
+                relevant_ids.add(str(article['id']))
+                
+        time.sleep(1) # Prevent rate limits
+        
+    return [a for a in articles if str(a['id']) in relevant_ids]
+
 # ---------------------------------------------------------------------------
-# Internal scoring function
+# Individual Scoring (Gemini)
 # ---------------------------------------------------------------------------
 
 def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict:
     """
     Calls Gemini Flash with RELEVANCE_PROMPT and parses the JSON response.
-
-    Args:
-        item_id: Unique identifier for caching (BOE id or article URL hash).
-        tipo:    'norma_boe' or 'noticia_prensa'.
-        titulo:  Title/headline of the item.
-        texto:   First ~1 000 chars of the content body.
-
-    Returns:
-        Dict with keys: score, sector, should_post, reason, urgency.
-        On failure returns a safe default (score=0, should_post=False).
     """
     # Cache hit
-    if item_id in _score_cache:
+    cached = _get_cached_score(item_id)
+    if cached:
         log.debug("Cache hit for %s", item_id)
-        return _score_cache[item_id]
+        return cached
 
     rejection_instructions = ""
     try:
@@ -165,7 +225,7 @@ def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict
         # Enforce should_post logic (score >= 6)
         result["should_post"] = result["score"] >= 6
 
-        _score_cache[item_id] = result
+        _set_cached_score(item_id, result)
         log.info(
             "Scored %s → score=%d sector=%s urgency=%s should_post=%s",
             item_id, result["score"], result["sector"],
@@ -237,36 +297,16 @@ def score_batch(
     force_keep_all: bool = False,
 ) -> list[dict]:
     """
-    Scores a batch of items (BOE entries or news articles), applies rate
-    limiting, and returns only those that should be posted, sorted by
-    score descending.
-
-    Args:
-        items:             List of BOE entry or news article dicts.
-        item_type:         'boe' to use score_boe_entry,
-                           'news' to use score_news_article.
-        rate_limit_sleep:  Seconds to sleep between API calls (default 0.5s).
-
-    Returns:
-        Filtered and sorted list of dicts. Each item gets a '_score_data'
-        field containing the full scoring result, plus top-level fields:
-        ai_score, ai_sector, ai_urgency, ai_reason merged in.
+    Scores a batch of items in parallel using ThreadPoolExecutor.
     """
     if not items:
         return []
 
     score_fn = score_boe_entry if item_type == "boe" else score_news_article
-
     scored: list[dict] = []
-    for i, item in enumerate(items):
-        log.info(
-            "Scoring item %d/%d (%s)…",
-            i + 1, len(items),
-            item.get("id", item.get("title", "?"))[:60],
-        )
 
+    def _process_item(item):
         score_data = score_fn(item)
-
         if score_data["should_post"] or force_keep_all:
             enriched = dict(item)
             enriched["_score_data"] = score_data
@@ -274,17 +314,26 @@ def score_batch(
             enriched["ai_sector"] = score_data["sector"]
             enriched["ai_urgency"] = score_data["urgency"]
             enriched["ai_reason"] = score_data["reason"]
-            scored.append(enriched)
+            return enriched
+        return None
 
-        # Rate limiting to stay within Gemini free-tier limits
-        if i < len(items) - 1:
+    import concurrent.futures
+    log.info("Scoring %d items with concurrency...", len(items))
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(_process_item, item): item for item in items}
+        for future in concurrent.futures.as_completed(futures):
+            res = future.result()
+            if res:
+                scored.append(res)
+            # Sleep slightly to avoid spamming the free API too fast
             time.sleep(rate_limit_sleep)
 
     # Sort by score descending (highest relevance first)
     scored.sort(key=lambda x: x["ai_score"], reverse=True)
 
     log.info(
-        "Batch scoring complete: %d/%d items passed (should_post=True)",
+        "Batch scoring complete: %d/%d items passed",
         len(scored), len(items),
     )
     return scored

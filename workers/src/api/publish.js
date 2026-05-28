@@ -59,8 +59,14 @@ export async function publishPost(db, env, postId) {
   const textToPublish = (post.content_edited ?? post.content).trim();
   if (!textToPublish) throw new Error('Post content is empty — cannot publish');
 
-  // 4. Build REST Posts payload
-  const payload = buildPostPayload(linkedin_urn, textToPublish);
+  // 4. If post has a PDF, upload it first to get the asset URN
+  let mediaUrn = null;
+  if (post.media_base64) {
+    mediaUrn = await uploadDocumentToLinkedIn(access_token, linkedin_urn, post.media_base64);
+  }
+
+  // 5. Build REST Posts payload
+  const payload = buildPostPayload(linkedin_urn, textToPublish, mediaUrn);
 
   // 5. POST to LinkedIn
   const response = await fetch(LINKEDIN_POSTS_URL, {
@@ -122,8 +128,8 @@ export async function publishPost(db, env, postId) {
  *
  * See: https://learn.microsoft.com/en-us/linkedin/marketing/integrations/community-management/shares/posts-api#create-a-post
  */
-function buildPostPayload(authorUrn, text) {
-  return {
+function buildPostPayload(authorUrn, text, mediaUrn = null) {
+  const payload = {
     author: authorUrn,
     commentary: text,
     visibility: 'PUBLIC',
@@ -132,6 +138,73 @@ function buildPostPayload(authorUrn, text) {
     },
     lifecycleState: 'PUBLISHED',
   };
+
+  if (mediaUrn) {
+    payload.content = {
+      media: {
+        id: mediaUrn,
+        title: "Documento Adjunto"
+      }
+    };
+  }
+  return payload;
+}
+
+// ─── Document Upload ──────────────────────────────────────────────────────────
+
+async function uploadDocumentToLinkedIn(access_token, authorUrn, base64Data) {
+  // 1. Register Upload
+  const registerRes = await fetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${access_token}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0'
+    },
+    body: JSON.stringify({
+      registerUploadRequest: {
+        recipes: ['urn:li:digitalmediaRecipe:feedshare-document'],
+        owner: authorUrn,
+        serviceRelationships: [{
+          relationshipType: 'OWNER',
+          identifier: 'urn:li:userGeneratedContent'
+        }]
+      }
+    })
+  });
+
+  if (!registerRes.ok) {
+    const err = await registerRes.text();
+    throw new Error(`Failed to register document upload: ${err}`);
+  }
+
+  const registerData = await registerRes.json();
+  const uploadUrl = registerData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+  const assetUrn = registerData.value.asset;
+
+  // 2. Decode Base64 to ArrayBuffer
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  // 3. Upload Binary Data
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${access_token}`,
+      'Content-Type': 'application/pdf'
+    },
+    body: bytes
+  });
+
+  if (!uploadRes.ok) {
+    const err = await uploadRes.text();
+    throw new Error(`Failed to upload document binary: ${err}`);
+  }
+
+  return assetUrn;
 }
 
 // ─── Rate limit info ──────────────────────────────────────────────────────────
