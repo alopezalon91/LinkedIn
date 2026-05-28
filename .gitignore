@@ -39,3 +39,19 @@ npm-debug.log*
 .idea/
 *.swp
 *.swo
+
+# Scratch and temp files
+*.pdf
+*.db
+*.sql
+cache.db
+*preview*.py
+*process*.py
+*fix*.py
+*remove*.py
+*recolor*.py
+*crop*.py
+*extract*.py
+*make_*.py
+upload_sql.py
+hardcode_pdfs.py
