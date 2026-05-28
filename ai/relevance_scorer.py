@@ -70,8 +70,8 @@ def _set_cached_score(item_id: str, data: dict):
 # ---------------------------------------------------------------------------
 # Gemini client initialisation
 # ---------------------------------------------------------------------------
-
-_MODEL_NAME = "gemini-2.5-flash"
+# AI parameters
+_MODEL_NAME = "gemini-2.0-flash"
 _model: genai.GenerativeModel | None = None
 
 def _get_model() -> genai.GenerativeModel:

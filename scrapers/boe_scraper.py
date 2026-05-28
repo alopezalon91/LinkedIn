@@ -132,38 +132,44 @@ def parse_sumario(data: dict) -> list[dict]:
 
     The BOE API returns a nested structure under data['sumario']['diario'].
     We navigate sections I, II, III and extract each 'item' node.
+    Supports both the old XML-like JSON schema and the new native JSON schema.
 
     Args:
         data: Parsed JSON dict from the BOE sumario API endpoint.
 
     Returns:
-        List of entry dicts with keys:
-            id, titulo, url_pdf, url_html, seccion, rango,
-            departamento, fecha
+        List of entry dicts
     """
     entries: list[dict] = []
 
     try:
-        # API structure: data → sumario → diario → secciones → departamentos → items
         sumario = data.get("data", {}).get("sumario", {})
         fecha_pub = sumario.get("metadatos", {}).get("fecha_publicacion", "")
-        diario_sections = (
-            sumario.get("diario", {})
-            .get("sumario_napi", {})
-            .get("seccion", [])
-        )
+        
+        diarios = sumario.get("diario", [])
+        if isinstance(diarios, dict):
+            diarios = [diarios]
 
-        # Normalise to list if the API returned a single dict
-        if isinstance(diario_sections, dict):
-            diario_sections = [diario_sections]
+        diario_sections = []
+        for d in diarios:
+            if "seccion" in d:
+                secs = d["seccion"]
+            else:
+                secs = d.get("sumario_napi", {}).get("seccion", [])
+            
+            if isinstance(secs, dict):
+                secs = [secs]
+            elif not isinstance(secs, list):
+                secs = []
+            diario_sections.extend(secs)
 
     except (AttributeError, TypeError) as exc:
         log.error("Unexpected BOE sumario structure: %s", exc)
         return []
 
     for section in diario_sections:
-        sec_id = section.get("@id", "")          # e.g. "1", "2", "3"
-        sec_num = section.get("@num", sec_id)    # Roman numeral label
+        sec_id = section.get("codigo", section.get("@id", ""))          # e.g. "1", "2", "3"
+        sec_num = section.get("numero", section.get("@num", sec_id))    # Roman numeral label
 
         # Only process sections we care about
         if sec_num not in BOE_RELEVANT_SECTIONS and sec_id not in BOE_RELEVANT_SECTIONS:
@@ -175,18 +181,43 @@ def parse_sumario(data: dict) -> list[dict]:
             departamentos = [departamentos]
 
         for dept in departamentos:
-            dept_nombre = dept.get("@nombre", "Desconocido")
-            items = dept.get("item", [])
-            if isinstance(items, dict):
-                items = [items]
+            dept_nombre = dept.get("nombre", dept.get("@nombre", "Desconocido"))
+            
+            items_raw = []
+            # Check direct items
+            dept_items = dept.get("item", [])
+            if isinstance(dept_items, dict):
+                items_raw.append(dept_items)
+            elif isinstance(dept_items, list):
+                items_raw.extend(dept_items)
+                
+            # Check items under epigrafe
+            epigrafes = dept.get("epigrafe", [])
+            if isinstance(epigrafes, dict):
+                epigrafes = [epigrafes]
+            for ep in epigrafes:
+                ep_items = ep.get("item", [])
+                if isinstance(ep_items, dict):
+                    items_raw.append(ep_items)
+                elif isinstance(ep_items, list):
+                    items_raw.extend(ep_items)
 
-            for item in items:
-                boe_id = item.get("@id", "")
+            for item in items_raw:
+                boe_id = item.get("identificador", item.get("@id", ""))
                 titulo = item.get("titulo", "Sin título")
                 rango = item.get("rango", "Otro")
-                url_pdf = item.get("urlPdf", {}).get("#text", "") if isinstance(item.get("urlPdf"), dict) else item.get("urlPdf", "")
-                url_html = item.get("urlHtml", "")
-                url_xml = item.get("urlXml", "")
+                
+                # New schema: url_pdf is dict with "texto", old schema: urlPdf is dict with "#text"
+                url_pdf = ""
+                if "url_pdf" in item:
+                    updf = item["url_pdf"]
+                    url_pdf = updf.get("texto", "") if isinstance(updf, dict) else updf
+                elif "urlPdf" in item:
+                    updf = item["urlPdf"]
+                    url_pdf = updf.get("#text", "") if isinstance(updf, dict) else updf
+                    
+                url_html = item.get("url_html", item.get("urlHtml", ""))
+                url_xml = item.get("url_xml", item.get("urlXml", ""))
 
                 if not boe_id:
                     continue
@@ -251,8 +282,8 @@ def get_document_text(boe_id: str, max_chars: int = 2000) -> str:
     if resp_html is not None:
         try:
             soup = BeautifulSoup(resp_html.text, "lxml")
-            # The article text lives inside <div class="texto_legal">
-            container = soup.find("div", class_="texto_legal") or soup.find("article")
+            # The article text lives inside <div id="textoxslt">
+            container = soup.find("div", id="textoxslt") or soup.find("div", class_="texto_legal") or soup.find("article")
             if container:
                 plain = container.get_text(separator=" ", strip=True)
                 return plain[:max_chars]

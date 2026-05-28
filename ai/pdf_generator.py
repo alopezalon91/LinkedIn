@@ -27,17 +27,13 @@ def strip_emojis(text: str) -> str:
 def draw_slide_background(c, width, height, current_slide, total_slides, is_cover=False):
     """Dibuja el fondo y la geometría minimalista digital."""
     # ----------------------------------------------------
-    # Fondo con Gradiente Elegante
+    # Fondo con Gradiente Elegante (Oscuro unificado)
     # ----------------------------------------------------
     steps = 80
     rect_h = height / steps
     
-    if is_cover:
-        # De un Navy nocturno muy oscuro a un Azul Navy medio-brillante
-        c1, c2 = (5, 10, 16), (30, 56, 81) # #050a10 to #1e3851
-    else:
-        # De blanco puro a un gris azulado sutil pero claramente visible
-        c1, c2 = (255, 255, 255), (218, 227, 236) # pure white to #dae3ec
+    # De un Navy nocturno muy oscuro a un Azul Navy medio-brillante
+    c1, c2 = (5, 10, 16), (30, 56, 81) # #050a10 to #1e3851
         
     for i in range(steps):
         ratio = i / float(steps)
@@ -51,22 +47,17 @@ def draw_slide_background(c, width, height, current_slide, total_slides, is_cove
     # ----------------------------------------------------
     # Geometría Identidad Elegante
     # ----------------------------------------------------
-    if is_cover:
-        # Detalles luminosos sutiles
-        c.setFillColor(HexColor('#0b141d')) # Un azul marino ligerísimamente más claro
-        c.circle(width - 100, height - 100, 400, fill=True, stroke=False)
-        
-        # Barra de acento fina Gold en la izquierda
-        c.setFillColor(ACCENT_GOLD)
-        c.rect(0, 0, 10, height, fill=True, stroke=False)
-    else:
-        # Contenido: minimalismo puro.
-        # Barra lateral finísima Navy para anclar visualmente
-        c.setFillColor(ACCENT_DEEP_NAVY)
-        c.rect(0, 0, 6, height, fill=True, stroke=False)
-        
+    # Detalles luminosos sutiles
+    c.setFillColor(HexColor('#0b141d')) # Un azul marino ligerísimamente más claro
+    c.circle(width - 100, height - 100, 400, fill=True, stroke=False)
+    
+    # Barra de acento fina Gold en la izquierda para unificar el diseño
+    c.setFillColor(ACCENT_GOLD)
+    c.rect(0, 0, 10, height, fill=True, stroke=False)
+    
+    if not is_cover:
         # Número de diapositiva (Círculo sutil superior derecha)
-        c.setFillColor(HexColor('#f8f9fa')) # Gris extra claro
+        c.setFillColor(HexColor('#0b141d'))
         c.circle(width - 100, height - 100, 35, fill=True, stroke=False)
         c.setFillColor(ACCENT_GOLD)
         c.setFont("Times-Roman", 32)
@@ -75,46 +66,30 @@ def draw_slide_background(c, width, height, current_slide, total_slides, is_cove
     # ----------------------------------------------------
     # Footer (Logo Variante A · Marco rectangular + Monograma entrelazado)
     # ----------------------------------------------------
-    text_color = TEXT_LIGHT if is_cover else TEXT_DARK
-    ivory = HexColor('#f5f0e8') if is_cover else HexColor('#1a2a3a')
+    import os
+    logo_filename = 'logo_cover.png'
+    logo_path = os.path.join(os.path.dirname(__file__), '..', 'assets', logo_filename)
 
-    logo_x = 60   # margen izquierdo
-    logo_y = 40   # altura base desde el fondo
-    box_w  = 115  # ancho marco — más grande para dar presencia
-    box_h  = 110  # alto marco
+    box_x = 50
+    box_y = 40
+    box_w = 160
+    box_h = 160
 
-    # Marco rectangular fino dorado (sello boutique)
-    c.setLineWidth(0.9)
-    c.setStrokeColor(ACCENT_GOLD)
-    c.rect(logo_x, logo_y, box_w, box_h, fill=False, stroke=True)
-
-    # A enorme en dorado serif — ocupa casi todo el marco
-    c.setFillColor(ACCENT_GOLD)
-    c.setFont("Times-Roman", 100)
-    c.drawString(logo_x + 6, logo_y + 8, "A")
-
-    # L en ivory serif — grande, superpuesta sobre la pata derecha de la A (solapado dramático)
-    c.setFillColor(ivory)
-    c.setFont("Times-Roman", 82)
-    c.drawString(logo_x + 52, logo_y + 18, "L")
-
-    # Línea horizontal fina dorada bajo el marco
-    c.setFillColor(ACCENT_GOLD)
-    c.rect(logo_x, logo_y - 4, box_w, 0.8, fill=True, stroke=False)
-
-    # Nombre "Alberto López" centrado bajo la línea
-    c.setFillColor(text_color)
-    c.setFont("Times-Roman", 22)
-    name_text = "Alberto López"
-    name_w = c.stringWidth(name_text, "Times-Roman", 22)
-    c.drawString(logo_x + (box_w - name_w) / 2, logo_y - 22, name_text)
+    if os.path.exists(logo_path):
+        # Insertar la imagen exacta original, manteniendo proporciones
+        c.drawImage(logo_path, box_x, box_y, width=box_w, height=box_h, mask='auto', preserveAspectRatio=True, anchor='sw')
+    else:
+        # Fallback temporal
+        c.setLineWidth(1.0)
+        c.setStrokeColor(ACCENT_GOLD)
+        c.rect(box_x, box_y, box_w, box_h, fill=False, stroke=True)
 
     # ----------------------------------------------------
     # Footer Derecho (Botón circular elegante)
     # ----------------------------------------------------
     if current_slide < total_slides:
         cx = width - 100
-        cy = logo_y + box_h // 2
+        cy = box_y + box_h // 2
 
         # Anillo exterior
         c.setStrokeColor(ACCENT_GOLD)
@@ -152,8 +127,8 @@ def create_carousel_pdf(slides: list[dict]) -> str:
         
         y_pos = height - 300 if is_cover else height - 300
         
-        text_color = TEXT_LIGHT if is_cover else TEXT_DARK
-        muted_color = MUTED_LIGHT if is_cover else MUTED_DARK
+        text_color = TEXT_LIGHT
+        muted_color = MUTED_LIGHT
         
         # 1. Píldora (Badge) - En la portada, o también en contenido
         if pre_title:
@@ -180,7 +155,7 @@ def create_carousel_pdf(slides: list[dict]) -> str:
                 fontName='Times-Roman' if is_cover else 'Helvetica-Bold',
                 fontSize=85 if is_cover else 70,
                 leading=105 if is_cover else 90,
-                textColor=text_color,
+                textColor=ACCENT_GOLD,
                 alignment=TA_LEFT,
             )
             p = Paragraph(title, t_style)

@@ -18,12 +18,12 @@ BOE_SUMARIO_URL = "https://www.boe.es/datosabiertos/api/boe/sumario/{date}"
 # {id} is the BOE document identifier (e.g. 'BOE-A-2024-12345')
 BOE_DOCUMENTO_URL = "https://www.boe.es/datosabiertos/api/documento/id/{id}"
 
-# BOE sections we care about (Roman numeral prefix matches API response)
-# I   = Disposiciones generales (Leyes, RD, Órdenes)
-# II  = Autoridades y personal
-# III = Otras disposiciones
-# IV  = Administración de Justicia  ← less relevant, kept for completeness
-BOE_RELEVANT_SECTIONS = {"I", "II", "III"}
+# BOE sections we care about (Roman numeral prefix matches old API response, Arabic matches new API)
+# I/1 = Disposiciones generales (Leyes, RD, Órdenes)
+# II/2A/2B = Autoridades y personal
+# III/3 = Otras disposiciones
+# IV/4 = Administración de Justicia  ← less relevant, kept for completeness
+BOE_RELEVANT_SECTIONS = {"I", "II", "III", "1", "2A", "2B", "3"}
 
 # Minimum section ranks to include (mapped to numeric priority for sorting)
 BOE_SECTION_PRIORITY = {
