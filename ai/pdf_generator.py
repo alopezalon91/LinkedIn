@@ -27,33 +27,21 @@ def strip_emojis(text: str) -> str:
 def draw_slide_background(c, width, height, current_slide, total_slides, is_cover=False):
     """Dibuja el fondo y la geometría minimalista digital."""
     # ----------------------------------------------------
-    # Fondo con Gradiente Elegante (Oscuro unificado)
     # ----------------------------------------------------
-    steps = 80
-    rect_h = height / steps
-    
-    # De un Navy nocturno muy oscuro a un Azul Navy medio-brillante
-    c1, c2 = (5, 10, 16), (30, 56, 81) # #050a10 to #1e3851
-        
-    for i in range(steps):
-        ratio = i / float(steps)
-        r = c1[0] + (c2[0] - c1[0]) * ratio
-        g = c1[1] + (c2[1] - c1[1]) * ratio
-        b = c1[2] + (c2[2] - c1[2]) * ratio
-        c.setFillColor(Color(r/255.0, g/255.0, b/255.0))
-        # Se dibuja desde arriba hacia abajo invirtiendo el índice
-        c.rect(0, height - (i + 1) * rect_h, width, rect_h + 1.5, fill=True, stroke=False)
-    
+    # Fondo Minimal 3 (Generado por IA, Recoloreado)
     # ----------------------------------------------------
-    # Geometría Identidad Elegante
-    # ----------------------------------------------------
-    # Detalles luminosos sutiles
-    c.setFillColor(HexColor('#0b141d')) # Un azul marino ligerísimamente más claro
-    c.circle(width - 100, height - 100, 400, fill=True, stroke=False)
+    import os
+    bg_filename = 'bg_carousel.png'
+    bg_path = os.path.join(os.path.dirname(__file__), '..', 'assets', bg_filename)
     
-    # Barra de acento fina Gold en la izquierda para unificar el diseño
-    c.setFillColor(ACCENT_GOLD)
-    c.rect(0, 0, 10, height, fill=True, stroke=False)
+    if os.path.exists(bg_path):
+        c.drawImage(bg_path, 0, 0, width=width, height=height, preserveAspectRatio=False)
+    else:
+        # Fallback dark navy
+        c.setFillColor(HexColor('#050a10'))
+        c.rect(0, 0, width, height, fill=True, stroke=False)
+    
+    # Sin geometría programada (ya viene en la imagen)
     
     if not is_cover:
         # Número de diapositiva (Círculo sutil superior derecha)
