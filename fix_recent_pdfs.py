@@ -6,7 +6,7 @@ from ai.pdf_generator import create_carousel_pdf
 
 api_key = os.environ.get("GEMINI_API_KEY", "")
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel("gemini-2.5-flash")
+model = genai.GenerativeModel("gemini-1.0-pro")
 
 # Solo posts PENDIENTES (status=pending) — no tocamos los rechazados ni publicados
 res = subprocess.run([
@@ -56,13 +56,25 @@ for p in posts:
     {content}
     """
 
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.GenerationConfig(response_mime_type="application/json")
-    )
-
+    import time
+    import requests
+    time.sleep(15)
+    
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"responseMimeType": "application/json"}
+    }
+    
     try:
-        resp_data = json.loads(response.text.strip())
+        resp = requests.post(url, json=payload)
+        resp_data = resp.json()
+        if "error" in resp_data:
+            print(f"API Error for {p['id']}: {resp_data['error']}")
+            continue
+            
+        text = resp_data["candidates"][0]["content"]["parts"][0]["text"]
+        resp_data = json.loads(text.strip())
         slides = resp_data.get("carousel", [])
         if slides:
             print(f"Generated slides for {p['id']}")
