@@ -156,14 +156,14 @@ def fetch_rss_feed(url: str, source_name: str) -> list[dict]:
         # Generate stable ID from URL hash
         article_id = hashlib.md5(article_url.encode()).hexdigest()[:12]
 
-        # Filter out articles older than 2 days to save processing time
+        # Filter out articles older than 12 hours to save API processing time
         from datetime import timedelta
         if published:
             try:
                 # published is ISO format e.g. '2026-05-28T10:00:00+00:00'
                 pub_dt = datetime.fromisoformat(published.replace('Z', '+00:00'))
                 now = datetime.now(timezone.utc)
-                if now - pub_dt > timedelta(days=2):
+                if now - pub_dt > timedelta(hours=12):
                     continue
             except Exception:
                 pass
@@ -171,6 +171,12 @@ def fetch_rss_feed(url: str, source_name: str) -> list[dict]:
         # Keyword-based sector detection
         combined = f"{title} {summary}"
         sector = get_sector_from_text(combined)
+
+        # To prevent hitting the 1500 requests/day Gemini Free API limit,
+        # aggressively discard news that don't trigger any sector keywords
+        # unless they come from an official/specialized source.
+        if sector == "general" and not is_official and source_name not in ["supercontable", "infoautonomos", "pymes_y_autonomos", "iberley", "cef", "expansion", "cinco_dias", "eleconomista_autonomos"]:
+            continue
 
         articles.append(
             {
@@ -185,7 +191,7 @@ def fetch_rss_feed(url: str, source_name: str) -> list[dict]:
             }
         )
 
-    log.info("  → %d articles from %s (recent only)", len(articles), source_name)
+    log.info("  → %d articles from %s (recent and relevant only)", len(articles), source_name)
     return articles
 
 
