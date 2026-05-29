@@ -21,8 +21,8 @@ def strip_emojis(text: str) -> str:
     return emoji.replace_emoji(text, replace='')
 
 def draw_clean_background(c, width, height, current_slide, total_slides, is_cover=False):
-    # 1. Fondo original exacto sin geometría (bg_no_geometry.png)
-    bg_filename = 'bg_no_geometry.png'
+    # 1. Fondo original exacto sin geometría y sin línea pintada (bg_clean_final.png)
+    bg_filename = 'bg_clean_final.png'
     bg_path = os.path.join(os.path.dirname(__file__), '..', 'assets', bg_filename)
         
     if os.path.exists(bg_path):
@@ -62,6 +62,10 @@ def draw_clean_background(c, width, height, current_slide, total_slides, is_cove
         else:
             # Izquierda
             c.drawImage(logo_path, 80, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+
+    # Línea separadora pegada al logo
+    c.setFillColor(ACCENT_GOLD)
+    c.rect(80, 165, width - 160, 2, fill=True, stroke=False)
 
     # 4. Numeración
     if not is_cover:
