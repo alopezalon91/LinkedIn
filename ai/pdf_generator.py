@@ -46,13 +46,13 @@ def draw_clean_background(c, width, height, current_slide, total_slides, is_cove
     logo_filename = 'logo_cover_trimmed.png'
     logo_path = os.path.join(os.path.dirname(__file__), '..', 'assets', logo_filename)
     if os.path.exists(logo_path):
-        logo_h = 75
+        logo_h = 110 # 46% bigger than 75
         try:
             with Image.open(logo_path) as img:
                 img_w, img_h = img.size
                 logo_w = int(logo_h * (img_w / img_h))
         except:
-            logo_w = 225
+            logo_w = 330
             
         logo_y = 35
         if is_cover:
@@ -163,8 +163,8 @@ def create_carousel_pdf(slides: list[dict]) -> str:
                 
             if title:
                 t_style = ParagraphStyle(
-                    name='Title', fontName='Helvetica-Bold', fontSize=70,
-                    leading=85, textColor=TEXT_LIGHT, alignment=TA_LEFT
+                    name='Title', fontName='Helvetica-Bold', fontSize=62,
+                    leading=75, textColor=TEXT_LIGHT, alignment=TA_LEFT
                 )
                 title_p = Paragraph(title, t_style)
                 w, h_title = title_p.wrapOn(c, width - 160, height)
@@ -183,16 +183,16 @@ def create_carousel_pdf(slides: list[dict]) -> str:
                 
             if bullets:
                 b_style = ParagraphStyle(
-                    name='Bullet', fontName='Helvetica', fontSize=34,
-                    leading=50, textColor=MUTED_LIGHT, alignment=TA_LEFT, spaceAfter=20
+                    name='Bullet', fontName='Helvetica', fontSize=32,
+                    leading=45, textColor=MUTED_LIGHT, alignment=TA_LEFT, spaceAfter=15
                 )
                 list_items = []
                 for b in bullets:
-                    item = ListItem(Paragraph(b, b_style), leftIndent=40, bulletColor=ACCENT_GOLD, bulletType='bullet', bulletFontName='Helvetica', bulletFontSize=34)
+                    item = ListItem(Paragraph(b, b_style), leftIndent=40, bulletColor=ACCENT_GOLD, bulletType='bullet', bulletFontName='Helvetica', bulletFontSize=32)
                     item.bulletText = '—'
                     list_items.append(item)
                     
-                bullets_f = ListFlowable(list_items, bulletType='bullet', bulletFontName='Helvetica', bulletFontSize=34, bulletOffsetY=0)
+                bullets_f = ListFlowable(list_items, bulletType='bullet', bulletFontName='Helvetica', bulletFontSize=32, bulletOffsetY=0)
                 w, h_bull = bullets_f.wrapOn(c, width - 160, height)
                 bullets_f.drawOn(c, 80, y_cursor - h_bull)
 
