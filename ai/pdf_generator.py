@@ -21,8 +21,8 @@ def strip_emojis(text: str) -> str:
     return emoji.replace_emoji(text, replace='')
 
 def draw_clean_background(c, width, height, current_slide, total_slides, is_cover=False):
-    # 1. Fondo texturizado original
-    bg_filename = 'bg_carousel.png'
+    # 1. Fondo texturizado original (sin figuras ni rayas)
+    bg_filename = 'bg_carousel_texture.png'
     bg_path = os.path.join(os.path.dirname(__file__), '..', 'assets', bg_filename)
     if os.path.exists(bg_path):
         c.drawImage(bg_path, 0, 0, width=width, height=height, preserveAspectRatio=False)
@@ -30,8 +30,8 @@ def draw_clean_background(c, width, height, current_slide, total_slides, is_cove
         c.setFillColor(BG_DARK)
         c.rect(0, 0, width, height, fill=True, stroke=False)
     
-    # 2. Marca de agua gigante (Símbolo al 5% opacidad) en el centro
-    wm_filename = 'logo_watermark.png'
+    # 2. Marca de agua gigante (Solo el símbolo A L, 15% opacidad) en el centro
+    wm_filename = 'logo_watermark_final.png'
     wm_path = os.path.join(os.path.dirname(__file__), '..', 'assets', wm_filename)
     if os.path.exists(wm_path):
         # We know it's 800px wide from the script
@@ -53,17 +53,17 @@ def draw_clean_background(c, width, height, current_slide, total_slides, is_cove
     c.rect(80, footer_y, width - 160, 2, fill=True, stroke=False)
     
     # 4. Logo alineado PERFECTAMENTE a la izquierda debajo de la línea
-    logo_filename = 'logo_cover.png'
+    logo_filename = 'logo_cover_trimmed.png'
     logo_path = os.path.join(os.path.dirname(__file__), '..', 'assets', logo_filename)
     if os.path.exists(logo_path):
         try:
             with Image.open(logo_path) as img:
                 img_w, img_h = img.size
-                logo_h = 110  # Altura grande sin pasar la línea
+                logo_h = 75  # 75px de alto para un logo sin márgenes transparentes es ENORME y muy notorio
                 logo_w = int(logo_h * (img_w / img_h))
         except:
-            logo_h = 110
-            logo_w = 330
+            logo_h = 75
+            logo_w = 225
             
         # Pegado a x=80, centrado verticalmente en el footer de 150px
         logo_y = (150 - logo_h) / 2
