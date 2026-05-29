@@ -255,28 +255,7 @@ def get_document_text(boe_id: str, max_chars: int = 2000) -> str:
     Returns:
         Extracted text string. Empty string on failure.
     """
-    # Try JSON API endpoint first
-    api_url = BOE_DOCUMENTO_URL.format(id=boe_id)
-    resp = _get_with_retry(api_url)
-
-    if resp is not None:
-        try:
-            doc_data = resp.json()
-            # Navigate to the text field in the API response
-            texto = (
-                doc_data.get("data", {})
-                .get("documento", {})
-                .get("texto", "")
-            )
-            if texto:
-                # Strip HTML tags if present
-                soup = BeautifulSoup(texto, "lxml")
-                plain = soup.get_text(separator=" ", strip=True)
-                return plain[:max_chars]
-        except (json.JSONDecodeError, AttributeError):
-            pass
-
-    # Fallback: fetch HTML version directly from boe.es
+    # Try HTML version first (since JSON API is currently broken and returning 404s)
     html_url = f"https://www.boe.es/diario_boe/txt.php?id={boe_id}"
     resp_html = _get_with_retry(html_url)
     if resp_html is not None:
@@ -288,7 +267,26 @@ def get_document_text(boe_id: str, max_chars: int = 2000) -> str:
                 plain = container.get_text(separator=" ", strip=True)
                 return plain[:max_chars]
         except Exception as exc:
-            log.warning("HTML fallback parse error for %s: %s", boe_id, exc)
+            log.warning("HTML parse error for %s: %s", boe_id, exc)
+
+    # Fallback to JSON API
+    api_url = BOE_DOCUMENTO_URL.format(id=boe_id)
+    resp = _get_with_retry(api_url)
+
+    if resp is not None:
+        try:
+            doc_data = resp.json()
+            texto = (
+                doc_data.get("data", {})
+                .get("documento", {})
+                .get("texto", "")
+            )
+            if texto:
+                soup = BeautifulSoup(texto, "lxml")
+                plain = soup.get_text(separator=" ", strip=True)
+                return plain[:max_chars]
+        except (json.JSONDecodeError, AttributeError):
+            pass
 
     log.warning("Could not retrieve text for BOE document %s", boe_id)
     return ""
