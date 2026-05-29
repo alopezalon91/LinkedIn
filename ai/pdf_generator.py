@@ -21,11 +21,16 @@ def strip_emojis(text: str) -> str:
     return emoji.replace_emoji(text, replace='')
 
 def draw_clean_background(c, width, height, current_slide, total_slides, is_cover=False):
-    # 1. Fondo sólido azul marino oscuro
-    c.setFillColor(BG_DARK)
-    c.rect(0, 0, width, height, fill=True, stroke=False)
+    # 1. Fondo texturizado original
+    bg_filename = 'bg_carousel.png'
+    bg_path = os.path.join(os.path.dirname(__file__), '..', 'assets', bg_filename)
+    if os.path.exists(bg_path):
+        c.drawImage(bg_path, 0, 0, width=width, height=height, preserveAspectRatio=False)
+    else:
+        c.setFillColor(BG_DARK)
+        c.rect(0, 0, width, height, fill=True, stroke=False)
     
-    # 2. Marca de agua gigante (Logo al 5% opacidad) en el centro
+    # 2. Marca de agua gigante (Símbolo al 5% opacidad) en el centro
     wm_filename = 'logo_watermark.png'
     wm_path = os.path.join(os.path.dirname(__file__), '..', 'assets', wm_filename)
     if os.path.exists(wm_path):
@@ -54,14 +59,13 @@ def draw_clean_background(c, width, height, current_slide, total_slides, is_cove
         try:
             with Image.open(logo_path) as img:
                 img_w, img_h = img.size
-                logo_w = 400  # Logo muy grande
-                logo_h = int(logo_w * (img_h / img_w))
+                logo_h = 75  # Altura fija para no sobrepasar la línea (150px de footer)
+                logo_w = int(logo_h * (img_w / img_h))
         except:
-            logo_w = 400
-            logo_h = 133
+            logo_h = 75
+            logo_w = 225
             
-        # Lo pegamos a x=80 y centrado verticalmente en el footer (150px de alto)
-        # y_pos = (150 - logo_h) / 2
+        # Pegado a x=80, centrado verticalmente en el footer de 150px
         logo_y = (150 - logo_h) / 2
         c.drawImage(logo_path, 80, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
 

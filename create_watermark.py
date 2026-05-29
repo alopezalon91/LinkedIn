@@ -1,12 +1,12 @@
-from PIL import Image, ImageEnhance
+from PIL import Image
 import os
 
-logo_path = "assets/logo_cover.png"
+logo_path = "assets/al_mark_transparent_high_quality.png"
 out_path = "assets/logo_watermark.png"
 
 if os.path.exists(logo_path):
     img = Image.open(logo_path).convert("RGBA")
-    # Make it huge (e.g., 800px wide)
+    # Make it huge
     aspect = img.height / img.width
     new_w = 800
     new_h = int(new_w * aspect)
@@ -18,6 +18,6 @@ if os.path.exists(logo_path):
     img.putalpha(alpha)
     
     img.save(out_path)
-    print("Watermark created")
+    print("Watermark created with symbol only")
 else:
-    print("Logo not found")
+    print("Symbol Logo not found")
