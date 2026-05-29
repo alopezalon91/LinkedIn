@@ -37,8 +37,10 @@ def draw_clean_background(c, width, height, current_slide, total_slides, is_cove
     if os.path.exists(wm_path):
         wm_w = 600
         wm_h = 600
-        # Centrado visual: desplazamos +25px a la derecha para compensar la cola de la "L"
-        c.drawImage(wm_path, ((width - wm_w)/2) + 25, (height - wm_h)/2, width=wm_w, height=wm_h, mask='auto', preserveAspectRatio=True)
+        # Centrado perfecto visualmente en el bloque de contenido (desde la línea dorada hacia arriba)
+        # La línea dorada está en y=150. El centro de ese espacio es 150 + (1080 - 150)/2 = 615.
+        # Por lo tanto, y = 615 - (wm_h / 2) = 615 - 300 = 315.
+        c.drawImage(wm_path, (width - wm_w)/2, 315, width=wm_w, height=wm_h, mask='auto', preserveAspectRatio=True)
 
     # 3. Footer Logo
     # Si es portada, quizás el logo va centrado abajo, o lo dejamos igual. El usuario dijo: 
