@@ -318,15 +318,19 @@ def score_batch(
         return None
 
     import concurrent.futures
-    log.info("Scoring %d items with concurrency...", len(items))
+    log.info("Scoring %d items sequentially to respect 15 RPM limit...", len(items))
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    # Free tier allows 15 RPM -> 1 request every 4 seconds.
+    # We use 1 worker and wait 4.5s between requests.
+    rate_limit_sleep = 4.5
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         futures = {executor.submit(_process_item, item): item for item in items}
         for future in concurrent.futures.as_completed(futures):
             res = future.result()
             if res:
                 scored.append(res)
-            # Sleep slightly to avoid spamming the free API too fast
+            # Sleep to strictly enforce rate limits
             time.sleep(rate_limit_sleep)
 
     # Sort by score descending (highest relevance first)
