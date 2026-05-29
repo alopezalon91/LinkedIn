@@ -21,10 +21,14 @@ def strip_emojis(text: str) -> str:
     return emoji.replace_emoji(text, replace='')
 
 def draw_clean_background(c, width, height, current_slide, total_slides, is_cover=False):
-    # 1. Fondo original (textura perfecta sin figuras)
-    bg_filename = 'bg_perfect_texture.png'
-    bg_path = os.path.join(os.path.dirname(__file__), '..', 'assets', bg_filename)
-    if os.path.exists(bg_path):
+    # 1. Fondo original exacto (Opción 4: bg_min_3_recolored.png)
+    import glob
+    bg_path = None
+    bgs = glob.glob("/Users/albertolopez/.gemini/antigravity/brain/*/bg_min_3_recolored.png")
+    if bgs:
+        bg_path = bgs[0]
+        
+    if bg_path and os.path.exists(bg_path):
         c.drawImage(bg_path, 0, 0, width=width, height=height, preserveAspectRatio=False)
     else:
         c.setFillColor(BG_DARK)
