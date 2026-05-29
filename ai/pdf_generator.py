@@ -37,8 +37,8 @@ def draw_clean_background(c, width, height, current_slide, total_slides, is_cove
     if os.path.exists(wm_path):
         wm_w = 600
         wm_h = 600
-        # Centrado en la diapositiva
-        c.drawImage(wm_path, (width - wm_w)/2, (height - wm_h)/2, width=wm_w, height=wm_h, mask='auto', preserveAspectRatio=True)
+        # Centrado visual: desplazamos +25px a la derecha para compensar la cola de la "L"
+        c.drawImage(wm_path, ((width - wm_w)/2) + 25, (height - wm_h)/2, width=wm_w, height=wm_h, mask='auto', preserveAspectRatio=True)
 
     # 3. Footer Logo
     # Si es portada, quizás el logo va centrado abajo, o lo dejamos igual. El usuario dijo: 
@@ -62,6 +62,10 @@ def draw_clean_background(c, width, height, current_slide, total_slides, is_cove
         else:
             # Izquierda
             c.drawImage(logo_path, 80, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+
+    # Línea separadora ajustada al milímetro
+    c.setFillColor(ACCENT_GOLD)
+    c.rect(80, 150, width - 160, 2, fill=True, stroke=False)
 
 
 
