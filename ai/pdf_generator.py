@@ -27,68 +27,43 @@ def strip_emojis(text: str) -> str:
 def draw_slide_background(c, width, height, current_slide, total_slides, is_cover=False):
     """Dibuja el fondo y la geometría minimalista digital."""
     # ----------------------------------------------------
-    # ----------------------------------------------------
-    # Fondo Minimal 3 (Generado por IA, Recoloreado)
+    # Fondo Minimal 3 Esquinado
     # ----------------------------------------------------
     import os
-    bg_filename = 'bg_carousel.png'
+    bg_filename = 'bg_carousel_corner.png'
     bg_path = os.path.join(os.path.dirname(__file__), '..', 'assets', bg_filename)
     
     if os.path.exists(bg_path):
         c.drawImage(bg_path, 0, 0, width=width, height=height, preserveAspectRatio=False)
     else:
         # Fallback dark navy
-        c.setFillColor(HexColor('#050a10'))
+        c.setFillColor(HexColor('#080e14'))
         c.rect(0, 0, width, height, fill=True, stroke=False)
     
-    # Sin geometría programada (ya viene en la imagen)
+    # ----------------------------------------------------
+    # Footer (Línea dorada + Logo + Numeración)
+    # ----------------------------------------------------
+    footer_y = 140
     
-    if not is_cover:
-        # Número de diapositiva (Círculo sutil superior derecha)
-        c.setFillColor(HexColor('#0b141d'))
-        c.circle(width - 100, height - 100, 35, fill=True, stroke=False)
-        c.setFillColor(ACCENT_GOLD)
-        c.setFont("Times-Roman", 32)
-        c.drawCentredString(width - 100, height - 110, str(current_slide))
-
-    # ----------------------------------------------------
-    # Footer (Logo Variante A · Marco rectangular + Monograma entrelazado)
-    # ----------------------------------------------------
-    import os
+    # Línea dorada separadora
+    c.setFillColor(ACCENT_GOLD)
+    c.rect(80, footer_y, width - 160, 3, fill=True, stroke=False)
+    
+    # Logo abajo a la izquierda
     logo_filename = 'logo_cover.png'
     logo_path = os.path.join(os.path.dirname(__file__), '..', 'assets', logo_filename)
 
-    box_x = 50
-    box_y = 40
-    box_w = 160
-    box_h = 160
-
     if os.path.exists(logo_path):
-        # Insertar la imagen exacta original, manteniendo proporciones
-        c.drawImage(logo_path, box_x, box_y, width=box_w, height=box_h, mask='auto', preserveAspectRatio=True, anchor='sw')
-    else:
-        # Fallback temporal
-        c.setLineWidth(1.0)
-        c.setStrokeColor(ACCENT_GOLD)
-        c.rect(box_x, box_y, box_w, box_h, fill=False, stroke=True)
+        logo_w = 200
+        logo_h = 60
+        # Dibujar logo justo debajo de la línea dorada
+        c.drawImage(logo_path, 80, footer_y - logo_h - 30, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
 
-    # ----------------------------------------------------
-    # Footer Derecho (Botón circular elegante)
-    # ----------------------------------------------------
-    if current_slide < total_slides:
-        cx = width - 100
-        cy = box_y + box_h // 2
-
-        # Anillo exterior
-        c.setStrokeColor(ACCENT_GOLD)
-        c.setLineWidth(0.9)
-        c.circle(cx, cy, 24, fill=False, stroke=True)
-
-        # Chevron interno (>)
-        c.setStrokeColor(ACCENT_GOLD)
-        c.setLineWidth(1.8)
-        c.line(cx - 5, cy + 9, cx + 6, cy)
-        c.line(cx + 6, cy, cx - 5, cy - 9)
+    # Número de diapositiva abajo a la derecha
+    if not is_cover:
+        c.setFillColor(HexColor('#ffffff'))
+        c.setFont("Times-Roman", 28)
+        c.drawRightString(width - 80, footer_y - 65, f"{current_slide} / {total_slides}")
 
 def create_carousel_pdf(slides: list[dict]) -> str:
     """
@@ -113,12 +88,64 @@ def create_carousel_pdf(slides: list[dict]) -> str:
         subtitle = strip_emojis(slide.get("subtitle", ""))
         bullets = [strip_emojis(b) for b in slide.get("bullets", [])]
         
-        y_pos = height - 300 if is_cover else height - 300
+        # Calcular altura total del contenido para centrarlo verticalmente
+        total_content_height = 0
         
-        text_color = TEXT_LIGHT
-        muted_color = MUTED_LIGHT
+        if pre_title:
+            total_content_height += 100 # Espacio aprox de la píldora
         
-        # 1. Píldora (Badge) - En la portada, o también en contenido
+        title_p = None
+        if title:
+            t_style = ParagraphStyle(
+                name='Title',
+                fontName='Times-Roman' if is_cover else 'Helvetica-Bold',
+                fontSize=80 if is_cover else 65,
+                leading=95 if is_cover else 80,
+                textColor=ACCENT_GOLD,
+                alignment=TA_LEFT,
+            )
+            title_p = Paragraph(title, t_style)
+            w, h_title = title_p.wrapOn(c, width - 160, height)
+            total_content_height += h_title + 30
+            
+        st_p = None
+        if subtitle:
+            st_style = ParagraphStyle(
+                name='Subtitle',
+                fontName='Helvetica',
+                fontSize=35 if is_cover else 30,
+                leading=45,
+                textColor=TEXT_LIGHT,
+                alignment=TA_LEFT,
+            )
+            st_p = Paragraph(subtitle, st_style)
+            w, h_st = st_p.wrapOn(c, width - 160, height)
+            total_content_height += h_st + 40
+            
+        bullets_f = None
+        if bullets:
+            b_style = ParagraphStyle(
+                name='Bullet',
+                fontName='Helvetica',
+                fontSize=30,
+                leading=45,
+                textColor=MUTED_LIGHT,
+                alignment=TA_LEFT,
+            )
+            list_items = [ListItem(Paragraph(b, b_style), leftIndent=35, bulletColor=ACCENT_GOLD) for b in bullets]
+            bullets_f = ListFlowable(list_items, bulletType='bullet', bulletFontName='Helvetica', bulletFontSize=30, bulletOffsetY=0)
+            w, h_bull = bullets_f.wrapOn(c, width - 160, height)
+            total_content_height += h_bull + 20
+            
+        # Calcular y_pos inicial para que el bloque quede centrado entre y=1080 y y=140
+        # Espacio central es 940. Mitad es 470.
+        y_pos = 140 + ((1080 - 140) / 2) + (total_content_height / 2)
+        
+        # Si se pasa por arriba, forzamos un tope
+        if y_pos > height - 100:
+            y_pos = height - 100
+
+        # 1. Píldora (Badge)
         if pre_title:
             pre_title_upper = pre_title.upper()
             c.setFont("Helvetica-Bold", 30)
@@ -126,80 +153,26 @@ def create_carousel_pdf(slides: list[dict]) -> str:
             pill_width = text_width + 60
             
             c.setFillColor(ACCENT_GOLD)
-            c.roundRect(80, y_pos + 40, pill_width, 50, 25, fill=True, stroke=False)
+            c.roundRect(80, y_pos - 50, pill_width, 50, 25, fill=True, stroke=False)
             
-            c.setFillColor(HexColor('#080e14')) # Dark text for gold background
-            c.drawString(80 + 30, y_pos + 54, pre_title_upper)
+            c.setFillColor(HexColor('#080e14'))
+            c.drawString(80 + 30, y_pos - 36, pre_title_upper)
+            y_pos -= 100
 
         # 2. Título Principal
-        if title:
-            # En contenido, ponemos una rayita Gold vertical para anclar el titulo
-            if not is_cover:
-                c.setFillColor(ACCENT_GOLD)
-                c.rect(60, y_pos - 100, 3, 120, fill=True, stroke=False)
-                
-            t_style = ParagraphStyle(
-                name='Title',
-                fontName='Times-Roman' if is_cover else 'Helvetica-Bold',
-                fontSize=85 if is_cover else 70,
-                leading=105 if is_cover else 90,
-                textColor=ACCENT_GOLD,
-                alignment=TA_LEFT,
-            )
-            p = Paragraph(title, t_style)
-            w, h = p.wrapOn(c, width - 200, height)
-            p.drawOn(c, 80, y_pos - h)
-            y_pos -= (h + 30)
+        if title_p:
+            title_p.drawOn(c, 80, y_pos - h_title)
+            y_pos -= (h_title + 30)
             
-        # 3. Subtítulo (Fecha o Referencia)
-        if subtitle:
-            st_style = ParagraphStyle(
-                name='Subtitle',
-                fontName='Helvetica',
-                fontSize=40 if is_cover else 35,
-                leading=50,
-                textColor=muted_color,
-                alignment=TA_LEFT,
-            )
-            p = Paragraph(subtitle, st_style)
-            w, h = p.wrapOn(c, width - 200, height)
-            p.drawOn(c, 80, y_pos - h)
-            y_pos -= (h + 60)
+        # 3. Subtítulo
+        if st_p:
+            st_p.drawOn(c, 80, y_pos - h_st)
+            y_pos -= (h_st + 40)
 
-        # 4. Bullets (Lista con viñetas)
-        if bullets and not is_cover:
-            list_items = []
-            bullet_style = ParagraphStyle(
-                name='BulletStyle',
-                fontName='Helvetica',
-                fontSize=38,
-                leading=55,
-                textColor=text_color,
-                alignment=TA_LEFT,
-            )
-            
-            for bullet_text in bullets:
-                # Custom bullet: un guión Gold o punto sutil
-                bullet_char = Paragraph("<font color='#b39562'>—</font>", bullet_style)
-                item = ListItem(Paragraph(bullet_text, bullet_style), bulletColor=ACCENT_GOLD, bulletType='bullet')
-                list_items.append(item)
-                
-            lf = ListFlowable(
-                list_items,
-                bulletType='bullet',
-                start=None,
-                bulletFontSize=40,
-                bulletOffsetY=-5,
-                leftIndent=40,
-                spaceBefore=0,
-                spaceAfter=40
-            )
-            
-            # Frame para dibujar flowables correctamente en Platypus
-            frame_height = y_pos - 150
-            if frame_height > 0:
-                f = Frame(80, 150, width - 160, frame_height, showBoundary=0, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
-                f.addFromList([lf], c)
+        # 4. Bullets
+        if bullets_f:
+            bullets_f.drawOn(c, 80, y_pos - h_bull)
+            y_pos -= (h_bull + 20)
 
         c.showPage()
         
