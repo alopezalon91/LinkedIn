@@ -22,7 +22,7 @@ jobs:
   scrape-news:
     name: Scrape Press & Generate Posts
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: 📥 Checkout código
