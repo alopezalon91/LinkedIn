@@ -119,8 +119,8 @@ def create_carousel_pdf(slides: list[dict]) -> str:
             # Restamos el último spacing extra
             if total_h > 0: total_h -= spacing
             
-            # Y de inicio
-            y_cursor = (height + total_h) / 2
+            # Y de inicio: desplazamos el bloque hacia arriba para compensar el peso visual del logo abajo
+            y_cursor = ((height + total_h) / 2) + 120
             
             # Dibujar píldora centrada
             if pre_title:
