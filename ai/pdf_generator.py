@@ -63,9 +63,7 @@ def draw_clean_background(c, width, height, current_slide, total_slides, is_cove
             # Izquierda
             c.drawImage(logo_path, 80, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
 
-    # Línea separadora pegada al logo
-    c.setFillColor(ACCENT_GOLD)
-    c.rect(80, 165, width - 160, 2, fill=True, stroke=False)
+
 
     # 4. Numeración
     if not is_cover:
