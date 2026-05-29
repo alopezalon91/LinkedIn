@@ -12,9 +12,9 @@ if os.path.exists(logo_path):
     new_h = int(new_w * aspect)
     img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
     
-    # Apply alpha (e.g. 5% opacity)
+    # Apply alpha (e.g. 15% opacity)
     alpha = img.split()[3]
-    alpha = alpha.point(lambda p: p * 0.05)
+    alpha = alpha.point(lambda p: p * 0.15)
     img.putalpha(alpha)
     
     img.save(out_path)

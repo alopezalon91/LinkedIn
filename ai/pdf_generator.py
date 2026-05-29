@@ -59,11 +59,11 @@ def draw_clean_background(c, width, height, current_slide, total_slides, is_cove
         try:
             with Image.open(logo_path) as img:
                 img_w, img_h = img.size
-                logo_h = 75  # Altura fija para no sobrepasar la línea (150px de footer)
+                logo_h = 110  # Altura grande sin pasar la línea
                 logo_w = int(logo_h * (img_w / img_h))
         except:
-            logo_h = 75
-            logo_w = 225
+            logo_h = 110
+            logo_w = 330
             
         # Pegado a x=80, centrado verticalmente en el footer de 150px
         logo_y = (150 - logo_h) / 2
