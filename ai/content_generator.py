@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 import google.generativeai as genai
+import groq
+from groq import Groq
 
 from config.prompts import NORMATIVA_PROMPT, ACTUALIDAD_PROMPT, SYSTEM_CONTEXT
 from config.sectors import get_hashtags_for_sector
@@ -70,6 +72,32 @@ def _get_model() -> genai.GenerativeModel:
         )
         log.info("Gemini model '%s' initialised (content generator).", _MODEL_NAME)
     return _model
+
+_groq_client: Groq | None = None
+
+def _get_groq_client() -> Groq:
+    global _groq_client
+    if _groq_client is None:
+        api_key = os.environ.get("GROQ_API_KEY", "")
+        if not api_key:
+            raise EnvironmentError("GROQ_API_KEY not set")
+        _groq_client = Groq(api_key=api_key)
+    return _groq_client
+
+def _call_groq_json(prompt: str, system_context: str = SYSTEM_CONTEXT, temperature: float = 1.0) -> str:
+    client = _get_groq_client()
+    # Add explicit instructions to guarantee JSON for Llama 3
+    system_instruction = system_context + "\n\nIMPORTANTE: Responde SIEMPRE con un objeto JSON válido según el esquema solicitado."
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": prompt}
+        ],
+        response_format={"type": "json_object"},
+        temperature=temperature
+    )
+    return response.choices[0].message.content.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -224,8 +252,21 @@ def _generate_post(prompt: str, source_id: str) -> dict:
         return data
 
     except Exception as exc:
-        log.error("Gemini generation error for %s: %s", source_id, exc)
-        raise RuntimeError(f"Gemini generation failed: {exc}") from exc
+        log.warning("Gemini generation failed for %s (%s). Falling back to Groq...", source_id, exc)
+        try:
+            text = _call_groq_json(prompt)
+            if text.startswith("```"):
+                parts = text.split("```")
+                text = parts[1] if len(parts) > 1 else text
+                if text.startswith("json"):
+                    text = text.split("\n", 1)[1] if "\n" in text else text
+            
+            data = json.loads(text)
+            log.info("Generated post & carousel using GROQ for %s", source_id)
+            return data
+        except Exception as groq_exc:
+            log.error("Groq fallback generation error for %s: %s", source_id, groq_exc)
+            raise RuntimeError(f"Both Gemini and Groq generation failed: {exc} | {groq_exc}") from groq_exc
 
 def _verify_and_correct_post(original_text: str, generated_json: dict, source_id: str) -> dict:
     """
@@ -282,9 +323,20 @@ Si encuentras errores, corrígelos directamente en la cadena de texto de salida.
         return corrected_data
 
     except Exception as exc:
-        log.error("Gemini verification error for %s: %s", source_id, exc)
-        # Fallback to original if verification fails
-        return generated_json
+        log.warning("Gemini verification failed for %s (%s). Falling back to Groq...", source_id, exc)
+        try:
+            text = _call_groq_json(prompt, system_context="Eres un corrector estricto que responde solo en JSON", temperature=0.0)
+            if text.startswith("```"):
+                parts = text.split("```")
+                text = parts[1] if len(parts) > 1 else text
+                if text.startswith("json"):
+                    text = text.split("\n", 1)[1] if "\n" in text else text
+            corrected_data = json.loads(text)
+            log.info("Post verified & corrected using GROQ for %s", source_id)
+            return corrected_data
+        except Exception as groq_exc:
+            log.error("Groq fallback verification error for %s: %s", source_id, groq_exc)
+            return generated_json
 
 # ---------------------------------------------------------------------------
 # Public API
