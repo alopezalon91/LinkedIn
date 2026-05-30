@@ -157,14 +157,14 @@ def fetch_rss_feed(url: str, source_name: str) -> list[dict]:
         # Generate stable ID from URL hash
         article_id = hashlib.md5(article_url.encode()).hexdigest()[:12]
 
-        # Filter out articles older than 12 hours to save API processing time
+        # Filter out articles older than 24 hours to save API processing time
         from datetime import timedelta
         if published:
             try:
                 # published is ISO format e.g. '2026-05-28T10:00:00+00:00'
                 pub_dt = datetime.fromisoformat(published.replace('Z', '+00:00'))
                 now = datetime.now(timezone.utc)
-                if now - pub_dt > timedelta(hours=12):
+                if now - pub_dt > timedelta(hours=24):
                     continue
             except Exception:
                 pass
