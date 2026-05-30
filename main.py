@@ -82,7 +82,7 @@ CF_WORKER_TOKEN = (
     os.environ.get("CF_WORKER_TOKEN")
     or os.environ.get("WORKER_SECRET", "")
 )
-MAX_POSTS_PER_RUN = 3  # Cap to avoid spamming; queue the rest
+MAX_POSTS_PER_RUN = 5  # Cap to avoid spamming; queue the rest
 
 
 # ---------------------------------------------------------------------------
