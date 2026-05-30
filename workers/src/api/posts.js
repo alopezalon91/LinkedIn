@@ -242,6 +242,28 @@ export async function approvePost(db, id, editedContent = null) {
   return { post: updated, editRatio };
 }
 
+// ─── Review ───────────────────────────────────────────────────────────────────
+
+/**
+ * Review a post, saving any edits but keeping it in the backlog (not ready for cron).
+ * Returns { post, editRatio }.
+ */
+export async function reviewPost(db, id, editedContent = null) {
+  const post = await getPost(db, id);
+  if (!post) throw new Error(`Post not found: ${id}`);
+
+  const updates = { status: 'reviewed' };
+  let editRatio = 0;
+
+  if (editedContent && editedContent.trim() !== post.content.trim()) {
+    updates.content_edited = editedContent;
+    editRatio = levenshteinRatio(post.content, editedContent);
+  }
+
+  const updated = await updatePost(db, id, updates);
+  return { post: updated, editRatio };
+}
+
 // ─── Reject ───────────────────────────────────────────────────────────────────
 
 export async function rejectPost(db, id) {
@@ -265,7 +287,7 @@ export async function schedulePost(db, id, scheduledAt) {
 
   const post = await getPost(db, id);
   if (!post) throw new Error(`Post not found: ${id}`);
-  if (!['pending', 'approved'].includes(post.status)) {
+  if (!['pending', 'reviewed', 'approved'].includes(post.status)) {
     throw new Error(`Cannot schedule a post with status '${post.status}'`);
   }
 

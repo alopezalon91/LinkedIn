@@ -6,8 +6,8 @@ dotenv.load_dotenv()
 
 article = {
     "id": "noticia-1234",
-    "title": "Hacienda advierte de multas de hasta 3000 euros para autónomos que no guarden facturas en formato digital",
-    "summary": "La Agencia Tributaria lanza una campaña para inspeccionar a pequeños negocios y exige que toda la contabilidad esté digitalizada. Los expertos avisan que guardar tickets de papel ya no sirve ante una inspección telemática.",
+    "title": "Hacienda pone el foco en los pequeños autónomos: multas de 3.000 euros si no se digitaliza la facturación",
+    "summary": "La Agencia Tributaria (AEAT) acaba de endurecer su plan de control tributario para 2026. Tras la reciente entrada en vigor del reglamento de facturación de la Ley Crea y Crece, la AEAT iniciará un barrido telemático masivo para verificar si las pymes y autónomos han implementado sistemas de facturación electrónica verificables. Según el último boletín oficial, mantener la facturación en papel, Excel o en un Word básico sin un software certificado será considerado una infracción grave, acarreando multas que oscilan entre los 1.000 y los 3.000 euros. Esta medida busca combatir la economía sumergida y evitar el fraude del 'software de doble uso'. Los profesionales tienen hasta el último trimestre del año para adaptarse, momento en el que comenzarán las sanciones automáticas.",
     "url": "https://www.eleconomista.es/autonomos",
     "source": "el economista",
     "published": "hoy",
@@ -37,7 +37,8 @@ if b64:
     pix.save(os.path.join(base_dir, "test_cover.png"))
     
     if len(doc) > 1:
-        pix2 = doc[1].get_pixmap(dpi=150)
-        pix2.save(os.path.join(base_dir, "test_slide2.png"))
+        for i in range(1, len(doc)):
+            pix2 = doc[i].get_pixmap(dpi=150)
+            pix2.save(os.path.join(base_dir, f"test_slide{i+1}.png"))
         
     print("Saved preview images!")

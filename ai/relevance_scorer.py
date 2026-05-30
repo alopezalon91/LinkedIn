@@ -72,7 +72,7 @@ def _set_cached_score(item_id: str, data: dict):
 # Gemini client initialisation
 # ---------------------------------------------------------------------------
 # AI parameters
-_MODEL_NAME = "llama-3.3-70b-versatile"
+_MODEL_NAME = "llama-3.1-8b-instant"
 _client: Groq | None = None
 
 def _get_groq_client():
@@ -332,8 +332,8 @@ def score_batch(
     log.info("Scoring %d items sequentially to respect 15 RPM limit...", len(items))
     
     # Free tier allows 15 RPM -> 1 request every 4 seconds.
-    # We use 1 worker and wait 4.5s between requests.
-    rate_limit_sleep = 4.5
+    # We use 1 worker and wait 6.5s between requests to be safe.
+    rate_limit_sleep = 6.5
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         futures = {executor.submit(_process_item, item): item for item in items}

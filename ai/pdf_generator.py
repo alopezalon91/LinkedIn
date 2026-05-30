@@ -101,9 +101,9 @@ def draw_background(c, current_slide, total_slides, is_cover=False):
     if os.path.exists(logo_path):
         if is_cover:
             cover_logo_h = int(117 * 1.20)  # 140px, 20% mas grande
-            _draw_signature(c, WIDTH / 2, 25, logo_path, cover_logo_h)
+            _draw_signature(c, WIDTH / 2, 70, logo_path, cover_logo_h)
         else:
-            _draw_signature(c, MARGIN + 60, 25, logo_path, 117)
+            _draw_signature(c, MARGIN + 60, 70, logo_path, 117)
 
     # PORTADA: sin linea ni paginacion — salir siempre aqui
     if is_cover:

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS posts (
   id TEXT PRIMARY KEY,                      -- UUID v4
   type TEXT NOT NULL,                       -- 'normativa' | 'actualidad'
   sector TEXT NOT NULL,                     -- 'ecommerce' | 'content_creator' | etc
-  status TEXT NOT NULL DEFAULT 'pending',   -- 'pending' | 'approved' | 'rejected' | 'published' | 'scheduled'
+  status TEXT NOT NULL DEFAULT 'pending',   -- 'pending' | 'reviewed' | 'approved' | 'rejected' | 'published' | 'scheduled'
   content TEXT NOT NULL,                    -- The LinkedIn post text (original AI-generated)
   content_edited TEXT,                      -- Edited version if user modified it
   first_comment TEXT,                       -- Link or CTA to be posted as first comment

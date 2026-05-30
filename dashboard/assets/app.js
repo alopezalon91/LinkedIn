@@ -73,6 +73,11 @@ const API = {
     body: JSON.stringify({ action: 'approve', content_edited: editedContent || null }),
   }),
 
+  reviewPost: (id, editedContent) => API.request(`/api/posts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action: 'review', content_edited: editedContent || null }),
+  }),
+
   rejectPost: (id) => API.request(`/api/posts/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ action: 'reject' }),
@@ -195,6 +200,7 @@ function renderStatusPill(status) {
     rejected: '❌ Rechazado',
     scheduled: '📅 Programado',
     approved: '👍 Aprobado',
+    reviewed: '👀 Revisado',
   };
   return `<span class="status-pill ${status}">${labels[status] || status}</span>`;
 }
@@ -279,7 +285,11 @@ function renderPostCard(post) {
       ${State.currentView === 'scheduled'
         ? `<button class="btn btn-primary btn-sm" onclick="PostActions.approve('${post.id}')">✅ Publicar Ahora</button>
            <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
+        : State.currentView === 'reviewed'
+        ? `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
+           <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
         : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
+           <button class="btn btn-ghost btn-sm" id="review-btn-${post.id}" onclick="PostActions.review('${post.id}')">👁️ Marcar Revisado</button>
            <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
       }
     </div>
@@ -388,6 +398,29 @@ const PostActions = {
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = '✅ Aprobar';
+      }
+    }
+  },
+
+  async review(postId) {
+    const btn = document.getElementById(`review-btn-${postId}`);
+    const editor = document.getElementById(`editor-${postId}`);
+    const isEditing = editor && editor.classList.contains('visible');
+    const editedContent = isEditing ? editor.value : null;
+
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loading-spinner"></div>';
+      }
+      await API.reviewPost(postId, editedContent);
+      Toast.show('Post movido a Revisados 👀', 'info');
+      removePostCard(postId);
+    } catch (err) {
+      Toast.show(`Error: ${err.message}`, 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '👁️ Marcar Revisado';
       }
     }
   },
