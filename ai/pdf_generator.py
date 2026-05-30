@@ -34,56 +34,65 @@ DRAW_WIDTH = WIDTH - (MARGIN * 2)
 def strip_emojis(text: str) -> str:
     return emoji.replace_emoji(text, replace='')
 
+def _draw_signature(c, center_x, bottom_y, logo_path, logo_h):
+    """Draw the vertical AL + Alberto Lopez signature block."""
+    try:
+        with Image.open(logo_path) as img:
+            img_w, img_h = img.size
+            logo_w = int(logo_h * (img_w / img_h))
+    except:
+        logo_w = logo_h
+
+    # Draw monogram
+    c.drawImage(logo_path, center_x - (logo_w / 2), bottom_y + 28, width=logo_w, height=logo_h,
+                preserveAspectRatio=True, mask='auto')
+
+    # Draw "Alberto Lopez" with expanded letter-spacing
+    name_size = int(logo_h * 0.19)
+    c.setFillColor(TEXT_MAIN)
+    c.setFont("Helvetica", name_size)
+    c.setCharSpace(1.8)
+    c.drawCentredString(center_x, bottom_y + 8, "Alberto Lopez")
+    c.setCharSpace(0)
+
+
 def draw_background(c, current_slide, total_slides, is_cover=False):
-    # 1. Fondo sólido Alabastro
+    # 1. Fondo solido Alabastro
     c.setFillColor(BG_COLOR)
     c.rect(0, 0, WIDTH, HEIGHT, fill=True, stroke=False)
-    
-    # 2. Marca de agua
+
+    # 2. Marca de agua - opacidad bajada 4% adicional (ahora al 11%)
     wm_filename = 'logo_watermark_rebrand.png'
     wm_path = os.path.join(os.path.dirname(__file__), '..', 'assets', wm_filename)
     if os.path.exists(wm_path):
         wm_w = 600
         wm_h = 600
-        # Centered optically in the content area (above footer)
-        # Footer line is at y=150. Space is 150 to 1080. Center is 615.
-        c.drawImage(wm_path, (WIDTH - wm_w)/2, 315, width=wm_w, height=wm_h, mask='auto', preserveAspectRatio=True)
+        c.drawImage(wm_path, (WIDTH - wm_w) / 2, 315, width=wm_w, height=wm_h,
+                    mask='auto', preserveAspectRatio=True)
 
-    # 3. Footer Logo & Signature
+    # 3. Firma
     logo_filename = 'monogram_solid.png'
     logo_path = os.path.join(os.path.dirname(__file__), '..', 'assets', logo_filename)
-    
+
     if os.path.exists(logo_path):
-        try:
-            with Image.open(logo_path) as img:
-                img_w, img_h = img.size
-                logo_h = 117
-                logo_w = int(logo_h * (img_w / img_h))
-        except:
-            logo_h = 117
-            logo_w = 117
-            
-        # Vertical signature block in the bottom left
-        center_x = MARGIN + 60
-        c.drawImage(logo_path, center_x - (logo_w/2), 75, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
-        
-        # Add "Alberto López" text centered below the monogram
-        c.setFillColor(TEXT_MAIN)
-        c.setFont("Helvetica", 20)
-        c.drawCentredString(center_x, 45, "Alberto López")
+        if is_cover:
+            # PORTADA: firma centrada, 20% mas grande, sin linea ni paginacion
+            cover_logo_h = int(117 * 1.20)  # 140px
+            _draw_signature(c, WIDTH / 2, 25, logo_path, cover_logo_h)
+            return  # No footer line, no pagination on cover
+        else:
+            # INTERIOR: firma izquierda
+            _draw_signature(c, MARGIN + 60, 25, logo_path, 117)
 
-    # Línea separadora Verde Sage
+    # 4. Linea separadora Verde Sage (solo paginas interiores)
     c.setFillColor(ACCENT_SECONDARY)
-    # The line separates the footer area (y=150)
-    c.rect(MARGIN, 150, DRAW_WIDTH, 2, fill=True, stroke=False)
+    c.rect(MARGIN, 170, DRAW_WIDTH, 2, fill=True, stroke=False)
 
-    # 4. Numeración (Pagination bottom right on ALL slides)
+    # 5. Paginacion esquina derecha (solo paginas interiores)
     c.setFillColor(ACCENT_SECONDARY)
     c.setFont("Helvetica", 28)
-    # Si es la portada, omitimos el número y solo dejamos la flecha si queremos, o ponemos 1/X. 
-    # El usuario dijo: "Mueve la indicación de paginación ('2 / 3 ->' o similar) a la esquina inferior derecha del footer para equilibrar la composición con la firma de la izquierda." (Implica portada también).
-    pagination_text = f"{current_slide} / {total_slides} →"
-    c.drawRightString(WIDTH - MARGIN, 45, pagination_text)
+    c.drawRightString(WIDTH - MARGIN, 55, f"{current_slide} / {total_slides} ->")
+
 
 def create_carousel_pdf(slides: list[dict]) -> str:
     if not slides:
