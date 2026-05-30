@@ -53,7 +53,7 @@ def _draw_signature(c, center_x, bottom_y, logo_path, logo_h):
     name_size = int(logo_h * 0.235)
     c.setFillColor(TEXT_MAIN)
     c.setFont("Helvetica", name_size)
-    name = "Alberto Lopez"
+    name = "Alberto López"
     tracking = 2.2  # extra px between chars
     # Measure total width including tracking
     total_w = sum(c.stringWidth(ch, "Helvetica", name_size) for ch in name) + tracking * (len(name) - 1)
