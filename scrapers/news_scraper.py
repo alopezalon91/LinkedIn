@@ -288,19 +288,59 @@ def check_credibility(articles: list[dict]) -> list[dict]:
     return articles
 
 
+import re
+
+FISCAL_KEYWORDS = [
+    "Autónomo", "Autónomos", "Pyme", "Pymes", "Sociedades", "SL", "SA", "IVA", "IRPF", 
+    "Impuesto", "Tasa", "Arbitrio", "Contribución", "Hacienda", "AEAT", "Sanción", 
+    "Multa", "Inspección", "Recargo", "Deducción", "Bonificación", "Exención", "Tributo", 
+    "Tributario", "Tributaria", "Fiscal", "Fiscalidad", "Contable", "Contabilidad", 
+    "Factura", "Facturación", "Crea y Crece", "BOE", "Subvención", "Cotización", "RETA", 
+    "Seguridad Social", "Base Imponible", "Retención", "Modelos", "Modelo 100", 
+    "Modelo 300", "Modelo 111", "Modelo 115", "Modelo 303", "Modelo 347", "Modelo 390", 
+    "Modelo 200", "Amortización", "Gasto Deducible", "Patrimonio", "Sucesiones", 
+    "Donaciones", "Plusvalía", "IBI", "IAE", "ITP", "AJD", "Catastro", "Renta", 
+    "Declaración", "Campaña de la Renta", "Ganancia Patrimonial", "Pérdida Patrimonial", 
+    "Criptomonedas", "Criptoactivos", "Dividendos", "Acciones", "Rendimiento del Capital", 
+    "Rendimiento del Trabajo", "Módulos", "Estimación Directa", "Estimación Objetiva", 
+    "Cese de Actividad", "Inspección Fiscal", "Plan de Control Fiscal", 
+    "Jurisprudencia Fiscal", "Supremo Fiscal", "TEAC", "Derivación de Responsabilidad", 
+    "Sociedad Patrimonial", "Transparencia Fiscal", "Optimización Fiscal"
+]
+# Compile the regex pattern for fast case-insensitive search
+FISCAL_PATTERN = re.compile(r'\b(' + '|'.join(re.escape(kw) for kw in FISCAL_KEYWORDS) + r')\b', re.IGNORECASE)
+
 def keyword_prefilter(articles: list[dict]) -> list[dict]:
     """
-    Uses Gemini Flash to batch-filter relevant news (business, economy, taxes, politics)
-    instead of relying on strict hardcoded keywords.
+    Applies a strict local heuristic regex filter using the extended fiscal dictionary.
+    Articles that do not match at least one keyword are discarded to save API costs.
+    The remaining articles are then sent to the AI batch pre-filter.
     """
+    log.info("Applying local heuristic filter to %d articles...", len(articles))
+    heuristic_filtered = []
+    
+    for article in articles:
+        # Check against both title and summary
+        text_to_check = f"{article['title']} {article['summary']}"
+        if FISCAL_PATTERN.search(text_to_check):
+            heuristic_filtered.append(article)
+        elif article["is_official"]:
+            # Always pass official sources (BOE)
+            heuristic_filtered.append(article)
+            
+    log.info("Local heuristic filter passed %d/%d articles", len(heuristic_filtered), len(articles))
+
+    if not heuristic_filtered:
+        return []
+
     from ai.relevance_scorer import batch_prefilter
-    log.info("Sending %d articles to Gemini Batch pre-filter...", len(articles))
-    filtered = batch_prefilter(articles)
+    log.info("Sending %d articles to AI Batch pre-filter...", len(heuristic_filtered))
+    filtered = batch_prefilter(heuristic_filtered)
     
     log.info(
-        "Keyword pre-filter: %d/%d articles passed",
+        "Final AI pre-filter: %d/%d articles passed",
         len(filtered),
-        len(articles),
+        len(heuristic_filtered),
     )
     return filtered
 

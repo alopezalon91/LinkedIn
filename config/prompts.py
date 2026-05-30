@@ -25,62 +25,38 @@ BRANDING_RULES = """\
 1. FIRMA CORPORATIVA UNIFICADA:
    El bloque de firma se compone SIEMPRE de dos elementos apilados verticalmente:
    - Superior: Anagrama gráfico [AL] (símbolo gráfico puro, sin texto).
-   - Inferior: Nombre "Alberto López" (SIEMPRE con tilde en la Ó). Prohibido escribirlo sin tilde.
+   - Inferior: Nombre "Alberto López" (SIEMPRE con tilde en la Ó y L mayúscula). Prohibido escribirlo sin tilde.
    Ambos elementos forman un bloque único e indivisible.
 
 2. TIPOGRAFÍA Y ESTILO DE MARCA:
-   El nombre "Alberto López" debe tratarse con estética tipográfica premium (Plus Jakarta Sans Medium
-   o Montserrat Medium, con tracking/espaciado de letras ligeramente expandido).
-   Está TERMINANTEMENTE PROHIBIDO usar fuentes básicas del sistema (Arial, Times, Courier).
+   Títulos y contenido interior: 'Plus Jakarta Sans' o 'Montserrat'.
+   Nombre del profesional en la firma: Forzar tipografía serif elegante y estilizada ('Playfair Display' o 'Lora' en peso Medium), con tracking/espaciado expandido para actuar como logotipo.
+   Está TERMINANTEMENTE PROHIBIDO usar fuentes básicas del sistema.
 
 3. MAQUETACIÓN POR LIENZO (slide_type cover vs interior):
    - cover (Portada): Firma centrada horizontalmente en la parte inferior. Sin línea de footer.
      Sin paginación. Tamaño de firma un 20% mayor que en interiores.
    - interior (Páginas 2 a 6): Firma en esquina inferior izquierda. Paginación (ej: "2 / 6 →")
      en esquina inferior derecha. Separadas por línea fina en Verde Sage (#7A8B7B).
+     Máximo 25 palabras totales por slide. Bullets de máximo 15 palabras.
 
 4. FONDO LIMPIO (SIN RUIDO VISUAL):
    Fondo plano arena claro #F9F6F0 en todas las diapositivas.
    Marca de agua central: ÚNICAMENTE las líneas entrelazadas del anagrama [AL], sin texto,
-   opacidad estricta entre el 8% y el 10%. No puede interferir con la lectura.
+   opacidad estricta entre el 6% y el 8%. No puede interferir con la lectura.
 
-=== ESTRATEGIA DE CONTENIDO (COPYWRITING) ===
-Escribe los textos combinando de forma equilibrada tres enfoques:
-- Actualidad normativa (cambios en el BOE)
-- Consejos prácticos de ahorro (orientados a resultados reales)
-- Claridad fiscal (traducir la jerga técnica al lenguaje del autónomo)
-
-Tono: Empático, cercano, profesional pero sumamente accesible.
-Nunca alarmista ni ultra-formal. Habla directamente al autónomo y al dueño de pyme.
+=== ESTRATEGIA DE CONTENIDO (COPYWRITING DE AUTOR) ===
+El tono es empático, didáctico y directo ("hablar de tú"). Cero alarmismo, cero tecnicismos sin traducir.
+Traduce la jerga técnica al lenguaje del autónomo y dueño de pyme.
 
 === ESTRUCTURA DEL POST DE LINKEDIN ===
-1. GANCHO (líneas 1 y 2) — Usa una de estas tres fórmulas de alto impacto (AIDA/PAS):
+1. GANCHO (líneas 1 y 2) — Basado en metodologías AIDA/PAS. Enfocado en el coste de la inacción o una verdad contraintuitiva. Prohibido usar ganchos genéricos como "¿Sabías que...?".
 
-   Fórmula A — El gancho contraintuitivo:
-   "Hacienda acaba de cambiar las reglas de juego para [perfil del autónomo],
-   y no es lo que te están contando."
+2. CUERPO: Bloques de texto limpios. Párrafos de máximo 2 líneas. Máximo 2-3 emojis en TODO el post. Longitud máxima del post: 1500 caracteres.
 
-   Fórmula B — El coste de la inacción:
-   "Hacer esto como siempre te puede costar hasta [X]€ a partir de [fecha/momento]."
+3. CIERRE: CTA directo invitando a dejar un comentario o enviar un mensaje privado a Alberto López para evaluar su caso.
 
-   Fórmula C — El traductor fiscal:
-   "He resumido las [X] páginas del nuevo BOE en [N] puntos claros para tu negocio.
-   Vamos al grano."
-
-   → Adapta la fórmula al tono de la noticia. Alterna entre ellas para no repetir patrón.
-
-2. CUERPO: Párrafos de máximo 2 líneas. Máximo 2-3 emojis por post.
-
-3. CIERRE: Pregunta abierta para fomentar debate, o invitación a mensaje privado.
-
-REGLA DEL ALGORITMO: Nunca incluyas enlaces externos en el cuerpo del texto.
-Indica que los recursos están en el primer comentario.
-FIRMA: Referencia a 'Alberto López, Gestor Fiscal y Contable'.
-
-=== DISEÑO DEL CARRUSEL ===
-- Fondo: #F9F6F0. Texto principal: #2B2D2F. Acento: #C2593F. Sage: #7A8B7B.
-- Densidad: 40% espacio en blanco. Máximo 25-30 palabras por diapositiva.
-- Estructura: Portada impactante → 4 slides de desarrollo (1 concepto/página) → CTA de cierre.
+REGLA DEL ALGORITMO: PROHIBIDO meter enlaces externos en el cuerpo. Debes inyectar el parámetro "first_comment" en el JSON final con la URL del recurso o un texto de contacto para el primer comentario.
 """
 
 JSON_FORMAT_RULES = """\
@@ -88,21 +64,25 @@ JSON_FORMAT_RULES = """\
 Devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura exacta.
 El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada y "interior" para el resto.
 {{
-  "post": "Aquí va el texto completo del post de LinkedIn...",
+  "post": "Texto optimizado para LinkedIn con gancho de impacto y firma final...",
+  "first_comment": "Enlace original o texto de contacto para el primer comentario...",
   "carousel": [
     {{
       "slide_type": "cover",
       "pre_title": "ACTUALIDAD",
-      "title": "Título impactante de la portada",
-      "subtitle": "Promesa de valor concreta y directa.",
+      "title": "Título Editorial Impactante",
+      "subtitle": "Subtítulo de valor claro",
       "bullets": []
     }},
     {{
       "slide_type": "interior",
       "pre_title": "",
-      "title": "Desarrollo conceptual 1",
-      "subtitle": "Contexto breve",
-      "bullets": ["Punto clave 1 (máx. 15 palabras)", "Punto clave 2 (máx. 15 palabras)"]
+      "title": "Concepto de la Slide",
+      "subtitle": "Contexto ultra-breve",
+      "bullets": [
+        "Punto clave 1 de alto impacto",
+        "Punto clave 2 directo al grano"
+      ]
     }}
   ]
 }}
@@ -153,8 +133,12 @@ Fecha: {{fecha}}
 URL: {{url}}
 Sector principal: {{sector}}
 
-=== ENFOQUE ===
-Traduce conceptos abstractos o tecnológicos a beneficios prácticos, contables o fiscales reales para autónomos, pymes y negocios digitales.
+=== REGLA DE CONEXIÓN TRANSVERSAL (CONEXIÓN FISCAL) ===
+Analiza la noticia general recibida y responde a la pregunta interna: ¿Cómo afecta este evento de forma indirecta a las finanzas, costes, obligaciones o impuestos de un ciudadano, autónomo o empresa en España?
+- Si la noticia habla de IA o tecnología -> Conéctalo con la deducción por I+D+i, digitalización obligatoria o gastos deducibles de software.
+- Si la noticia habla de inflación o huelgas -> Conéctalo con el aumento de costes deducibles, optimización de márgenes o planificación del cierre contable.
+- Si la noticia habla de vivienda o tipos de interés -> Conéctalo con las deducciones por alquiler, inversiones inmobiliarias, el IBI o el impuesto sobre el patrimonio.
+Traduce la actualidad del mundo en una lección de estrategia fiscal práctica.
 
 {BRANDING_RULES}
 

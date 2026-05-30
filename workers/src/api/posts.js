@@ -52,7 +52,7 @@ export async function listPosts(db, params = {}) {
 
   const [rowsResult, countResult] = await Promise.all([
     db.prepare(`
-      SELECT p.*, p.media_base64, d.rejection_reason, d.edit_reason
+      SELECT p.*, p.media_base64, p.first_comment, d.rejection_reason, d.edit_reason
       FROM posts p
       LEFT JOIN (
         SELECT post_id, rejection_reason, edit_reason,
@@ -91,7 +91,7 @@ export async function listPosts(db, params = {}) {
  */
 export async function getPost(db, id) {
   const row = await db.prepare(`
-    SELECT p.*, p.media_base64, d.rejection_reason, d.edit_reason
+    SELECT p.*, p.media_base64, p.first_comment, d.rejection_reason, d.edit_reason
     FROM posts p
     LEFT JOIN (
       SELECT post_id, rejection_reason, edit_reason,
@@ -137,14 +137,14 @@ export async function createPost(db, data) {
 
   await db.prepare(`
     INSERT INTO posts (
-      id, type, sector, status, content, content_edited,
+      id, type, sector, status, content, content_edited, first_comment,
       source_id, source_url, source_name,
       urgency, ai_score, confidence_score,
       char_count, hashtags, media_base64,
       scheduled_at, published_at, linkedin_post_id,
       created_at, updated_at
     ) VALUES (
-      ?, ?, ?, 'pending', ?, NULL,
+      ?, ?, ?, 'pending', ?, NULL, ?,
       ?, ?, ?,
       ?, ?, ?,
       ?, ?, ?,
@@ -156,6 +156,7 @@ export async function createPost(db, data) {
     data.type,
     data.sector,
     data.content,
+    data.first_comment ?? null,
     data.source_id    ?? null,
     data.source_url   ?? null,
     data.source_name  ?? null,
@@ -186,7 +187,7 @@ export async function updatePost(db, id, updates) {
   if (!post) throw new Error(`Post not found: ${id}`);
 
   const allowed = [
-    'status', 'content_edited', 'scheduled_at', 'published_at', 'linkedin_post_id',
+    'status', 'content_edited', 'first_comment', 'scheduled_at', 'published_at', 'linkedin_post_id',
     'urgency', 'ai_score', 'confidence_score', 'hashtags',
   ];
 

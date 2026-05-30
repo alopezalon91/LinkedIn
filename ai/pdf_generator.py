@@ -13,6 +13,22 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from PIL import Image
 
+# Register Custom Fonts
+font_dir = os.path.join(os.path.dirname(__file__), '..', 'assets', 'fonts')
+try:
+    pdfmetrics.registerFont(TTFont('Montserrat-Regular', os.path.join(font_dir, 'Montserrat-Regular.ttf')))
+    pdfmetrics.registerFont(TTFont('Montserrat-Medium', os.path.join(font_dir, 'Montserrat-Medium.ttf')))
+    pdfmetrics.registerFont(TTFont('Montserrat-Bold', os.path.join(font_dir, 'Montserrat-Bold.ttf')))
+    pdfmetrics.registerFont(TTFont('Lora-Medium', os.path.join(font_dir, 'Lora-Medium.ttf')))
+    FONT_MAIN = 'Montserrat-Medium'
+    FONT_BOLD = 'Montserrat-Bold'
+    FONT_SIGNATURE = 'Lora-Medium'
+except Exception as e:
+    print(f"Warning: Failed to load custom fonts, falling back to Helvetica. Error: {e}")
+    FONT_MAIN = 'Helvetica'
+    FONT_BOLD = 'Helvetica-Bold'
+    FONT_SIGNATURE = 'Helvetica'
+
 # ---------------------------------------------------------
 # NEW DESIGN SYSTEM (Minimalist, Accessible, Professional)
 # ---------------------------------------------------------
@@ -49,19 +65,19 @@ def _draw_signature(c, center_x, bottom_y, logo_path, logo_h):
     c.drawImage(logo_path, center_x - (logo_w / 2), mono_y, width=logo_w, height=logo_h,
                 preserveAspectRatio=True, mask='auto')
 
-    # Draw "Alberto Lopez" with expanded letter-spacing (manual tracking)
+    # Draw "Alberto López" with Lora-Medium
     name_size = int(logo_h * 0.235)
     c.setFillColor(TEXT_MAIN)
-    c.setFont("Helvetica", name_size)
+    c.setFont(FONT_SIGNATURE, name_size)
     name = "Alberto López"
     tracking = 2.2  # extra px between chars
     # Measure total width including tracking
-    total_w = sum(c.stringWidth(ch, "Helvetica", name_size) for ch in name) + tracking * (len(name) - 1)
+    total_w = sum(c.stringWidth(ch, FONT_SIGNATURE, name_size) for ch in name) + tracking * (len(name) - 1)
     x_start = center_x - total_w / 2
     x_cursor = x_start
     for ch in name:
         c.drawString(x_cursor, bottom_y + 4, ch)
-        x_cursor += c.stringWidth(ch, "Helvetica", name_size) + tracking
+        x_cursor += c.stringWidth(ch, FONT_SIGNATURE, name_size) + tracking
 
 
 def draw_background(c, current_slide, total_slides, is_cover=False):
@@ -99,8 +115,8 @@ def draw_background(c, current_slide, total_slides, is_cover=False):
 
     # 5. Paginacion esquina derecha (solo paginas interiores)
     c.setFillColor(ACCENT_SECONDARY)
-    c.setFont("Helvetica", 28)
-    c.drawRightString(WIDTH - MARGIN, 55, f"{current_slide} / {total_slides} ->")
+    c.setFont(FONT_MAIN, 28)
+    c.drawRightString(WIDTH - MARGIN, 55, f"{current_slide} / {total_slides} →")
 
 
 def create_carousel_pdf(slides: list[dict]) -> str:
@@ -128,11 +144,11 @@ def create_carousel_pdf(slides: list[dict]) -> str:
             # === PORTADA: Diseño Centrado ===
             total_h = 0
             t_style = ParagraphStyle(
-                name='TitleCover', fontName='Helvetica-Bold', fontSize=80,
+                name='TitleCover', fontName=FONT_BOLD, fontSize=80,
                 leading=95, textColor=TEXT_MAIN, alignment=TA_CENTER
             )
             st_style = ParagraphStyle(
-                name='SubtitleCover', fontName='Helvetica', fontSize=44,
+                name='SubtitleCover', fontName=FONT_MAIN, fontSize=44,
                 leading=58, textColor=TEXT_MAIN, alignment=TA_CENTER
             )
             
@@ -157,8 +173,8 @@ def create_carousel_pdf(slides: list[dict]) -> str:
             
             # Dibujar píldora centrada
             if pre_title:
-                c.setFont("Helvetica-Bold", 30)
-                text_width = c.stringWidth(pre_title, "Helvetica-Bold", 30)
+                c.setFont(FONT_BOLD, 30)
+                text_width = c.stringWidth(pre_title, FONT_BOLD, 30)
                 pill_width = text_width + 80
                 pill_x = (WIDTH - pill_width) / 2
                 
@@ -181,8 +197,8 @@ def create_carousel_pdf(slides: list[dict]) -> str:
             
             # Píldora
             if pre_title:
-                c.setFont("Helvetica-Bold", 26)
-                text_width = c.stringWidth(pre_title, "Helvetica-Bold", 26)
+                c.setFont(FONT_BOLD, 26)
+                text_width = c.stringWidth(pre_title, FONT_BOLD, 26)
                 pill_width = text_width + 60
                 
                 c.setFillColor(ACCENT_PRIMARY)
@@ -194,7 +210,7 @@ def create_carousel_pdf(slides: list[dict]) -> str:
             # Título
             if title:
                 t_style = ParagraphStyle(
-                    name='TitleInner', fontName='Helvetica-Bold', fontSize=60,
+                    name='TitleInner', fontName=FONT_BOLD, fontSize=60,
                     leading=70, textColor=TEXT_MAIN, alignment=TA_LEFT
                 )
                 p_title = Paragraph(title, t_style)
@@ -205,7 +221,7 @@ def create_carousel_pdf(slides: list[dict]) -> str:
             # Subtítulo
             if subtitle:
                 st_style = ParagraphStyle(
-                    name='SubtitleInner', fontName='Helvetica', fontSize=36,
+                    name='SubtitleInner', fontName=FONT_MAIN, fontSize=36,
                     leading=46, textColor=ACCENT_SECONDARY, alignment=TA_LEFT
                 )
                 p_st = Paragraph(subtitle, st_style)
@@ -216,7 +232,7 @@ def create_carousel_pdf(slides: list[dict]) -> str:
             # Bullets
             if bullets:
                 b_style = ParagraphStyle(
-                    name='BulletInner', fontName='Helvetica-Bold', fontSize=32,
+                    name='BulletInner', fontName=FONT_BOLD, fontSize=32,
                     leading=45, textColor=TEXT_MAIN, alignment=TA_LEFT
                 )
                 

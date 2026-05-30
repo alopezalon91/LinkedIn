@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS posts (
   status TEXT NOT NULL DEFAULT 'pending',   -- 'pending' | 'approved' | 'rejected' | 'published' | 'scheduled'
   content TEXT NOT NULL,                    -- The LinkedIn post text (original AI-generated)
   content_edited TEXT,                      -- Edited version if user modified it
+  first_comment TEXT,                       -- Link or CTA to be posted as first comment
   source_id TEXT,                           -- BOE ID or article identifier
   source_url TEXT,                          -- Link to the original source
   source_name TEXT,                         -- 'BOE' | 'Expansión' | 'El Economista' | etc

@@ -45,7 +45,7 @@ log = logging.getLogger("content_generator")
 # Constants
 # ---------------------------------------------------------------------------
 
-MAX_POST_CHARS = 2500
+MAX_POST_CHARS = 1500
 _MODEL_NAME = "gemini-2.0-flash"
 
 # ---------------------------------------------------------------------------
@@ -433,6 +433,7 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
         "ai_score": score_data.get("score", 0),
         "ai_urgency": score_data.get("urgency", "baja"),
         "ai_reason": score_data.get("reason", ""),
+        "first_comment": verified_content.get("first_comment", raw_content.get("first_comment", "")),
         "media_base64": create_carousel_pdf(carousel_slides) if carousel_slides else "",
     }
 
@@ -518,5 +519,6 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
         "ai_score": score_data.get("score", 0),
         "ai_urgency": score_data.get("urgency", "baja"),
         "ai_reason": score_data.get("reason", ""),
+        "first_comment": verified_content.get("first_comment", raw_content.get("first_comment", "")),
         "media_base64": create_carousel_pdf(carousel_slides) if carousel_slides else "",
     }

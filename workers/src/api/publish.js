@@ -106,6 +106,43 @@ export async function publishPost(db, env, postId) {
     }
   }
 
+  // 5b. Publish the first comment if provided
+  let commentResult = null;
+  if (linkedinPostId && post.first_comment) {
+    try {
+      // Create comment payload per LinkedIn API
+      const commentPayload = {
+        actor: linkedin_urn,
+        object: linkedinPostId,
+        message: {
+          text: post.first_comment
+        }
+      };
+
+      const commentResponse = await fetch(`https://api.linkedin.com/rest/socialActions/${encodeURIComponent(linkedinPostId)}/comments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'Content-Type': 'application/json',
+          'LinkedIn-Version': LINKEDIN_VERSION,
+          'X-RestLi-Protocol-Version': '2.0.0',
+        },
+        body: JSON.stringify(commentPayload),
+      });
+
+      if (!commentResponse.ok) {
+        const commentErr = await commentResponse.text();
+        console.error(`[worker] Failed to publish first_comment for post ${postId}: ${commentErr}`);
+        commentResult = 'failed';
+      } else {
+        commentResult = 'success';
+      }
+    } catch (err) {
+      console.error(`[worker] Error publishing first_comment for post ${postId}:`, err);
+      commentResult = 'error';
+    }
+  }
+
   // 6. Update post in D1
   const publishedAt = nowISO();
   const updatedPost = await updatePost(db, postId, {
