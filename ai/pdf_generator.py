@@ -53,23 +53,24 @@ def draw_background(c, current_slide, total_slides, is_cover=False):
     logo_filename = 'monogram_solid.png'
     logo_path = os.path.join(os.path.dirname(__file__), '..', 'assets', logo_filename)
     
-    logo_y = MARGIN / 2  # Around 54
-    logo_h = 70
     if os.path.exists(logo_path):
         try:
             with Image.open(logo_path) as img:
                 img_w, img_h = img.size
+                logo_h = 55
                 logo_w = int(logo_h * (img_w / img_h))
         except:
-            logo_w = 70
+            logo_h = 55
+            logo_w = 55
             
-        # Left aligned at footer on ALL slides
-        c.drawImage(logo_path, MARGIN, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+        # Vertical signature block in the bottom left
+        center_x = MARGIN + 60
+        c.drawImage(logo_path, center_x - (logo_w/2), 75, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
         
-        # Add "Alberto López" text to the right of the monogram
+        # Add "Alberto López" text centered below the monogram
         c.setFillColor(TEXT_MAIN)
-        c.setFont("Helvetica", 32)
-        c.drawString(MARGIN + logo_w + 20, logo_y + 20, "Alberto López")
+        c.setFont("Helvetica", 20)
+        c.drawCentredString(center_x, 45, "Alberto López")
 
     # Línea separadora Verde Sage
     c.setFillColor(ACCENT_SECONDARY)
@@ -82,7 +83,7 @@ def draw_background(c, current_slide, total_slides, is_cover=False):
     # Si es la portada, omitimos el número y solo dejamos la flecha si queremos, o ponemos 1/X. 
     # El usuario dijo: "Mueve la indicación de paginación ('2 / 3 ->' o similar) a la esquina inferior derecha del footer para equilibrar la composición con la firma de la izquierda." (Implica portada también).
     pagination_text = f"{current_slide} / {total_slides} →"
-    c.drawRightString(WIDTH - MARGIN, logo_y + 20, pagination_text)
+    c.drawRightString(WIDTH - MARGIN, 45, pagination_text)
 
 def create_carousel_pdf(slides: list[dict]) -> str:
     if not slides:
