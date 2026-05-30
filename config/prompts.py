@@ -38,7 +38,7 @@ BRANDING_RULES = """\
      Sin paginación. Tamaño de firma un 20% mayor que en interiores.
    - interior (Páginas 2 a 6): Firma en esquina inferior izquierda. Paginación (ej: "2 / 6 →")
      en esquina inferior derecha. Separadas por línea fina en Verde Sage (#7A8B7B).
-     Máximo 25 palabras totales por slide. Bullets de máximo 15 palabras.
+     DEBES incluir de 3 a 4 bullets de información densa y valiosa por slide. Nada de frases vacías.
 
 4. FONDO LIMPIO (SIN RUIDO VISUAL):
    Fondo plano arena claro #F9F6F0 en todas las diapositivas.
@@ -51,10 +51,11 @@ Aléjate por completo de sonar a "gestor cualquiera" o a una "IA de ChatGPT". Us
 de forma cruda y aporta un punto de vista único. Traduce la jerga técnica al lenguaje de la calle, pero demostrando 
 un conocimiento fiscal implacable.
 
-=== ESTRUCTURA DEL POST DE LINKEDIN (MÍNIMO 1000 CARACTERES) ===
+=== ESTRUCTURA DEL POST DE LINKEDIN (EXTENSO Y PROFUNDO) ===
 1. GANCHO (líneas 1 y 2) — Basado en metodologías AIDA/PAS. Enfocado en el coste de la inacción o una verdad contraintuitiva. Prohibido usar ganchos genéricos como "¿Sabías que...?".
 
-2. CUERPO (ALTA DENSIDAD DE VALOR): El post no puede ser un resumen superficial. DEBES incluir datos concretos, plazos, importes de sanciones y pasos exactos que debe tomar el autónomo. Longitud obligatoria: Mínimo 1000 caracteres, máximo 1500. Párrafos de máximo 2 líneas. Máximo 2-3 emojis en TODO el post.
+2. CUERPO (ALTA DENSIDAD DE VALOR): El texto principal será el desarrollo EXTENSO de la noticia. Tienes que desgranar todos los detalles técnicos, dar contextos profundos y explicar todo con detalle. Escribe a modo de mini-blog. 
+Longitud obligatoria: Mínimo 2000 caracteres, máximo 2800. Párrafos de máximo 3 líneas. Máximo 2-3 emojis en TODO el post.
 
 3. CIERRE: CTA directo invitando a dejar un comentario o enviar un mensaje privado a Alberto López para evaluar su caso.
 
@@ -82,8 +83,9 @@ El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada y "interior" p
       "title": "El Problema Real",
       "subtitle": "La letra pequeña que nadie te cuenta",
       "bullets": [
-        "PROHIBIDO SER GENÉRICO: Da el dato crudo (Ej: Multa de 3.000€ firme)",
-        "Aporta el matiz que los periódicos ocultan o no explican"
+        "Da el dato crudo (Ej: Multa de 3.000€ firme)",
+        "Aporta el matiz que los periódicos ocultan",
+        "Explica el mecanismo técnico exacto del problema"
       ]
     }},
     {{
@@ -93,6 +95,7 @@ El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada y "interior" p
       "subtitle": "Perfil exacto de los afectados",
       "bullets": [
         "Especifica a quién afecta: (Ej: Autónomos que usan Excel para facturar)",
+        "Requisito económico o sectorial para que aplique",
         "Fecha exacta o condición concreta de aplicación"
       ]
     }},
@@ -102,8 +105,10 @@ El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada y "interior" p
       "title": "La Solución Táctica",
       "subtitle": "Qué debes ejecutar hoy mismo",
       "bullets": [
-        "PROHIBIDO: 'Busca software certificado'. OBLIGATORIO: 'Usa programas conectados a Verifactu que envíen el XML a Hacienda'",
-        "PROHIBIDO: 'Implementa medidas'. OBLIGATORIO: 'Guarda los tickets físicos hasta volcar el PDF en tu portal'"
+        "Explica con pelos y señales el sistema que se debe implementar",
+        "Menciona requisitos del reglamento o ley concreta",
+        "Paso 1: Qué hacer con los tickets y facturas actuales",
+        "Paso 2: Plazos límite de adaptación"
       ]
     }},
     {{
@@ -112,8 +117,9 @@ El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada y "interior" p
       "title": "La Estrategia de Alberto",
       "subtitle": "Mi consejo fuera de lo común",
       "bullets": [
-        "Un hack o recomendación agresiva y práctica",
-        "PROHIBIDO: 'Evalúa tu situación'. OBLIGATORIO: 'Audita hoy tus facturas del T1 antes del cierre'"
+        "Un hack táctico avanzado o recomendación agresiva",
+        "Auditoría preventiva que debes hacer ya",
+        "Estrategia para minimizar el daño fiscal a corto plazo"
       ]
     }}
   ]

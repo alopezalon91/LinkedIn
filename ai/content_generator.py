@@ -45,7 +45,7 @@ log = logging.getLogger("content_generator")
 # Constants
 # ---------------------------------------------------------------------------
 
-MAX_POST_CHARS = 1500
+MAX_POST_CHARS = 3000
 _MODEL_NAME = "gemini-2.0-flash"
 
 # ---------------------------------------------------------------------------
