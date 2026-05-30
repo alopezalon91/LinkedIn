@@ -1,94 +1,97 @@
-import io
+import json
 import os
-import base64
+import io
+import textwrap
 import emoji
-from PIL import Image
 from reportlab.pdfgen import canvas
-from reportlab.lib.colors import HexColor
-from reportlab.lib.pagesizes import landscape, portrait
-from reportlab.platypus import Paragraph, ListFlowable, ListItem, Frame
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import Paragraph
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.colors import HexColor
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from PIL import Image
 
-# Brand Colors
-BG_DARK = HexColor('#080e14')
-ACCENT_GOLD = HexColor('#b39562')
-TEXT_LIGHT = HexColor('#ffffff')
-MUTED_LIGHT = HexColor('#cccccc')
+# ---------------------------------------------------------
+# NEW DESIGN SYSTEM (Minimalist, Accessible, Professional)
+# ---------------------------------------------------------
 
+# Palette
+BG_COLOR = HexColor('#F9F6F0')     # Alabastro / Arena Claro
+TEXT_MAIN = HexColor('#2B2D2F')    # Gris Grafito Oscuro (Titulos y Texto)
+ACCENT_PRIMARY = HexColor('#C2593F') # Terracota Mate (Pastillas/Alertas)
+ACCENT_SECONDARY = HexColor('#7A8B7B') # Verde Sage / Sabio (Subtítulos, Iconos, Líneas)
+WHITE = HexColor('#FFFFFF')
+
+# Geometry & Margins
+WIDTH = 1080
+HEIGHT = 1080
+MARGIN = 108 # 10% margin on all sides
+DRAW_WIDTH = WIDTH - (MARGIN * 2)
+
+# Helper function
 def strip_emojis(text: str) -> str:
-    if not text: return ""
     return emoji.replace_emoji(text, replace='')
 
-def draw_clean_background(c, width, height, current_slide, total_slides, is_cover=False):
-    # 1. Fondo original exacto sin geometría y sin línea pintada (bg_clean_final.png)
-    bg_filename = 'bg_clean_final.png'
-    bg_path = os.path.join(os.path.dirname(__file__), '..', 'assets', bg_filename)
-        
-    if os.path.exists(bg_path):
-        c.drawImage(bg_path, 0, 0, width=width, height=height, preserveAspectRatio=False)
-    else:
-        c.setFillColor(BG_DARK)
-        c.rect(0, 0, width, height, fill=True, stroke=False)
+def draw_background(c, current_slide, total_slides, is_cover=False):
+    # 1. Fondo sólido Alabastro
+    c.setFillColor(BG_COLOR)
+    c.rect(0, 0, WIDTH, HEIGHT, fill=True, stroke=False)
     
-    # 2. Marca de agua (Solo monograma)
-    wm_filename = 'logo_watermark_final.png'
+    # 2. Marca de agua
+    wm_filename = 'logo_watermark_rebrand.png'
     wm_path = os.path.join(os.path.dirname(__file__), '..', 'assets', wm_filename)
     if os.path.exists(wm_path):
         wm_w = 600
         wm_h = 600
-        # Centrado perfecto visualmente en el bloque de contenido (desde la línea dorada hacia arriba)
-        # La línea dorada está en y=150. El centro de ese espacio es 150 + (1080 - 150)/2 = 615.
-        # Por lo tanto, y = 615 - (wm_h / 2) = 615 - 300 = 315.
-        c.drawImage(wm_path, (width - wm_w)/2, 315, width=wm_w, height=wm_h, mask='auto', preserveAspectRatio=True)
+        # Centered optically in the content area (above footer)
+        # Footer line is at y=150. Space is 150 to 1080. Center is 615.
+        c.drawImage(wm_path, (WIDTH - wm_w)/2, 315, width=wm_w, height=wm_h, mask='auto', preserveAspectRatio=True)
 
     # 3. Footer Logo
-    # Si es portada, quizás el logo va centrado abajo, o lo dejamos igual. El usuario dijo: 
-    # "todo debería estar más centrado y dispuesto de otra manera" para la portada.
-    # Así que para la portada, el logo grande centrado abajo. Para el interior, a la izquierda.
-    logo_filename = 'logo_cover_trimmed.png'
+    logo_filename = 'logo_rebrand.png'
     logo_path = os.path.join(os.path.dirname(__file__), '..', 'assets', logo_filename)
+    
+    logo_y = MARGIN / 2  # Around 54
+    logo_h = 90
     if os.path.exists(logo_path):
-        logo_h = 110 # 46% bigger than 75
         try:
             with Image.open(logo_path) as img:
                 img_w, img_h = img.size
                 logo_w = int(logo_h * (img_w / img_h))
         except:
-            logo_w = 330
+            logo_w = 270
             
-        logo_y = 35
         if is_cover:
-            # Centrado
-            c.drawImage(logo_path, (width - logo_w)/2, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+            # Centered at bottom
+            c.drawImage(logo_path, (WIDTH - logo_w)/2, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
         else:
-            # Izquierda
-            c.drawImage(logo_path, 80, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+            # Left aligned at footer
+            c.drawImage(logo_path, MARGIN, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
 
-    # Línea separadora ajustada (con margen de respiración sobre el logo)
-    c.setFillColor(ACCENT_GOLD)
-    c.rect(80, 185, width - 160, 2, fill=True, stroke=False)
-
-
+    # Línea separadora Verde Sage
+    c.setFillColor(ACCENT_SECONDARY)
+    # The line separates the footer area (y=150)
+    c.rect(MARGIN, 150, DRAW_WIDTH, 2, fill=True, stroke=False)
 
     # 4. Numeración
     if not is_cover:
-        c.setFillColor(MUTED_LIGHT)
-        c.setFont("Helvetica", 28)
-        c.drawRightString(width - 80, 65, f"{current_slide} / {total_slides}")
+        c.setFillColor(ACCENT_SECONDARY)
+        c.setFont("Helvetica", 24)
+        c.drawRightString(WIDTH - MARGIN, logo_y + 30, f"{current_slide} / {total_slides} →")
 
 def create_carousel_pdf(slides: list[dict]) -> str:
     if not slides:
         slides = [{"pre_title": "INFO", "title": "Sin contenido", "subtitle": "", "bullets": []}]
 
     buffer = io.BytesIO()
-    width, height = (1080, 1080)
-    c = canvas.Canvas(buffer, pagesize=(width, height))
+    c = canvas.Canvas(buffer, pagesize=(WIDTH, HEIGHT))
     total_slides = len(slides)
     
     for i, slide in enumerate(slides):
         is_cover = (i == 0)
-        draw_clean_background(c, width, height, i + 1, total_slides, is_cover)
+        draw_background(c, i + 1, total_slides, is_cover)
         
         pre_title = strip_emojis(slide.get("pre_title", ""))
         title = strip_emojis(slide.get("title", ""))
@@ -99,15 +102,14 @@ def create_carousel_pdf(slides: list[dict]) -> str:
         
         if is_cover:
             # === PORTADA: Diseño Centrado ===
-            # Calculamos altura total para centrarlo verticalmente
             total_h = 0
             t_style = ParagraphStyle(
                 name='TitleCover', fontName='Helvetica-Bold', fontSize=80,
-                leading=95, textColor=TEXT_LIGHT, alignment=TA_CENTER
+                leading=95, textColor=TEXT_MAIN, alignment=TA_CENTER
             )
             st_style = ParagraphStyle(
                 name='SubtitleCover', fontName='Helvetica', fontSize=40,
-                leading=55, textColor=ACCENT_GOLD, alignment=TA_CENTER
+                leading=55, textColor=ACCENT_SECONDARY, alignment=TA_CENTER
             )
             
             p_title = Paragraph(title, t_style) if title else None
@@ -115,100 +117,96 @@ def create_carousel_pdf(slides: list[dict]) -> str:
             
             h_title = h_st = 0
             if p_title:
-                w, h_title = p_title.wrapOn(c, width - 160, height)
+                w, h_title = p_title.wrapOn(c, DRAW_WIDTH, HEIGHT)
                 total_h += h_title + spacing
             if p_st:
-                w, h_st = p_st.wrapOn(c, width - 160, height)
+                w, h_st = p_st.wrapOn(c, DRAW_WIDTH, HEIGHT)
                 total_h += h_st + spacing
                 
             if pre_title:
                 total_h += 60 + spacing
                 
-            # Restamos el último spacing extra
             if total_h > 0: total_h -= spacing
             
-            # Y de inicio: desplazamos el bloque hacia arriba para compensar el peso visual del logo abajo
-            y_cursor = ((height + total_h) / 2) + 120
+            # Y start
+            y_cursor = ((HEIGHT + total_h) / 2) + 80
             
             # Dibujar píldora centrada
             if pre_title:
-                pre_title_upper = pre_title.upper()
                 c.setFont("Helvetica-Bold", 30)
-                text_width = c.stringWidth(pre_title_upper, "Helvetica-Bold", 30)
-                pill_width = text_width + 60
+                text_width = c.stringWidth(pre_title, "Helvetica-Bold", 30)
+                pill_width = text_width + 80
+                pill_x = (WIDTH - pill_width) / 2
                 
-                pill_x = (width - pill_width) / 2
-                c.setFillColor(ACCENT_GOLD)
+                c.setFillColor(ACCENT_PRIMARY)
                 c.roundRect(pill_x, y_cursor - 60, pill_width, 60, 30, fill=True, stroke=False)
-                
-                c.setFillColor(BG_DARK)
-                c.drawString(pill_x + 30, y_cursor - 42, pre_title_upper)
+                c.setFillColor(WHITE)
+                c.drawCentredString(WIDTH / 2, y_cursor - 42, pre_title)
                 y_cursor -= (60 + spacing)
                 
             if p_title:
-                p_title.drawOn(c, 80, y_cursor - h_title)
+                p_title.drawOn(c, MARGIN, y_cursor - h_title)
                 y_cursor -= (h_title + spacing)
                 
             if p_st:
-                p_st.drawOn(c, 80, y_cursor - h_st)
-                y_cursor -= (h_st + spacing)
-
+                p_st.drawOn(c, MARGIN, y_cursor - h_st)
+                
         else:
-            # === INTERIOR: Alineado a la izquierda, posición fija superior ===
-            y_cursor = height - 120
+            # === INTERIOR ===
+            y_cursor = HEIGHT - MARGIN
             
+            # Píldora
             if pre_title:
-                pre_title_upper = pre_title.upper()
-                c.setFont("Helvetica-Bold", 30)
-                text_width = c.stringWidth(pre_title_upper, "Helvetica-Bold", 30)
+                c.setFont("Helvetica-Bold", 26)
+                text_width = c.stringWidth(pre_title, "Helvetica-Bold", 26)
                 pill_width = text_width + 60
                 
-                c.setFillColor(ACCENT_GOLD)
-                c.roundRect(80, y_cursor - 60, pill_width, 60, 30, fill=True, stroke=False)
-                
-                c.setFillColor(BG_DARK)
-                c.drawString(80 + 30, y_cursor - 42, pre_title_upper)
-                y_cursor -= (60 + spacing)
-                
+                c.setFillColor(ACCENT_PRIMARY)
+                c.roundRect(MARGIN, y_cursor - 50, pill_width, 50, 25, fill=True, stroke=False)
+                c.setFillColor(WHITE)
+                c.drawString(MARGIN + 30, y_cursor - 35, pre_title)
+                y_cursor -= (50 + 40)
+            
+            # Título
             if title:
                 t_style = ParagraphStyle(
-                    name='Title', fontName='Helvetica-Bold', fontSize=62,
-                    leading=75, textColor=TEXT_LIGHT, alignment=TA_LEFT
+                    name='TitleInner', fontName='Helvetica-Bold', fontSize=60,
+                    leading=70, textColor=TEXT_MAIN, alignment=TA_LEFT
                 )
-                title_p = Paragraph(title, t_style)
-                w, h_title = title_p.wrapOn(c, width - 160, height)
-                title_p.drawOn(c, 80, y_cursor - h_title)
-                y_cursor -= (h_title + spacing)
+                p_title = Paragraph(title, t_style)
+                w, h = p_title.wrapOn(c, DRAW_WIDTH, HEIGHT)
+                p_title.drawOn(c, MARGIN, y_cursor - h)
+                y_cursor -= (h + 30)
                 
+            # Subtítulo
             if subtitle:
                 st_style = ParagraphStyle(
-                    name='Subtitle', fontName='Helvetica', fontSize=32,
-                    leading=45, textColor=ACCENT_GOLD, alignment=TA_LEFT
+                    name='SubtitleInner', fontName='Helvetica', fontSize=36,
+                    leading=46, textColor=ACCENT_SECONDARY, alignment=TA_LEFT
                 )
-                st_p = Paragraph(subtitle, st_style)
-                w, h_st = st_p.wrapOn(c, width - 160, height)
-                st_p.drawOn(c, 80, y_cursor - h_st)
-                y_cursor -= (h_st + spacing)
+                p_st = Paragraph(subtitle, st_style)
+                w, h = p_st.wrapOn(c, DRAW_WIDTH, HEIGHT)
+                p_st.drawOn(c, MARGIN, y_cursor - h)
+                y_cursor -= (h + 60)
                 
+            # Bullets
             if bullets:
                 b_style = ParagraphStyle(
-                    name='Bullet', fontName='Helvetica', fontSize=32,
-                    leading=45, textColor=MUTED_LIGHT, alignment=TA_LEFT, spaceAfter=15
+                    name='BulletInner', fontName='Helvetica-Bold', fontSize=32,
+                    leading=45, textColor=TEXT_MAIN, alignment=TA_LEFT
                 )
-                list_items = []
+                
                 for b in bullets:
-                    item = ListItem(Paragraph(b, b_style), leftIndent=40, bulletColor=ACCENT_GOLD, bulletType='bullet', bulletFontName='Helvetica', bulletFontSize=32)
-                    item.bulletText = '—'
-                    list_items.append(item)
+                    bullet_text = f"•  {b}"
+                    p_b = Paragraph(bullet_text, b_style)
+                    w, h = p_b.wrapOn(c, DRAW_WIDTH - 20, HEIGHT)
+                    p_b.drawOn(c, MARGIN + 20, y_cursor - h)
+                    y_cursor -= (h + 40)
                     
-                bullets_f = ListFlowable(list_items, bulletType='bullet', bulletFontName='Helvetica', bulletFontSize=32, bulletOffsetY=0)
-                w, h_bull = bullets_f.wrapOn(c, width - 160, height)
-                bullets_f.drawOn(c, 80, y_cursor - h_bull)
-
         c.showPage()
         
     c.save()
     pdf_bytes = buffer.getvalue()
-    buffer.close()
-    
-    return base64.b64encode(pdf_bytes).decode('utf-8')
+    import base64
+    b64_str = base64.b64encode(pdf_bytes).decode('utf-8')
+    return b64_str
