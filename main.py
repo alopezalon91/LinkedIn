@@ -130,6 +130,39 @@ def _post_to_cloudflare(post: dict) -> bool:
         log.error("Network error posting to Cloudflare: %s", exc)
         return False
 
+def _filter_existing_posts(entries: list[dict]) -> list[dict]:
+    """
+    Asks the Cloudflare Worker which source_ids already exist in the dashboard
+    (pending, approved, rejected, published) and filters them out.
+    """
+    if not CF_WORKER_URL or not entries:
+        return entries
+        
+    source_ids = [str(e.get("id")) for e in entries if e.get("id")]
+    if not source_ids:
+        return entries
+        
+    endpoint = f"{CF_WORKER_URL}/api/posts/check-sources"
+    headers = {"Content-Type": "application/json"}
+    if CF_WORKER_TOKEN:
+        headers["Authorization"] = f"Bearer {CF_WORKER_TOKEN}"
+        
+    try:
+        with httpx.Client(timeout=15) as client:
+            resp = client.post(endpoint, json={"source_ids": source_ids}, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                existing = set(data.get("existing_source_ids", []))
+                if existing:
+                    log.info("Anti-duplicate filter: Cloudflare reported %d items already exist in the dashboard. Discarding them.", len(existing))
+                return [e for e in entries if str(e.get("id")) not in existing]
+            else:
+                log.warning("Could not check duplicate source IDs (HTTP %d). Proceeding without duplicate filter.", resp.status_code)
+                return entries
+    except Exception as exc:
+        log.warning("Error checking duplicate source IDs: %s. Proceeding without filter.", exc)
+        return entries
+
 
 # ---------------------------------------------------------------------------
 # Module runners
@@ -162,6 +195,12 @@ def run_boe_module(date: str | None = None) -> list[dict]:
     scored_entries = score_batch(entries, item_type="boe")
     if not scored_entries:
         log.info("No BOE entries passed relevance threshold.")
+        return []
+
+    # Step 2.5 – Discard items already in the Cloudflare dashboard
+    scored_entries = _filter_existing_posts(scored_entries)
+    if not scored_entries:
+        log.info("All relevant BOE entries were already processed previously.")
         return []
 
     # Step 3 – Generate posts (cap to MAX_POSTS_PER_RUN)
@@ -219,6 +258,12 @@ def run_news_module(query: Optional[str] = None) -> list[dict]:
     scored_articles = score_batch(articles, item_type="news", force_keep_all=bool(query))
     if not scored_articles:
         log.info("No news articles passed relevance threshold.")
+        return []
+
+    # Step 3.5 – Discard items already in the Cloudflare dashboard
+    scored_articles = _filter_existing_posts(scored_articles)
+    if not scored_articles:
+        log.info("All relevant news articles were already processed previously.")
         return []
 
     # Step 4 – Generate posts

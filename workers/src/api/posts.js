@@ -401,3 +401,26 @@ Por favor, reescribe el post completo siguiendo las instrucciones de Alberto y r
 
   return updatedPost;
 }
+
+// ─── Deduplication ────────────────────────────────────────────────────────────
+
+/**
+ * Given an array of source_ids, returns an array of those that already exist in the database.
+ * This checks ALL statuses (pending, approved, rejected, published, etc) to ensure we never process them twice.
+ */
+export async function getExistingSourceIds(db, sourceIds) {
+  if (!Array.isArray(sourceIds) || sourceIds.length === 0) {
+    return [];
+  }
+  
+  // Create placeholders e.g. "?, ?, ?"
+  const placeholders = sourceIds.map(() => '?').join(', ');
+  
+  const result = await db.prepare(
+    `SELECT source_id FROM posts WHERE source_id IN (${placeholders})`
+  )
+    .bind(...sourceIds)
+    .all();
+    
+  return (result.results ?? []).map(row => row.source_id);
+}

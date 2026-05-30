@@ -39,6 +39,7 @@ import {
   reviewPost,
   schedulePost,
   regeneratePost,
+  getExistingSourceIds,
 } from './api/posts.js';
 
 import { publishPost }                              from './api/publish.js';
@@ -149,6 +150,10 @@ async function route(request, env, ctx, url, path, method) {
     if (method === 'GET')  return handleListPosts(db, url);
     if (method === 'POST') return handleCreatePost(db, request);
     return errorResponse('Method not allowed', 405);
+  }
+  
+  if (path === '/api/posts/check-sources' && method === 'POST') {
+    return handleCheckSources(db, request);
   }
 
   // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate ────
@@ -293,6 +298,16 @@ async function handleCreatePost(db, request) {
   try {
     const post = await createPost(db, data);
     return jsonResponse(post, 201);
+  } catch (err) {
+    return errorResponse(err.message, 400);
+  }
+}
+
+async function handleCheckSources(db, request) {
+  try {
+    const data = await parseJSON(request);
+    const existingIds = await getExistingSourceIds(db, data.source_ids || []);
+    return jsonResponse({ existing_source_ids: existingIds });
   } catch (err) {
     return errorResponse(err.message, 400);
   }
