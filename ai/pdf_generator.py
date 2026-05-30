@@ -43,16 +43,18 @@ def _draw_signature(c, center_x, bottom_y, logo_path, logo_h):
     except:
         logo_w = logo_h
 
-    # Draw monogram
-    c.drawImage(logo_path, center_x - (logo_w / 2), bottom_y + 28, width=logo_w, height=logo_h,
+    # Draw monogram (closer to name: gap is just 6px above text cap-height)
+    name_size = int(logo_h * 0.235)
+    mono_y = bottom_y + 4 + name_size + 6   # name baseline + name height + 6px gap
+    c.drawImage(logo_path, center_x - (logo_w / 2), mono_y, width=logo_w, height=logo_h,
                 preserveAspectRatio=True, mask='auto')
 
-    # Draw "Alberto Lopez" with expanded letter-spacing
-    name_size = int(logo_h * 0.19)
+    # Draw "Alberto Lopez" with expanded letter-spacing, tight under the monogram
+    name_size = int(logo_h * 0.235)   # slightly bigger, more weight
     c.setFillColor(TEXT_MAIN)
     c.setFont("Helvetica", name_size)
-    c.setCharSpace(1.8)
-    c.drawCentredString(center_x, bottom_y + 8, "Alberto Lopez")
+    c.setCharSpace(2.4)              # tracking elegante / corporativo
+    c.drawCentredString(center_x, bottom_y + 4, "Alberto Lopez")
     c.setCharSpace(0)
 
 
@@ -61,8 +63,8 @@ def draw_background(c, current_slide, total_slides, is_cover=False):
     c.setFillColor(BG_COLOR)
     c.rect(0, 0, WIDTH, HEIGHT, fill=True, stroke=False)
 
-    # 2. Marca de agua - opacidad bajada 4% adicional (ahora al 11%)
-    wm_filename = 'logo_watermark_rebrand.png'
+    # 2. Marca de agua diferenciada: portada 11%, interior 7%
+    wm_filename = 'logo_watermark_cover.png' if is_cover else 'logo_watermark_interior.png'
     wm_path = os.path.join(os.path.dirname(__file__), '..', 'assets', wm_filename)
     if os.path.exists(wm_path):
         wm_w = 600
