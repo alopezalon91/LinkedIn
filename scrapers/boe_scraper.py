@@ -32,6 +32,7 @@ from config.sources import (
     REQUEST_RETRY_BACKOFF,
     HEADERS,
 )
+from utils.text_cleaner import clean_boe_text
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -242,7 +243,7 @@ def parse_sumario(data: dict) -> list[dict]:
     return entries
 
 
-def get_document_text(boe_id: str, max_chars: int = 2000) -> str:
+def get_document_text(boe_id: str, max_chars: int = 4000) -> str:
     """
     Fetches the text content of a specific BOE document for AI context.
 
@@ -250,7 +251,7 @@ def get_document_text(boe_id: str, max_chars: int = 2000) -> str:
 
     Args:
         boe_id:    BOE document identifier (e.g. 'BOE-A-2024-12345').
-        max_chars: Maximum characters to return (default 2 000 for AI context).
+        max_chars: Maximum characters to return (default 4000 for AI context).
 
     Returns:
         Extracted text string. Empty string on failure.
@@ -265,7 +266,7 @@ def get_document_text(boe_id: str, max_chars: int = 2000) -> str:
             container = soup.find("div", id="textoxslt") or soup.find("div", class_="texto_legal") or soup.find("article")
             if container:
                 plain = container.get_text(separator=" ", strip=True)
-                return plain[:max_chars]
+                return clean_boe_text(plain, max_chars=max_chars)
         except Exception as exc:
             log.warning("HTML parse error for %s: %s", boe_id, exc)
 
@@ -284,7 +285,7 @@ def get_document_text(boe_id: str, max_chars: int = 2000) -> str:
             if texto:
                 soup = BeautifulSoup(texto, "lxml")
                 plain = soup.get_text(separator=" ", strip=True)
-                return plain[:max_chars]
+                return clean_boe_text(plain, max_chars=max_chars)
         except (json.JSONDecodeError, AttributeError):
             pass
 

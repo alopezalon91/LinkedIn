@@ -319,6 +319,8 @@ def score_batch(
     def _process_item(item):
         score_data = score_fn(item)
         if score_data["should_post"] or force_keep_all:
+            if not score_data["should_post"] and force_keep_all:
+                log.info("Bypass active: Kept item %s despite score < 6", item.get("id"))
             enriched = dict(item)
             enriched["_score_data"] = score_data
             enriched["ai_score"] = score_data["score"]

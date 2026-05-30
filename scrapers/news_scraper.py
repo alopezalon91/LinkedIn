@@ -32,6 +32,7 @@ from config.sources import (
     REQUEST_RETRY_BACKOFF,
     HEADERS,
 )
+from utils.text_cleaner import clean_news_text
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -345,7 +346,7 @@ def keyword_prefilter(articles: list[dict]) -> list[dict]:
     return filtered
 
 
-def get_article_text(url: str, max_chars: int = 2000) -> str:
+def get_article_text(url: str, max_chars: int = 4000) -> str:
     """
     Fetches the HTML of the news article page and extracts clean text content.
     """
@@ -373,7 +374,7 @@ def get_article_text(url: str, max_chars: int = 2000) -> str:
             text = re.sub(r'\s+', ' ', text).strip()
             
             if len(text) > 150:
-                return text[:max_chars]
+                return clean_news_text(text, max_chars=max_chars)
     except Exception as exc:
         log.warning("Error fetching full article text for %s: %s", url, exc)
     return ""
