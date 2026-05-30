@@ -49,13 +49,19 @@ def _draw_signature(c, center_x, bottom_y, logo_path, logo_h):
     c.drawImage(logo_path, center_x - (logo_w / 2), mono_y, width=logo_w, height=logo_h,
                 preserveAspectRatio=True, mask='auto')
 
-    # Draw "Alberto Lopez" with expanded letter-spacing, tight under the monogram
-    name_size = int(logo_h * 0.235)   # slightly bigger, more weight
+    # Draw "Alberto Lopez" with expanded letter-spacing (manual tracking)
+    name_size = int(logo_h * 0.235)
     c.setFillColor(TEXT_MAIN)
     c.setFont("Helvetica", name_size)
-    c.setCharSpace(2.4)              # tracking elegante / corporativo
-    c.drawCentredString(center_x, bottom_y + 4, "Alberto Lopez")
-    c.setCharSpace(0)
+    name = "Alberto Lopez"
+    tracking = 2.2  # extra px between chars
+    # Measure total width including tracking
+    total_w = sum(c.stringWidth(ch, "Helvetica", name_size) for ch in name) + tracking * (len(name) - 1)
+    x_start = center_x - total_w / 2
+    x_cursor = x_start
+    for ch in name:
+        c.drawString(x_cursor, bottom_y + 4, ch)
+        x_cursor += c.stringWidth(ch, "Helvetica", name_size) + tracking
 
 
 def draw_background(c, current_slide, total_slides, is_cover=False):
