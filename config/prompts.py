@@ -87,25 +87,25 @@ JSON_FORMAT_RULES = """\
 === FORMATO DE SALIDA (CRÍTICO) ===
 Devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura exacta.
 El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada y "interior" para el resto.
-{
+{{
   "post": "Aquí va el texto completo del post de LinkedIn...",
   "carousel": [
-    {
+    {{
       "slide_type": "cover",
       "pre_title": "ACTUALIDAD",
       "title": "Título impactante de la portada",
       "subtitle": "Promesa de valor concreta y directa.",
       "bullets": []
-    },
-    {
+    }},
+    {{
       "slide_type": "interior",
       "pre_title": "",
       "title": "Desarrollo conceptual 1",
       "subtitle": "Contexto breve",
       "bullets": ["Punto clave 1 (máx. 15 palabras)", "Punto clave 2 (máx. 15 palabras)"]
-    }
+    }}
   ]
-}
+}}
 """
 
 # ---------------------------------------------------------------------------
