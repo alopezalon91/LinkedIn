@@ -274,25 +274,23 @@ def _verify_and_correct_post(original_text: str, generated_json: dict, source_id
     the generated content with the original text.
     """
     prompt = f"""
-Actúa como un auditor legal estricto, corrector de estilo editorial y controller de UI/UX de marca.
-Tu único objetivo es realizar una revisión exhaustiva del JSON generado antes de enviarlo al Cloudflare Worker.
+Actúa como un auditor legal estricto y corrector de estilo editorial.
+Tu único objetivo es realizar una revisión exhaustiva del JSON generado. Ejecuta esta revisión como un CHECKLIST SECUENCIAL estricto:
 
-Compara el 'post' y el 'carousel' generados con el texto original del BOE/Noticia y aplica las siguientes reglas de validación obligatorias:
+PASO 01: COMPROBACIÓN LEGAL Y DE DATOS (PRIORIDAD MÁXIMA CERO ALUCINACIONES)
+- Compara el 'post' y el 'carousel' con el texto original de la noticia.
+- Detecta y elimina CUALQUIER dato, fecha, porcentaje, sanción o nombre de tribunal que NO aparezca en el texto original.
+- Si el texto original no incluye la sanción exacta, elimina la sanción del JSON. No inventes.
 
-1. COMPROBACIÓN LEGAL (Cero Alucinaciones):
-- Detecta y elimina cualquier dato, fecha, porcentaje, sanción o nombre de tribunal que NO aparezca de forma explícita en el texto original. Es preferible omitir un dato que aproximarlo o inventarlo.
+PASO 02: AUDITORÍA DE IDENTIDAD
+- El nombre del profesional debe ser exactamente 'Alberto López' (con tilde en la 'ó' y la 'L' mayúscula).
+- Asegura que el campo 'slide_type' esté correctamente asignado como 'cover' para la primera diapositiva y como 'interior' para el resto.
 
-2. AUDITORÍA DE IDENTIDAD Y ORTOGRAFÍA CRÍTICA:
-- Revisa cada campo de texto del JSON. El nombre del profesional debe aparecer SIEMPRE escrito exactamente como 'Alberto López' (con tilde obligatoria en la 'ó' y la 'L' mayúscula). Si encuentras 'Alberto Lopez', 'alberto lopez' o cualquier variante sin acentuar, corrígelo de inmediato.
-- Asegura que el campo 'slide_type' esté correctamente asignado como 'cover' para la primera diapositiva y como 'interior' para el resto, para que el Worker pueda renderizar la firma unificada (Anagrama AL + Nombre en vertical) en la posición correcta (centrada en portada, izquierda en interiores).
-
-3. REVISIÓN DE TONO Y ESTILO:
-- Asegúrate de que el gancho del post no sea una pregunta genérica. Si el post empieza con un aburrido '¿Sabías que...?', reescríbelo usando un gancho de impacto basado en el dolor del autónomo o el coste de la inacción.
-- Verifica que ningún párrafo del cuerpo del post supere las 2 líneas de extensión.
-- Cuenta los emojis: si hay más de 3 en todo el post, elimina los sobrantes para mantener la estética profesional.
-
-Si el JSON cumple todas las reglas, devuélvelo optimizado y limpio manteniendo estrictamente la estructura de salida exigida.
-Si encuentras errores, corrígelos directamente en la cadena de texto de salida.
+PASO 03: REVISIÓN DE FORMATO Y ESTILO (JSON RULES)
+- Comprueba que NINGÚN bullet (viñeta) del carrusel termine en punto final (.). Elimínalos si existen.
+- Asegúrate de que el gancho del post no sea una pregunta genérica ("¿Sabías que...?").
+- Verifica que ningún párrafo del post supere las 3 líneas.
+- Máximo 3 emojis en todo el post. Elimina los sobrantes.
 
     === TEXTO ORIGINAL ===
     {original_text}
@@ -301,7 +299,7 @@ Si encuentras errores, corrígelos directamente en la cadena de texto de salida.
     {json.dumps(generated_json, ensure_ascii=False)}
     
     Devuelve ÚNICAMENTE el objeto JSON corregido con la misma estructura exacta ("post" y "carousel").
-    Si no hay alucinaciones, devuelve el JSON tal cual.
+    Si no hay alucinaciones ni errores de formato, devuelve el JSON tal cual.
     """
     
     try:
