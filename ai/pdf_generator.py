@@ -49,37 +49,40 @@ def draw_background(c, current_slide, total_slides, is_cover=False):
         # Footer line is at y=150. Space is 150 to 1080. Center is 615.
         c.drawImage(wm_path, (WIDTH - wm_w)/2, 315, width=wm_w, height=wm_h, mask='auto', preserveAspectRatio=True)
 
-    # 3. Footer Logo
-    logo_filename = 'logo_rebrand.png'
+    # 3. Footer Logo & Signature
+    logo_filename = 'monogram_solid.png'
     logo_path = os.path.join(os.path.dirname(__file__), '..', 'assets', logo_filename)
     
     logo_y = MARGIN / 2  # Around 54
-    logo_h = 90
+    logo_h = 70
     if os.path.exists(logo_path):
         try:
             with Image.open(logo_path) as img:
                 img_w, img_h = img.size
                 logo_w = int(logo_h * (img_w / img_h))
         except:
-            logo_w = 270
+            logo_w = 70
             
-        if is_cover:
-            # Centered at bottom
-            c.drawImage(logo_path, (WIDTH - logo_w)/2, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
-        else:
-            # Left aligned at footer
-            c.drawImage(logo_path, MARGIN, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+        # Left aligned at footer on ALL slides
+        c.drawImage(logo_path, MARGIN, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+        
+        # Add "Alberto López" text to the right of the monogram
+        c.setFillColor(TEXT_MAIN)
+        c.setFont("Helvetica", 32)
+        c.drawString(MARGIN + logo_w + 20, logo_y + 20, "Alberto López")
 
     # Línea separadora Verde Sage
     c.setFillColor(ACCENT_SECONDARY)
     # The line separates the footer area (y=150)
     c.rect(MARGIN, 150, DRAW_WIDTH, 2, fill=True, stroke=False)
 
-    # 4. Numeración
-    if not is_cover:
-        c.setFillColor(ACCENT_SECONDARY)
-        c.setFont("Helvetica", 24)
-        c.drawRightString(WIDTH - MARGIN, logo_y + 30, f"{current_slide} / {total_slides} →")
+    # 4. Numeración (Pagination bottom right on ALL slides)
+    c.setFillColor(ACCENT_SECONDARY)
+    c.setFont("Helvetica", 28)
+    # Si es la portada, omitimos el número y solo dejamos la flecha si queremos, o ponemos 1/X. 
+    # El usuario dijo: "Mueve la indicación de paginación ('2 / 3 ->' o similar) a la esquina inferior derecha del footer para equilibrar la composición con la firma de la izquierda." (Implica portada también).
+    pagination_text = f"{current_slide} / {total_slides} →"
+    c.drawRightString(WIDTH - MARGIN, logo_y + 20, pagination_text)
 
 def create_carousel_pdf(slides: list[dict]) -> str:
     if not slides:
@@ -108,8 +111,8 @@ def create_carousel_pdf(slides: list[dict]) -> str:
                 leading=95, textColor=TEXT_MAIN, alignment=TA_CENTER
             )
             st_style = ParagraphStyle(
-                name='SubtitleCover', fontName='Helvetica', fontSize=40,
-                leading=55, textColor=ACCENT_SECONDARY, alignment=TA_CENTER
+                name='SubtitleCover', fontName='Helvetica', fontSize=44,
+                leading=58, textColor=TEXT_MAIN, alignment=TA_CENTER
             )
             
             p_title = Paragraph(title, t_style) if title else None
