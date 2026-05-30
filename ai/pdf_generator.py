@@ -57,11 +57,11 @@ def draw_background(c, current_slide, total_slides, is_cover=False):
         try:
             with Image.open(logo_path) as img:
                 img_w, img_h = img.size
-                logo_h = 55
+                logo_h = 72
                 logo_w = int(logo_h * (img_w / img_h))
         except:
-            logo_h = 55
-            logo_w = 55
+            logo_h = 72
+            logo_w = 72
             
         # Vertical signature block in the bottom left
         center_x = MARGIN + 60
