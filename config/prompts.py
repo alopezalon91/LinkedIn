@@ -49,10 +49,10 @@ BRANDING_RULES = """\
 El tono es empático, didáctico y directo ("hablar de tú"). Cero alarmismo, cero tecnicismos sin traducir.
 Traduce la jerga técnica al lenguaje del autónomo y dueño de pyme.
 
-=== ESTRUCTURA DEL POST DE LINKEDIN ===
+=== ESTRUCTURA DEL POST DE LINKEDIN (MÍNIMO 1000 CARACTERES) ===
 1. GANCHO (líneas 1 y 2) — Basado en metodologías AIDA/PAS. Enfocado en el coste de la inacción o una verdad contraintuitiva. Prohibido usar ganchos genéricos como "¿Sabías que...?".
 
-2. CUERPO: Bloques de texto limpios. Párrafos de máximo 2 líneas. Máximo 2-3 emojis en TODO el post. Longitud máxima del post: 1500 caracteres.
+2. CUERPO (ALTA DENSIDAD DE VALOR): El post no puede ser un resumen superficial. DEBES incluir datos concretos, plazos, importes de sanciones y pasos exactos que debe tomar el autónomo. Longitud obligatoria: Mínimo 1000 caracteres, máximo 1500. Párrafos de máximo 2 líneas. Máximo 2-3 emojis en TODO el post.
 
 3. CIERRE: CTA directo invitando a dejar un comentario o enviar un mensaje privado a Alberto López para evaluar su caso.
 
@@ -70,18 +70,48 @@ El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada y "interior" p
     {{
       "slide_type": "cover",
       "pre_title": "ACTUALIDAD",
-      "title": "Título Editorial Impactante",
-      "subtitle": "Subtítulo de valor claro",
+      "title": "Título Editorial Impactante (máx 5 palabras)",
+      "subtitle": "Subtítulo de valor claro (máx 10 palabras)",
       "bullets": []
     }},
     {{
       "slide_type": "interior",
-      "pre_title": "",
-      "title": "Concepto de la Slide",
-      "subtitle": "Contexto ultra-breve",
+      "pre_title": "1/4",
+      "title": "El Problema Exacto",
+      "subtitle": "Contexto ultra-breve con datos reales",
+      "bullets": [
+        "Detalle técnico específico 1 (ej. Importe multa)",
+        "Detalle técnico específico 2 (ej. Fecha límite)"
+      ]
+    }},
+    {{
+      "slide_type": "interior",
+      "pre_title": "2/4",
+      "title": "A Quién Afecta",
+      "subtitle": "Define el perfil exacto",
       "bullets": [
         "Punto clave 1 de alto impacto",
         "Punto clave 2 directo al grano"
+      ]
+    }},
+    {{
+      "slide_type": "interior",
+      "pre_title": "3/4",
+      "title": "La Solución o Medida",
+      "subtitle": "Qué hay que hacer ahora mismo",
+      "bullets": [
+        "Paso accionable 1",
+        "Paso accionable 2"
+      ]
+    }},
+    {{
+      "slide_type": "interior",
+      "pre_title": "4/4",
+      "title": "Recomendación Fiscal",
+      "subtitle": "El consejo de Alberto López",
+      "bullets": [
+        "Estrategia de ahorro 1",
+        "Estrategia de protección 2"
       ]
     }}
   ]
