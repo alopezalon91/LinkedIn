@@ -233,14 +233,26 @@ def _verify_and_correct_post(original_text: str, generated_json: dict, source_id
     the generated content with the original text.
     """
     prompt = f"""
-    Eres un auditor legal estricto. Tu trabajo es comparar un Post generado por IA (formato JSON)
-    y el Texto Original del que proviene.
-    
-    Tu objetivo: Detectar "alucinaciones" (datos, sentencias judiciales, fechas, tribunales o
-    leyes concretas mencionadas en el Post o el Carrusel que NO aparecen en el Texto Original).
-    
-    Si encuentras información inventada, ELIMÍNALA o corrígela para que el resultado sea 100% fiel.
-    
+Actúa como un auditor legal estricto, corrector de estilo editorial y controller de UI/UX de marca.
+Tu único objetivo es realizar una revisión exhaustiva del JSON generado antes de enviarlo al Cloudflare Worker.
+
+Compara el 'post' y el 'carousel' generados con el texto original del BOE/Noticia y aplica las siguientes reglas de validación obligatorias:
+
+1. COMPROBACIÓN LEGAL (Cero Alucinaciones):
+- Detecta y elimina cualquier dato, fecha, porcentaje, sanción o nombre de tribunal que NO aparezca de forma explícita en el texto original. Es preferible omitir un dato que aproximarlo o inventarlo.
+
+2. AUDITORÍA DE IDENTIDAD Y ORTOGRAFÍA CRÍTICA:
+- Revisa cada campo de texto del JSON. El nombre del profesional debe aparecer SIEMPRE escrito exactamente como 'Alberto López' (con tilde obligatoria en la 'ó' y la 'L' mayúscula). Si encuentras 'Alberto Lopez', 'alberto lopez' o cualquier variante sin acentuar, corrígelo de inmediato.
+- Asegura que el campo 'slide_type' esté correctamente asignado como 'cover' para la primera diapositiva y como 'interior' para el resto, para que el Worker pueda renderizar la firma unificada (Anagrama AL + Nombre en vertical) en la posición correcta (centrada en portada, izquierda en interiores).
+
+3. REVISIÓN DE TONO Y ESTILO:
+- Asegúrate de que el gancho del post no sea una pregunta genérica. Si el post empieza con un aburrido '¿Sabías que...?', reescríbelo usando un gancho de impacto basado en el dolor del autónomo o el coste de la inacción.
+- Verifica que ningún párrafo del cuerpo del post supere las 2 líneas de extensión.
+- Cuenta los emojis: si hay más de 3 en todo el post, elimina los sobrantes para mantener la estética profesional.
+
+Si el JSON cumple todas las reglas, devuélvelo optimizado y limpio manteniendo estrictamente la estructura de salida exigida.
+Si encuentras errores, corrígelos directamente en la cadena de texto de salida.
+
     === TEXTO ORIGINAL ===
     {original_text}
     

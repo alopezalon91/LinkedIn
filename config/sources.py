@@ -74,7 +74,7 @@ NEWS_RSS = {
     "cef": "https://www.cef.es/feed",
 
     # ─── 20 Medios Digitales Generalistas Importantes ────────────────
-    "el_pais": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/seccion/economia",
+    "el_pais": "https://e00-elmundo.uecdn.es/elmundo/rss/portada.xml",
     "el_mundo": "https://e00-elmundo.uecdn.es/elmundo/rss/portada.xml",
     "el_confidencial": "https://rss.elconfidencial.com/espana/",
     "abc": "https://www.abc.es/rss/2.0/portada/",

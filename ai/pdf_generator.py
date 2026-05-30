@@ -112,7 +112,9 @@ def create_carousel_pdf(slides: list[dict]) -> str:
     total_slides = len(slides)
     
     for i, slide in enumerate(slides):
-        is_cover = (i == 0)
+        # slide_type field takes priority; fall back to position (i==0)
+        slide_type = slide.get("slide_type", "")
+        is_cover = (slide_type == "cover") if slide_type else (i == 0)
         draw_background(c, i + 1, total_slides, is_cover)
         
         pre_title = strip_emojis(slide.get("pre_title", ""))

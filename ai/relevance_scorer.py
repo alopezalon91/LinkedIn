@@ -22,7 +22,8 @@ import time
 import sqlite3
 from typing import Any, Literal
 
-import google.generativeai as genai
+import groq
+from groq import Groq
 
 from config.prompts import RELEVANCE_PROMPT, SYSTEM_CONTEXT
 
@@ -71,28 +72,23 @@ def _set_cached_score(item_id: str, data: dict):
 # Gemini client initialisation
 # ---------------------------------------------------------------------------
 # AI parameters
-_MODEL_NAME = "gemini-2.0-flash"
-_model: genai.GenerativeModel | None = None
+_MODEL_NAME = "llama-3.3-70b-versatile"
+_client: Groq | None = None
 
-def _get_model() -> genai.GenerativeModel:
+def _get_groq_client():
     """
-    Lazily initialises and returns the Gemini GenerativeModel singleton.
-    Reads GEMINI_API_KEY from environment.
+    Lazily initialises and returns the Groq client singleton.
+    If GROQ_API_KEY is not set, returns None and logs a warning.
     """
-    global _model
-    if _model is None:
-        api_key = os.environ.get("GEMINI_API_KEY", "")
+    global _client
+    if _client is None:
+        api_key = os.environ.get("GROQ_API_KEY", "")
         if not api_key:
-            raise EnvironmentError(
-                "GEMINI_API_KEY environment variable is not set."
-            )
-        genai.configure(api_key=api_key)
-        _model = genai.GenerativeModel(
-            model_name=_MODEL_NAME,
-            system_instruction=SYSTEM_CONTEXT,
-        )
-        log.info("Gemini model '%s' initialised.", _MODEL_NAME)
-    return _model
+            log.warning("GROQ_API_KEY not set; Groq scoring will be bypassed with default scores.")
+            return None
+        _client = Groq(api_key=api_key)
+        log.info("Groq client initialised for model '%s'.", _MODEL_NAME)
+    return _client
 
 
 # ---------------------------------------------------------------------------
@@ -108,14 +104,17 @@ def batch_prefilter(articles: list[dict], batch_size: int = 50) -> list[dict]:
     might be relevant to business, economy, taxes, or politics that affect business.
     Returns the filtered list of articles.
     """
-    model = _get_model()
+    client = _get_groq_client()
+    if client is None:
+        log.warning("Groq client unavailable; batch prefilter will return all articles.")
+        return articles
     relevant_ids = set()
     
     for i in range(0, len(articles), batch_size):
         batch = articles[i:i+batch_size]
         prompt = (
             "Eres un filtro rápido. A continuación tienes una lista de titulares de noticias con un ID.\n"
-            "Devuelve ÚNICAMENTE un array JSON con los IDs de las noticias que estén relacionadas con economía, "
+            "Devuelve ÚNICAMENTE un array JSON (con la clave 'ids' que contenga una lista de strings) con los IDs de las noticias que estén relacionadas con economía, "
             "política (que pueda afectar a leyes o impuestos), empresas, autónomos, tecnología o deducciones. "
             "Ante la duda, INCLUYE el ID.\n\n"
         )
@@ -123,13 +122,17 @@ def batch_prefilter(articles: list[dict], batch_size: int = 50) -> list[dict]:
             prompt += f"- ID: {article['id']} | Titular: {article['title']}\n"
             
         try:
-            response = model.generate_content(
-                prompt,
-                generation_config={"response_mime_type": "application/json"}
+            response = client.chat.completions.create(
+                model=_MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": "You are a fast JSON filter. Always output valid JSON with an 'ids' array."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"}
             )
-            data = json.loads(response.text)
-            if isinstance(data, list):
-                for item in data:
+            data = json.loads(response.choices[0].message.content)
+            if "ids" in data and isinstance(data["ids"], list):
+                for item in data["ids"]:
                     relevant_ids.add(str(item))
         except Exception as e:
             log.error("Batch prefilter error: %s", e)
@@ -137,7 +140,7 @@ def batch_prefilter(articles: list[dict], batch_size: int = 50) -> list[dict]:
             for article in batch:
                 relevant_ids.add(str(article['id']))
                 
-        time.sleep(1) # Prevent rate limits
+        time.sleep(4.5) # Prevent rate limits on Gemini Free Tier (15 RPM)
         
     return [a for a in articles if str(a['id']) in relevant_ids]
 
@@ -146,9 +149,7 @@ def batch_prefilter(articles: list[dict], batch_size: int = 50) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict:
-    """
-    Calls Gemini Flash with RELEVANCE_PROMPT and parses the JSON response.
-    """
+    """Call Gemini Flash with RELEVANCE_PROMPT and parse JSON response. If Gemini is unavailable, return a default low score."""
     # Cache hit
     cached = _get_cached_score(item_id)
     if cached:
@@ -186,7 +187,6 @@ def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict
     if rejection_instructions:
         prompt += "\n" + rejection_instructions
 
-
     default_result = {
         "score": 0,
         "sector": "general",
@@ -195,12 +195,24 @@ def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict
         "urgency": "baja",
     }
 
-    try:
-        model = _get_model()
-        response = model.generate_content(prompt)
-        raw = response.text.strip()
+    # Attempt to get Groq client; if unavailable, return default result immediately.
+    client = _get_groq_client()
+    if client is None:
+        log.info("Groq client unavailable; returning default relevance score for %s.", item_id)
+        return default_result
 
-        # Strip markdown fences if the model added them
+    try:
+        response = client.chat.completions.create(
+            model=_MODEL_NAME,
+            messages=[
+                {"role": "system", "content": SYSTEM_CONTEXT + "\n\nIMPORTANTE: Responde SIEMPRE con un objeto JSON válido."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        raw = response.choices[0].message.content.strip()
+
+        # Strip markdown fences if the model added them (fallback)
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
@@ -232,12 +244,11 @@ def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict
             result["urgency"], result["should_post"],
         )
         return result
-
     except json.JSONDecodeError as exc:
         log.error("JSON parse error for %s: %s | raw: %r", item_id, exc, raw[:200])
         return default_result
     except Exception as exc:
-        log.error("Gemini API error for %s: %s", item_id, exc)
+        log.error("Groq API error for %s: %s", item_id, exc)
         return default_result
 
 

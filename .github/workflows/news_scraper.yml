@@ -34,12 +34,21 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
+      - name: 💾 Cache SQLite DB
+        uses: actions/cache@v3
+        with:
+          path: cache.db
+          key: scraper-cache-${{ github.run_id }}
+          restore-keys: |
+            scraper-cache-
+
       - name: 📦 Instalar dependencias
         run: pip install -r requirements.txt
 
       - name: 📰 Ejecutar scraper de noticias
         env:
           GEMINI_API_KEY:   ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY:     ${{ secrets.GROQ_API_KEY }}
           WORKER_URL:       ${{ secrets.WORKER_URL }}
           WORKER_SECRET:    ${{ secrets.WORKER_SECRET }}
           DRY_RUN:          ${{ github.event.inputs.dry_run || 'false' }}
