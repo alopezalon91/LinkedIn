@@ -100,10 +100,10 @@ def draw_background(c, current_slide, total_slides, is_cover=False):
 
     if os.path.exists(logo_path):
         if is_cover:
-            cover_logo_h = int(117 * 1.20)  # 140px, 20% mas grande
+            cover_logo_h = 100
             _draw_signature(c, WIDTH / 2, 70, logo_path, cover_logo_h)
         else:
-            _draw_signature(c, MARGIN + 60, 70, logo_path, 117)
+            _draw_signature(c, MARGIN + 60, 55, logo_path, 80)
 
     # PORTADA: sin linea ni paginacion — salir siempre aqui
     if is_cover:
@@ -111,12 +111,12 @@ def draw_background(c, current_slide, total_slides, is_cover=False):
 
     # 4. Linea separadora Verde Sage (solo paginas interiores)
     c.setFillColor(ACCENT_SECONDARY)
-    c.rect(MARGIN, 170, DRAW_WIDTH, 2, fill=True, stroke=False)
+    c.rect(MARGIN, 180, DRAW_WIDTH, 2, fill=True, stroke=False)
 
     # 5. Paginacion esquina derecha (solo paginas interiores)
     c.setFillColor(ACCENT_SECONDARY)
-    c.setFont(FONT_MAIN, 28)
-    c.drawRightString(WIDTH - MARGIN, 55, f"{current_slide} / {total_slides} →")
+    c.setFont(FONT_MAIN, 24)
+    c.drawRightString(WIDTH - MARGIN, 55 + 4, f"{current_slide} / {total_slides} →")
 
 
 def create_carousel_pdf(slides: list[dict]) -> str:
