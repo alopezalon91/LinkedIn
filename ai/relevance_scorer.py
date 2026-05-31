@@ -179,10 +179,13 @@ def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict
     except Exception as e:
         log.warning("Could not append user preferences to relevance scorer: %s", e)
 
+    safe_texto = texto[:1000].replace("{", "{{").replace("}", "}}")
+    safe_titulo = titulo.replace("{", "{{").replace("}", "}}")
+    
     prompt = RELEVANCE_PROMPT.format(
         tipo=tipo,
-        titulo=titulo,
-        texto=texto[:1000],  # limit to 1 000 chars to save tokens
+        titulo=safe_titulo,
+        texto=safe_texto,
     )
     if rejection_instructions:
         prompt += "\n" + rejection_instructions

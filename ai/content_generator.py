@@ -114,7 +114,8 @@ def _extract_key_facts(full_text: str, source_id: str) -> str:
         return full_text
 
     from config.prompts import EXTRACTOR_PROMPT
-    prompt = EXTRACTOR_PROMPT.format(texto=full_text)
+    # Safe injection of untrusted text to avoid ValueError on stray braces
+    prompt = EXTRACTOR_PROMPT.replace("{texto}", full_text)
     
     try:
         response = client.chat.completions.create(
@@ -428,14 +429,16 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
     
     # Capa 2: Extraction
     extracted_facts = _extract_key_facts(original_text, source_id)
+    safe_texto = extracted_facts.replace("{", "{{").replace("}", "}}") if extracted_facts else ""
+    safe_titulo = boe_entry.get("titulo", "").replace("{", "{{").replace("}", "}}")
 
     prompt = NORMATIVA_PROMPT.format(
-        titulo=boe_entry.get("titulo", ""),
+        titulo=safe_titulo,
         seccion=boe_entry.get("seccion", ""),
         departamento=boe_entry.get("departamento", ""),
         fecha=boe_entry.get("fecha", ""),
         boe_id=source_id,
-        texto=extracted_facts,
+        texto=safe_texto,
         sector=sector,
         sector_hashtags=sector_hashtags,
         hoy=hoy_str,
@@ -516,10 +519,12 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
     
     # Capa 2: Extraction
     extracted_facts = _extract_key_facts(original_text, source_id)
+    safe_texto = extracted_facts.replace("{", "{{").replace("}", "}}") if extracted_facts else ""
+    safe_titulo = article.get("title", "").replace("{", "{{").replace("}", "}}")
 
     prompt = ACTUALIDAD_PROMPT.format(
-        titulo=article.get("title", ""),
-        resumen=extracted_facts,
+        titulo=safe_titulo,
+        resumen=safe_texto,
         url=article.get("url", ""),
         fuente=article.get("source", "Fuente desconocida").replace("_", " ").title(),
         fecha=article.get("published", ""),
