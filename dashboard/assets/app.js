@@ -224,6 +224,15 @@ function renderPostCard(post) {
   const createdAt = formatDate(post.created_at);
   const isHighConfidence = confidence >= 0.85;
 
+  let draftData = null;
+  if (post.status === 'draft') {
+    try {
+      draftData = JSON.parse(post.content);
+    } catch (e) {
+      console.error("Error parsing draft data", e);
+    }
+  }
+
   card.innerHTML = `
     <div class="post-card-header">
       ${renderTypeBadge(post.type)}
@@ -236,34 +245,41 @@ function renderPostCard(post) {
     </div>
 
     <div class="post-card-body">
-      <div class="post-content-preview" id="preview-${post.id}">${previewText}</div>
-      <button class="expand-btn" data-post-id="${post.id}" id="expand-btn-${post.id}">
-        Ver completo ▾
-      </button>
-
-      <!-- Editor (hidden by default) -->
-      <textarea class="post-editor" id="editor-${post.id}" maxlength="2500">${post.content_edited || post.content || ''}</textarea>
-      <div class="char-counter ok" id="counter-${post.id}">${(post.content_edited || post.content || '').length} / 2500 caracteres</div>
-      ${post.content_edited ? `
-        <div style="margin-top: 8px;">
-          <button class="btn btn-ghost btn-sm" onclick="PostActions.undoRegenerate('${post.id}')" style="color: var(--accent-amber); font-size: 12px; padding: 4px 8px;">
-            ↩️ Deshacer cambios
-          </button>
+      ${post.status === 'draft' ? `
+        <div style="padding:16px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:12px;">
+          <h3 style="margin-top:0; color:var(--text-primary); font-size:16px;">${draftData ? draftData.title : 'Sin título'}</h3>
+          <p style="color:var(--text-secondary); font-size:14px; line-height:1.5;">${draftData ? draftData.summary : 'Sin resumen'}</p>
         </div>
-      ` : ''}
-
-      <!-- AI Rewrite Section (visible only when editing) -->
-      <div class="ai-rewrite-section" id="ai-rewrite-section-${post.id}" style="display:none; margin-top:12px; padding:12px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:6px;">
-        <label style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:6px;">🪄 Redactar de nuevo con Inteligencia Artificial:</label>
-        <div style="display:flex; gap:8px; position:relative; align-items:center; width:100%;">
-          <input type="text" id="ai-instructions-${post.id}" placeholder="Ej: Enfócalo para el sector inmobiliario..." style="flex:1; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:4px; padding:8px 36px 8px 8px; color:var(--text-primary); font-size:13px; outline:none;" />
-          <button id="ai-mic-btn-${post.id}" onclick="PostActions.startVoiceRewrite('${post.id}')" style="position:absolute; right:115px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;" title="Dictar instrucciones">🎙️</button>
-          <button class="btn btn-primary btn-sm" id="ai-rewrite-btn-${post.id}" onclick="PostActions.regenerateWithIA('${post.id}')" style="flex-shrink:0;">🪄 Rehacer post</button>
+      ` : `
+        <div class="post-content-preview" id="preview-${post.id}">${previewText}</div>
+        <button class="expand-btn" data-post-id="${post.id}" id="expand-btn-${post.id}">
+          Ver completo ▾
+        </button>
+  
+        <!-- Editor (hidden by default) -->
+        <textarea class="post-editor" id="editor-${post.id}" maxlength="2500">${post.content_edited || post.content || ''}</textarea>
+        <div class="char-counter ok" id="counter-${post.id}">${(post.content_edited || post.content || '').length} / 2500 caracteres</div>
+        ${post.content_edited ? `
+          <div style="margin-top: 8px;">
+            <button class="btn btn-ghost btn-sm" onclick="PostActions.undoRegenerate('${post.id}')" style="color: var(--accent-amber); font-size: 12px; padding: 4px 8px;">
+              ↩️ Deshacer cambios
+            </button>
+          </div>
+        ` : ''}
+  
+        <!-- AI Rewrite Section (visible only when editing) -->
+        <div class="ai-rewrite-section" id="ai-rewrite-section-${post.id}" style="display:none; margin-top:12px; padding:12px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:6px;">
+          <label style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:6px;">🪄 Redactar de nuevo con Inteligencia Artificial:</label>
+          <div style="display:flex; gap:8px; position:relative; align-items:center; width:100%;">
+            <input type="text" id="ai-instructions-${post.id}" placeholder="Ej: Enfócalo para el sector inmobiliario..." style="flex:1; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:4px; padding:8px 36px 8px 8px; color:var(--text-primary); font-size:13px; outline:none;" />
+            <button id="ai-mic-btn-${post.id}" onclick="PostActions.startVoiceRewrite('${post.id}')" style="position:absolute; right:115px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;" title="Dictar instrucciones">🎙️</button>
+            <button class="btn btn-primary btn-sm" id="ai-rewrite-btn-${post.id}" onclick="PostActions.regenerateWithIA('${post.id}')" style="flex-shrink:0;">🪄 Rehacer post</button>
+          </div>
+          <div id="ai-rewrite-status-${post.id}" style="font-size:11px; color:var(--accent-red); margin-top:6px; display:none; align-items:center; gap:5px;">
+            <span class="pulse-dot"></span> Grabando voz... Pulsa de nuevo el micrófono para parar.
+          </div>
         </div>
-        <div id="ai-rewrite-status-${post.id}" style="font-size:11px; color:var(--accent-red); margin-top:6px; display:none; align-items:center; gap:5px;">
-          <span class="pulse-dot"></span> Grabando voz... Pulsa de nuevo el micrófono para parar.
-        </div>
-      </div>
+      `}
 
       <div class="hashtags-preview" id="tags-${post.id}">
         ${renderHashtags(post.hashtags)}
@@ -276,26 +292,36 @@ function renderPostCard(post) {
         ${post.ai_score ? ` · Score IA: ${post.ai_score}/10` : ''}
         ${post.scheduled_at ? `<br>📅 Programado para: ${formatDate(post.scheduled_at)}` : ''}
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">
-        👁 Preview
-      </button>
-      ${post.media_base64 ? `<button class="btn btn-ghost btn-sm" onclick="PostActions.showPDF('${post.id}', '${post.media_base64}')">📄 Ver PDF</button>` : ''}
-      <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">
-        ✏️ Editar
-      </button>
-      <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">
-        ❌ Rechazar
-      </button>
-      ${State.currentView === 'scheduled'
-        ? `<button class="btn btn-primary btn-sm" onclick="PostActions.approve('${post.id}')">✅ Publicar Ahora</button>
-           <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
-        : State.currentView === 'reviewed'
-        ? `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
-           <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
-        : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
-           <button class="btn btn-ghost btn-sm" id="review-btn-${post.id}" onclick="PostActions.review('${post.id}')">👁️ Marcar Revisado</button>
-           <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
-      }
+      
+      ${post.status === 'draft' ? `
+        <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">
+          ❌ Descartar Idea
+        </button>
+        <button class="btn btn-primary btn-sm" id="generate-btn-${post.id}" onclick="PostActions.generatePost('${post.id}')" style="font-weight:bold; background-color:var(--accent-purple);">
+          ✨ Generar Post con IA
+        </button>
+      ` : `
+        <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">
+          👁 Preview
+        </button>
+        ${post.media_base64 ? `<button class="btn btn-ghost btn-sm" onclick="PostActions.showPDF('${post.id}', '${post.media_base64}')">📄 Ver PDF</button>` : ''}
+        <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">
+          ✏️ Editar
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">
+          ❌ Rechazar
+        </button>
+        ${State.currentView === 'scheduled'
+          ? `<button class="btn btn-primary btn-sm" onclick="PostActions.approve('${post.id}')">✅ Publicar Ahora</button>
+             <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
+          : State.currentView === 'reviewed'
+          ? `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
+             <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
+          : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
+             <button class="btn btn-ghost btn-sm" id="review-btn-${post.id}" onclick="PostActions.review('${post.id}')">👁️ Marcar Revisado</button>
+             <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
+        }
+      `}
     </div>
   `;
 
@@ -362,6 +388,26 @@ const PostActions = {
         Toast.show('Error al programar: ' + e.message, 'error');
       }
     };
+  },
+
+  async generatePost(postId) {
+    const btn = document.getElementById(`generate-btn-${postId}`);
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loading-spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; margin-right:5px;"></div> Redactando Post...';
+      }
+      await API.request(`/api/posts/${postId}/generate`, { method: 'POST' });
+      Toast.show('¡Post generado con éxito! 🪄', 'success');
+      // Reload queue to show the generated post
+      Pages.queue();
+    } catch (err) {
+      Toast.show(`Error al generar post: ${err.message}`, 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '✨ Generar Post con IA';
+      }
+    }
   },
 
   async approve(postId) {

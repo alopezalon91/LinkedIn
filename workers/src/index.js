@@ -39,6 +39,7 @@ import {
   reviewPost,
   schedulePost,
   regeneratePost,
+  generatePostFromDraft,
   getExistingSourceIds,
 } from './api/posts.js';
 
@@ -156,8 +157,8 @@ async function route(request, env, ctx, url, path, method) {
     return handleCheckSources(db, request);
   }
 
-  // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate ────
-  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate)$/);
+  // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate|generate ────
+  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate|generate)$/);
   if (subActionMatch && method === 'POST') {
     const [, postId, action] = subActionMatch;
     return handlePostAction(db, env, request, postId, action);
@@ -344,6 +345,7 @@ async function handlePostAction(db, env, request, postId, action) {
     case 'review':   return _handleReview(db, postId, body.content_edited ?? null);
     case 'schedule': return _handleSchedule(db, postId, body.scheduled_at);
     case 'regenerate': return _handleRegenerate(db, env, postId, body.instructions);
+    case 'generate': return _handleGenerate(db, env, postId);
     default:         return errorResponse(`Unknown action: ${action}`, 400);
   }
 }
@@ -390,6 +392,15 @@ async function _handleRegenerate(db, env, postId, instructions) {
       return errorResponse('instructions are required for post regeneration', 400);
     }
     const post = await regeneratePost(db, env, postId, instructions);
+    return jsonResponse(post);
+  } catch (err) {
+    return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
+  }
+}
+
+async function _handleGenerate(db, env, postId) {
+  try {
+    const post = await generatePostFromDraft(db, env, postId);
     return jsonResponse(post);
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);

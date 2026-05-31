@@ -30,8 +30,10 @@ export async function listPosts(db, params = {}) {
   const bindings   = [];
 
   if (status) {
-    if (status === 'all') {
-      conditions.push("p.status != 'pending'");
+    if (status === 'pending') {
+      conditions.push("p.status IN ('pending', 'draft')");
+    } else if (status === 'all') {
+      conditions.push("p.status NOT IN ('pending', 'draft')");
     } else {
       conditions.push('p.status = ?');
       bindings.push(status);
@@ -135,6 +137,9 @@ export async function createPost(db, data) {
     ? JSON.stringify(data.hashtags)
     : (data.hashtags ?? null);
 
+  const validStatus = ['draft', 'pending', 'approved', 'rejected', 'published', 'scheduled'];
+  const status = validStatus.includes(data.status) ? data.status : 'pending';
+
   await db.prepare(`
     INSERT INTO posts (
       id, type, sector, status, content, content_edited, first_comment,
@@ -144,7 +149,7 @@ export async function createPost(db, data) {
       scheduled_at, published_at, linkedin_post_id,
       created_at, updated_at
     ) VALUES (
-      ?, ?, ?, 'pending', ?, NULL, ?,
+      ?, ?, ?, ?, ?, NULL, ?,
       ?, ?, ?,
       ?, ?, ?,
       ?, ?, ?,
@@ -155,6 +160,7 @@ export async function createPost(db, data) {
     id,
     data.type,
     data.sector,
+    status,
     data.content,
     data.first_comment ?? null,
     data.source_id    ?? null,
@@ -398,6 +404,89 @@ Por favor, reescribe el post completo siguiendo las instrucciones de Alberto y r
     `IA Rewrite: ${instructions}`,
     now
   ).run();
+
+  return updatedPost;
+}
+
+export async function generatePostFromDraft(db, env, id) {
+  const post = await getPost(db, id);
+  if (!post) throw new Error(`Post not found: ${id}`);
+  if (post.status !== 'draft') {
+    throw new Error(`Only posts with status 'draft' can be generated, got '${post.status}'`);
+  }
+
+  if (!env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not configured on the Worker.');
+  }
+
+  let draftData;
+  try {
+    draftData = JSON.parse(post.content);
+  } catch (err) {
+    throw new Error('Draft content is not valid JSON');
+  }
+
+  const prompt = draftData.prompt;
+  if (!prompt) {
+    throw new Error('Draft JSON is missing the prompt string');
+  }
+
+  const systemInstruction = "Actúa como un fiscalista disruptor, implacable y experto en copywriting de LinkedIn. IMPORTANTE: Responde SIEMPRE con un objeto JSON válido.";
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: systemInstruction }] },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 1.0,
+        responseMimeType: "application/json"
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  let generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!generatedText) {
+    throw new Error('Gemini API returned an empty or invalid response.');
+  }
+
+  if (generatedText.startsWith("```")) {
+    const parts = generatedText.split("```");
+    generatedText = parts[1] || generatedText;
+    if (generatedText.startsWith("json")) {
+      generatedText = generatedText.substring(4).trim();
+    }
+  }
+
+  let generatedData;
+  try {
+    generatedData = JSON.parse(generatedText);
+  } catch (err) {
+    throw new Error(`Failed to parse Gemini output as JSON: ${err.message}`);
+  }
+
+  const postText = generatedData.post || '';
+  const firstComment = generatedData.first_comment || null;
+
+  if (!postText) {
+    throw new Error('Generated JSON did not contain a "post" field.');
+  }
+
+  // Update post in D1
+  const updatedPost = await updatePost(db, id, {
+    status: 'pending',
+    content: postText,
+    first_comment: firstComment,
+  });
 
   return updatedPost;
 }

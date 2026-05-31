@@ -406,33 +406,32 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
     if rejection_instructions:
         prompt += "\n" + rejection_instructions
 
-    raw_content = _generate_post(prompt, source_id)
-    # Double validation pass
     original_text = boe_entry.get("texto", "Sin texto disponible")
-    verified_content = _verify_and_correct_post(original_text, raw_content, source_id)
     
-    post_text = verified_content.get("post", raw_content.get("post", ""))
-    carousel_slides = verified_content.get("carousel", raw_content.get("carousel", []))
-    
-    final_content = truncate_if_needed(post_text)
-    validation = validate_post(final_content)
+    draft_json = {
+        "title": boe_entry.get("titulo", ""),
+        "summary": original_text[:500] + "...",
+        "prompt": prompt,
+        "original_text": original_text,
+    }
 
     return {
-        "content": final_content,
+        "content": json.dumps(draft_json, ensure_ascii=False),
+        "status": "draft",
         "type": "normativa",
         "sector": sector,
         "source_id": source_id,
         "source_url": boe_entry.get("url_html", ""),
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "char_count": len(final_content),
-        "hashtags_used": _extract_hashtags(final_content),
-        "valid": validation["valid"],
-        "issues": validation["issues"],
+        "char_count": len(original_text),
+        "hashtags_used": [],
+        "valid": True,
+        "issues": [],
         "ai_score": score_data.get("score", 0),
         "ai_urgency": score_data.get("urgency", "baja"),
         "ai_reason": score_data.get("reason", ""),
-        "first_comment": verified_content.get("first_comment", raw_content.get("first_comment", "")),
-        "media_base64": create_carousel_pdf(carousel_slides) if carousel_slides else "",
+        "first_comment": "",
+        "media_base64": "",
     }
 
 
@@ -491,32 +490,31 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
     if rejection_instructions:
         prompt += "\n" + rejection_instructions
 
-    raw_content = _generate_post(prompt, source_id)
-    # Double validation pass
     original_text = article.get("texto") or article.get("summary", "Sin resumen disponible")
-    verified_content = _verify_and_correct_post(original_text, raw_content, source_id)
     
-    post_text = verified_content.get("post", raw_content.get("post", ""))
-    carousel_slides = verified_content.get("carousel", raw_content.get("carousel", []))
-    
-    final_content = truncate_if_needed(post_text)
-    validation = validate_post(final_content)
+    draft_json = {
+        "title": article.get("title", ""),
+        "summary": original_text[:500] + "...",
+        "prompt": prompt,
+        "original_text": original_text,
+    }
 
     return {
-        "content": final_content,
+        "content": json.dumps(draft_json, ensure_ascii=False),
+        "status": "draft",
         "type": "actualidad",
         "sector": sector,
         "source_id": source_id,
         "source_url": article.get("url", ""),
         "source_name": article.get("source", ""),
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "char_count": len(final_content),
-        "hashtags_used": _extract_hashtags(final_content),
-        "valid": validation["valid"],
-        "issues": validation["issues"],
+        "char_count": len(original_text),
+        "hashtags_used": [],
+        "valid": True,
+        "issues": [],
         "ai_score": score_data.get("score", 0),
         "ai_urgency": score_data.get("urgency", "baja"),
         "ai_reason": score_data.get("reason", ""),
-        "first_comment": verified_content.get("first_comment", raw_content.get("first_comment", "")),
-        "media_base64": create_carousel_pdf(carousel_slides) if carousel_slides else "",
+        "first_comment": "",
+        "media_base64": "",
     }
