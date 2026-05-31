@@ -51,9 +51,9 @@ Tu enemigo narrativo es la burocracia asfixiante, el lenguaje deliberadamente co
 El tono debe ser DISRUPTIVO, crítico, contraintuitivo y directo. Cero lenguaje corporativo aburrido.
 
 === ESTRUCTURA DEL POST DE LINKEDIN (MINI-BLOG EXTENSO) ===
-1. GANCHO (líneas 1 y 2): Ataca directamente el coste de la inacción o una contradicción de la norma. 
+1. GANCHO (líneas 1 y 2): Ataca directamente el coste de la inacción o una contradicción de la norma/noticia. 
    Prohibido usar "¿Sabías que...?" o saludos introductorios. 
-   Usa la técnica del "Anclaje de Pérdida". Ejemplo: "El BOE de esta mañana oculta un cambio de tres líneas en [Concepto]. Si tu gestor no lo lee hoy, estás asumiendo un riesgo de [Sanción] de forma gratuita."
+   Usa la técnica del "Anclaje de Pérdida". Ejemplo: "La letra pequeña de esta medida oculta un detalle clave sobre [Concepto]. Si tu gestor no lo aplica hoy, estás perdiendo [Beneficio/Euros] de forma absurda."
 2. CUERPO (ALTA DENSIDAD DE VALOR): Desgrana la letra pequeña. Explica el mecanismo técnico de cómo la administración ejecuta la medida y el impacto directo en la caja líquida del negocio.
    Longitud obligatoria: Entre 2000 y 2700 caracteres. Párrafos de máximo 3 líneas. Máximo 2 o 3 emojis en todo el documento, usados únicamente como marcadores estructurales.
 3. CIERRE: CTA directo invitando a dejar un comentario o enviar un mensaje privado.
