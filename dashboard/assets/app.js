@@ -216,7 +216,11 @@ function renderPostCard(post) {
 
   const previewText = (post.content || '').replace(/</g, '&lt;');
   const confidence = post.confidence_score || 0;
-  const sourceInfo = post.source_name ? `${post.source_name}${post.source_id ? ' · ' + post.source_id : ''}` : '';
+  let sourceInfo = '';
+  if (post.source_name) {
+    const nameStr = `${post.source_name}${post.source_id ? ' · ' + post.source_id : ''}`;
+    sourceInfo = post.source_url ? `<a href="${post.source_url}" target="_blank" style="color:var(--accent-blue); text-decoration:none;" title="Ver fuente original">${nameStr}</a>` : nameStr;
+  }
   const createdAt = formatDate(post.created_at);
   const isHighConfidence = confidence >= 0.85;
 

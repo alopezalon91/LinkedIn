@@ -58,6 +58,14 @@ El tono debe ser DISRUPTIVO, crítico, contraintuitivo y directo. Cero lenguaje 
    Longitud obligatoria: Entre 2000 y 2700 caracteres. Párrafos de máximo 3 líneas. Máximo 2 o 3 emojis en todo el documento, usados únicamente como marcadores estructurales.
 3. CIERRE: CTA directo invitando a dejar un comentario o enviar un mensaje privado.
 
+=== REGLA ANTI-HUMO (OBLIGATORIA PARA CUALQUIER IA) ===
+Está TERMINANTEMENTE PROHIBIDO crear contenido genérico ("te cuento cómo ahorrar", "hay una nueva ley"). El post TIENE QUE DAR EL DATO EXACTO. 
+- Si hablas de un impuesto, di cuánto % o cuántos euros. 
+- Si hay una fecha de entrada en vigor o de publicación, indica el día exacto (ej: "Hoy, {fecha_de_hoy}" o la fecha proporcionada). 
+- Especifica exactamente CÓMO se beneficia el lector, o CÓMO se le penaliza.
+- Indica DÓNDE puede consultar más información (ej: "Resolución del TSJ", "BOE de hoy", "Sentencia del Supremo") y la MECÁNICA exacta.
+Queremos un post extremadamente denso en valor, técnico pero accesible, y con datos empíricos.
+
 REGLA DEL ALGORITMO: PROHIBIDO meter enlaces externos en el cuerpo. Debes inyectar el parámetro "first_comment" en el JSON final con la URL del recurso o un texto de contacto para el primer comentario.
 """
 
