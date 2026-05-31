@@ -212,3 +212,25 @@ Devuelve UNICAMENTE un JSON válido con la siguiente estructura:
   "urgency": "<string alta, media, o baja>"
 }}
 """
+
+# ---------------------------------------------------------------------------
+# EXTRACTOR_PROMPT (Capa 2)
+# ---------------------------------------------------------------------------
+
+EXTRACTOR_PROMPT = """\
+Actúa como un analista legal y fiscal experto. Lee el siguiente texto completo de un documento legal o noticia y extrae ÚNICAMENTE la información crítica y relevante que afecte directamente a pymes, autónomos o ciudadanos a nivel económico.
+
+DOCUMENTO:
+{texto}
+
+REGLAS DE EXTRACCIÓN:
+1. Extrae solo HECHOS, DATOS, FECHAS y CIFRAS reales (ej. "La sanción es de 3.000€", "Entra en vigor el 1 de enero").
+2. Descarta toda la paja burocrática, exposiciones de motivos irrelevantes, listas de nombramientos, o contexto político vacío.
+3. Formatea la salida como una lista de viñetas muy concretas y directas.
+4. NUNCA INVENTES DATOS. Si el documento no da un dato específico, no lo asumas.
+
+Salida esperada:
+- Hecho 1
+- Hecho 2
+...
+"""

@@ -243,7 +243,7 @@ def parse_sumario(data: dict) -> list[dict]:
     return entries
 
 
-def get_document_text(boe_id: str, max_chars: int = 4000) -> str:
+def get_document_text(boe_id: str, max_chars: int = 10000) -> str:
     """
     Fetches the text content of a specific BOE document for AI context.
 
@@ -251,7 +251,7 @@ def get_document_text(boe_id: str, max_chars: int = 4000) -> str:
 
     Args:
         boe_id:    BOE document identifier (e.g. 'BOE-A-2024-12345').
-        max_chars: Maximum characters to return (default 4000 for AI context).
+        max_chars: Maximum characters to return (default 10000 for AI context).
 
     Returns:
         Extracted text string. Empty string on failure.
@@ -341,8 +341,9 @@ def run(date: Optional[str] = None) -> list[dict]:
     Returns:
         List of enriched BOE entry dicts ready for AI scoring.
         Each dict contains all fields from parse_sumario PLUS:
-            texto     - first 2 000 chars of the document body
-            sector    - keyword-detected sector (pre-AI classification)
+            texto      - first 10 000 chars of the document body
+            short_text - first 1 000 chars for relevance scoring
+            sector     - keyword-detected sector (pre-AI classification)
     """
     log.info("=== BOE Scraper started ===")
 
@@ -365,6 +366,7 @@ def run(date: Optional[str] = None) -> list[dict]:
         log.info("Fetching document text for %s…", boe_id)
         texto = get_document_text(boe_id)
         entry["texto"] = texto
+        entry["short_text"] = texto[:1000]
 
         # Keyword-based sector detection (AI will refine this later)
         combined_text = f"{entry['titulo']} {texto}"

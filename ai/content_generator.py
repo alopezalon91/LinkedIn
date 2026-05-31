@@ -100,6 +100,38 @@ def _call_groq_json(prompt: str, system_context: str = SYSTEM_CONTEXT, temperatu
     return response.choices[0].message.content.strip()
 
 
+def _extract_key_facts(full_text: str, source_id: str) -> str:
+    """
+    Capa 2 (Extractor): Uses a fast model (Groq) to extract key facts
+    from the full text, massively reducing tokens for the Drafter.
+    """
+    if not full_text or len(full_text) < 500:
+        return full_text
+
+    client = _get_groq_client()
+    if client is None:
+        log.warning("Groq not available for extraction, returning original text for %s", source_id)
+        return full_text
+
+    from config.prompts import EXTRACTOR_PROMPT
+    prompt = EXTRACTOR_PROMPT.format(texto=full_text)
+    
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",  # Extremely fast and cheap
+            messages=[
+                {"role": "system", "content": "You are a fast legal summarizer. Output only bullet points."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3
+        )
+        extracted = response.choices[0].message.content.strip()
+        log.info("Extracted key facts for %s (Reduced %d -> %d chars)", source_id, len(full_text), len(extracted))
+        return extracted
+    except Exception as exc:
+        log.error("Failed to extract key facts for %s: %s", source_id, exc)
+        return full_text
+
 # ---------------------------------------------------------------------------
 # Validation & truncation utilities
 # ---------------------------------------------------------------------------
@@ -392,13 +424,18 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
     hoy_date = datetime.now()
     hoy_str = f"{hoy_date.day} de {meses[hoy_date.month]} de {hoy_date.year}"
 
+    original_text = boe_entry.get("texto", "Sin texto disponible")
+    
+    # Capa 2: Extraction
+    extracted_facts = _extract_key_facts(original_text, source_id)
+
     prompt = NORMATIVA_PROMPT.format(
         titulo=boe_entry.get("titulo", ""),
         seccion=boe_entry.get("seccion", ""),
         departamento=boe_entry.get("departamento", ""),
         fecha=boe_entry.get("fecha", ""),
         boe_id=source_id,
-        texto=boe_entry.get("texto", "Sin texto disponible"),
+        texto=extracted_facts,
         sector=sector,
         sector_hashtags=sector_hashtags,
         hoy=hoy_str,
@@ -406,13 +443,11 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
     if rejection_instructions:
         prompt += "\n" + rejection_instructions
 
-    original_text = boe_entry.get("texto", "Sin texto disponible")
-    
     draft_json = {
         "title": boe_entry.get("titulo", ""),
-        "summary": original_text[:500] + "...",
+        "summary": extracted_facts[:500] + "..." if extracted_facts else original_text[:500] + "...",
         "prompt": prompt,
-        "original_text": original_text,
+        "original_text": extracted_facts,
     }
 
     return {
@@ -477,9 +512,14 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
     hoy_date = datetime.now()
     hoy_str = f"{hoy_date.day} de {meses[hoy_date.month]} de {hoy_date.year}"
 
+    original_text = article.get("texto") or article.get("summary", "Sin resumen disponible")
+    
+    # Capa 2: Extraction
+    extracted_facts = _extract_key_facts(original_text, source_id)
+
     prompt = ACTUALIDAD_PROMPT.format(
         titulo=article.get("title", ""),
-        resumen=article.get("texto") or article.get("summary", "Sin resumen disponible"),
+        resumen=extracted_facts,
         url=article.get("url", ""),
         fuente=article.get("source", "Fuente desconocida").replace("_", " ").title(),
         fecha=article.get("published", ""),
@@ -490,13 +530,11 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
     if rejection_instructions:
         prompt += "\n" + rejection_instructions
 
-    original_text = article.get("texto") or article.get("summary", "Sin resumen disponible")
-    
     draft_json = {
         "title": article.get("title", ""),
-        "summary": original_text[:500] + "...",
+        "summary": extracted_facts[:500] + "..." if extracted_facts else original_text[:500] + "...",
         "prompt": prompt,
-        "original_text": original_text,
+        "original_text": extracted_facts,
     }
 
     return {

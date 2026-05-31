@@ -261,7 +261,7 @@ def score_boe_entry(entry: dict) -> dict:
     Scores a single BOE entry for relevance to the audience.
 
     Args:
-        entry: Dict with at least 'id', 'titulo', and optionally 'texto'.
+        entry: Dict with at least 'id', 'titulo', and optionally 'texto'/'short_text'.
 
     Returns:
         Score dict: {score, sector, should_post, reason, urgency}.
@@ -269,7 +269,7 @@ def score_boe_entry(entry: dict) -> dict:
     """
     item_id = entry.get("id", "unknown")
     titulo = entry.get("titulo", "")
-    texto = entry.get("texto", "")
+    texto = entry.get("short_text") or entry.get("texto", "")
 
     return _call_gemini_score(
         item_id=item_id,
@@ -284,14 +284,14 @@ def score_news_article(article: dict) -> dict:
     Scores a single news article for relevance to the audience.
 
     Args:
-        article: Dict with at least 'id', 'title', and optionally 'summary'.
+        article: Dict with at least 'id', 'title', and optionally 'summary'/'short_text'.
 
     Returns:
         Score dict: {score, sector, should_post, reason, urgency}.
     """
     item_id = article.get("id", "unknown")
     titulo = article.get("title", "")
-    texto = article.get("texto") or article.get("summary", "")
+    texto = article.get("short_text") or article.get("texto") or article.get("summary", "")
 
     return _call_gemini_score(
         item_id=item_id,

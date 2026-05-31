@@ -346,7 +346,7 @@ def keyword_prefilter(articles: list[dict]) -> list[dict]:
     return filtered
 
 
-def get_article_text(url: str, max_chars: int = 4000) -> str:
+def get_article_text(url: str, max_chars: int = 10000) -> str:
     """
     Fetches the HTML of the news article page and extracts clean text content.
     """
@@ -374,7 +374,7 @@ def get_article_text(url: str, max_chars: int = 4000) -> str:
             text = re.sub(r'\s+', ' ', text).strip()
             
             if len(text) > 150:
-                return clean_news_text(text, max_chars=max_chars)
+                return text[:max_chars]
     except Exception as exc:
         log.warning("Error fetching full article text for %s: %s", url, exc)
     return ""
@@ -440,6 +440,7 @@ def run(query: Optional[str] = None) -> list[dict]:
         
         if len(final_text) >= 600:
             article["texto"] = final_text
+            article["short_text"] = final_text[:1000]
             log.info("  → Successfully kept article with %d characters of text", len(final_text))
             enriched_articles.append(article)
         else:
