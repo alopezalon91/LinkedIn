@@ -201,55 +201,73 @@ def _call_gemini_score(item_id: str, tipo: str, titulo: str, texto: str) -> dict
         log.info("Groq client unavailable; returning default relevance score for %s.", item_id)
         return default_result
 
-    try:
-        response = client.chat.completions.create(
-            model=_MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_CONTEXT + "\n\nIMPORTANTE: Responde SIEMPRE con un objeto JSON válido."},
-                {"role": "user", "content": prompt}
-            ],
-            response_format={"type": "json_object"}
-        )
-        raw = response.choices[0].message.content.strip()
-
-        # Strip markdown fences if the model added them (fallback)
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-
-        result = json.loads(raw)
-
-        # Validate required fields
-        required = {"score", "sector", "should_post", "reason", "urgency"}
-        if not required.issubset(result.keys()):
-            log.warning(
-                "Gemini response missing fields for %s. Got: %s",
-                item_id, list(result.keys()),
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = client.chat.completions.create(
+                model=_MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": SYSTEM_CONTEXT + "\n\nIMPORTANTE: Responde SIEMPRE con un objeto JSON válido."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"}
             )
+            raw = response.choices[0].message.content.strip()
+
+            # Strip markdown fences if the model added them (fallback)
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+
+            result = json.loads(raw)
+
+            # Validate required fields
+            required = {"score", "sector", "should_post", "reason", "urgency"}
+            if not required.issubset(result.keys()):
+                log.warning(
+                    "Gemini response missing fields for %s. Got: %s",
+                    item_id, list(result.keys()),
+                )
+                return default_result
+
+            # Coerce types
+            result["score"] = int(result["score"])
+            result["should_post"] = bool(result["should_post"])
+            result["urgency"] = result["urgency"].lower()
+
+            # Enforce should_post logic (score >= 6)
+            result["should_post"] = result["score"] >= 6
+
+            _set_cached_score(item_id, result)
+            log.info(
+                "Scored %s → score=%d sector=%s urgency=%s should_post=%s",
+                item_id, result["score"], result["sector"],
+                result["urgency"], result["should_post"],
+            )
+            return result
+            
+        except groq.RateLimitError as exc:
+            log.warning("Rate limit hit scoring %s. Attempt %d/%d. Sleeping 12s...", item_id, attempt, max_attempts)
+            if attempt == max_attempts:
+                return default_result
+            time.sleep(12)
+            
+        except json.JSONDecodeError as exc:
+            log.error("JSON parse error for %s: %s", item_id, exc)
             return default_result
-
-        # Coerce types
-        result["score"] = int(result["score"])
-        result["should_post"] = bool(result["should_post"])
-        result["urgency"] = result["urgency"].lower()
-
-        # Enforce should_post logic (score >= 6)
-        result["should_post"] = result["score"] >= 6
-
-        _set_cached_score(item_id, result)
-        log.info(
-            "Scored %s → score=%d sector=%s urgency=%s should_post=%s",
-            item_id, result["score"], result["sector"],
-            result["urgency"], result["should_post"],
-        )
-        return result
-    except json.JSONDecodeError as exc:
-        log.error("JSON parse error for %s: %s | raw: %r", item_id, exc, raw[:200])
-        return default_result
-    except Exception as exc:
-        log.error("Groq API error for %s: %s", item_id, exc)
-        return default_result
+            
+        except Exception as exc:
+            log.error("Groq API error for %s: %s", item_id, exc)
+            if "429" in str(exc).lower():
+                log.warning("Rate limit hit scoring %s. Attempt %d/%d. Sleeping 12s...", item_id, attempt, max_attempts)
+                if attempt == max_attempts:
+                    return default_result
+                time.sleep(12)
+                continue
+            return default_result
+            
+    return default_result
 
 
 # ---------------------------------------------------------------------------
