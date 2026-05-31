@@ -428,23 +428,29 @@ def run(query: Optional[str] = None) -> list[dict]:
 
     # Step 5 – enrich with full article text (only for relevant ones to save time/resources)
     log.info("Enriching %d relevant articles with full text...", len(relevant_articles))
+    enriched_articles = []
     for article in relevant_articles:
         url = article["url"]
         log.info("Scraping full text for: %s", url)
         texto = get_article_text(url)
-        if texto:
-            article["texto"] = texto
-            log.info("  → Successfully scraped %d characters of text", len(texto))
+        
+        # We need substantial text to generate a 2500-char high-quality post.
+        # Fallback to summary usually results in < 400 chars, which causes generic AI outputs.
+        final_text = texto if texto else article.get("summary", "")
+        
+        if len(final_text) >= 600:
+            article["texto"] = final_text
+            log.info("  → Successfully kept article with %d characters of text", len(final_text))
+            enriched_articles.append(article)
         else:
-            log.info("  → Could not scrape full text, falling back to summary")
-            article["texto"] = article["summary"]
+            log.warning("  → Discarding article %s: text too short (%d chars). Not enough info for a deep post.", url, len(final_text))
 
     # Convert sources_covering set to list for JSON serialisation
-    for article in relevant_articles:
+    for article in enriched_articles:
         article["sources_covering"] = list(article.get("sources_covering", []))
 
-    log.info("=== News Scraper finished: %d relevant articles ===", len(relevant_articles))
-    return relevant_articles
+    log.info("=== News Scraper finished: %d relevant articles ===", len(enriched_articles))
+    return enriched_articles
 
 
 # ---------------------------------------------------------------------------
