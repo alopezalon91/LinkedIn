@@ -194,7 +194,7 @@ export async function updatePost(db, id, updates) {
 
   const allowed = [
     'status', 'content_edited', 'first_comment', 'scheduled_at', 'published_at', 'linkedin_post_id',
-    'urgency', 'ai_score', 'confidence_score', 'hashtags',
+    'urgency', 'ai_score', 'confidence_score', 'hashtags', 'media_base64'
   ];
 
   const setClauses = [];
