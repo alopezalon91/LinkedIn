@@ -61,7 +61,7 @@ El tono debe ser DISRUPTIVO, crítico, contraintuitivo y directo. Cero lenguaje 
 === REGLA ANTI-HUMO (OBLIGATORIA PARA CUALQUIER IA) ===
 Está TERMINANTEMENTE PROHIBIDO crear contenido genérico ("te cuento cómo ahorrar", "hay una nueva ley"). El post TIENE QUE DAR EL DATO EXACTO. 
 - Si hablas de un impuesto, di cuánto % o cuántos euros. 
-- Si hay una fecha de entrada en vigor o de publicación, indica el día exacto (ej: "Hoy, {fecha_de_hoy}" o la fecha proporcionada). 
+- Si hay una fecha de entrada en vigor o de publicación, indica el día exacto (ej: "Hoy, {{fecha_de_hoy}}" o la fecha proporcionada). 
 - Especifica exactamente CÓMO se beneficia el lector, o CÓMO se le penaliza.
 - Indica DÓNDE puede consultar más información (ej: "Resolución del TSJ", "BOE de hoy", "Sentencia del Supremo") y la MECÁNICA exacta.
 Queremos un post extremadamente denso en valor, técnico pero accesible, y con datos empíricos.
