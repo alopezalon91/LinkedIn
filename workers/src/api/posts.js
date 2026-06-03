@@ -341,7 +341,7 @@ ${instructions}
 
 Por favor, reescribe el post completo siguiendo las instrucciones de Alberto y respetando el formato original. Devuelve únicamente el texto del post reescrito y la nueva encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -433,7 +433,7 @@ export async function generatePostFromDraft(db, env, id) {
 
   const systemInstruction = "Actúa como un fiscalista disruptor, implacable y experto en copywriting de LinkedIn. IMPORTANTE: Responde SIEMPRE con un objeto JSON válido.";
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
 
   const response = await fetch(url, {
     method: 'POST',
