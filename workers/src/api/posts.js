@@ -584,7 +584,28 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     systemInstruction: { role: "system", parts: [{ text: systemPrompt }] },
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 2500
+      maxOutputTokens: 2500,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "object",
+        properties: {
+          carousel: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                slide_type: { type: "string", enum: ["cover", "interior"] },
+                pre_title: { type: "string" },
+                title: { type: "string" },
+                subtitle: { type: "string" },
+                bullets: { type: "array", items: { type: "string" } }
+              },
+              required: ["slide_type", "pre_title", "title", "subtitle", "bullets"]
+            }
+          }
+        },
+        required: ["carousel"]
+      }
     }
   };
 
