@@ -332,13 +332,13 @@ function renderPostCard(post) {
           ❌ Rechazar
         </button>
         ${State.currentView === 'scheduled'
-          ? `<button class="btn btn-primary btn-sm" onclick="PostActions.approve('${post.id}')">✅ Publicar Ahora</button>
+          ? `<button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
           : State.currentView === 'reviewed'
-          ? `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
+          ? `<button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
           : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
-             <button class="btn btn-ghost btn-sm" id="review-btn-${post.id}" onclick="PostActions.review('${post.id}')">👁️ Marcar Revisado</button>
+             <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
         }
       `}
@@ -577,6 +577,34 @@ const PostActions = {
         btn.disabled = false;
         btn.innerHTML = '✅ Aprobar';
       }
+    }
+  },
+
+  async publishNow(postId) {
+    const editor = document.getElementById(`editor-${postId}`);
+    const isEditing = editor && editor.classList.contains('visible');
+    const editedContent = isEditing ? editor.value : null;
+
+    if (isEditing) {
+      Toast.show('Por favor, aplica la edición antes de publicar.', 'warning');
+      return;
+    }
+
+    if (!confirm('¿Estás seguro de que quieres publicar esto AHORA MISMO en LinkedIn?')) return;
+
+    try {
+      const btn = document.querySelector(`#post-card-${postId} .btn-primary`);
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loading-spinner"></div> Publicando...';
+      }
+      await API.publishPost(postId);
+      Toast.show('¡Publicado con éxito en LinkedIn! 🚀', 'success');
+      removePostCard(postId);
+      loadStats();
+    } catch (err) {
+      Toast.show(`Error al publicar: ${err.message}`, 'error');
+      App.loadPosts(); // Reload to reset UI
     }
   },
 
