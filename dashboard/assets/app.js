@@ -490,7 +490,7 @@ const PostActions = {
 
   openScheduleModal(postId) {
     const modal = document.getElementById('schedule-modal');
-    modal.style.display = 'flex';
+    modal.classList.add('visible');
     document.getElementById('confirm-schedule-btn').onclick = async () => {
       const date = document.getElementById('schedule-date').value;
       const time = document.getElementById('schedule-time').value;
@@ -510,7 +510,7 @@ const PostActions = {
         }
         await API.schedulePost(postId, isoStr);
         Toast.show('Post programado ✅', 'success');
-        modal.style.display = 'none';
+        modal.classList.remove('visible');
         removePostCard(postId);
       } catch(e) {
         Toast.show('Error al programar: ' + e.message, 'error');
