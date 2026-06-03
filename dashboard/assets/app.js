@@ -350,11 +350,11 @@ function renderPostCard(post) {
     });
   }
 
-  // Carousel button (uses data-attribute to avoid inline base64 in onclick)
+  // Carousel button (uses state lookup to ensure fresh data)
   const carouselBtn = card.querySelector('.carousel-btn');
   if (carouselBtn) {
     carouselBtn.addEventListener('click', () => {
-      PostActions.showCarousel(carouselBtn.dataset.postid, carouselBtn.dataset.carousel);
+      PostActions.showCarousel(carouselBtn.dataset.postid);
     });
   }
 
@@ -363,8 +363,14 @@ function renderPostCard(post) {
 
 // ── Post Actions ───────────────────────────────────────────
 const PostActions = {
-  showCarousel(postId, base64) {
+  showCarousel(postId) {
     try {
+      const post = State.posts.find(p => p.id === postId);
+      if (!post || !post.media_base64) {
+        Toast.show('No hay carrusel disponible para este post.', 'warning');
+        return;
+      }
+      const base64 = post.media_base64;
       const decoded = decodeURIComponent(escape(atob(base64)));
       if (decoded.startsWith('CAROUSEL:')) {
         const slides = JSON.parse(decoded.slice(9));
