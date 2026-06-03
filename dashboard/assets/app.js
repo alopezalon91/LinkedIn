@@ -304,7 +304,7 @@ function renderPostCard(post) {
         <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">
           👁 Preview
         </button>
-        ${post.media_base64 ? `<button class="btn btn-ghost btn-sm" onclick="PostActions.showCarousel('${post.id}', '${post.media_base64}')">🎴 Ver Carrusel</button>` : ''}
+        ${post.media_base64 ? `<button class="btn btn-ghost btn-sm carousel-btn" data-postid="${post.id}" data-carousel="${post.media_base64}">🎴 Ver Carrusel</button>` : ''}
         <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">
           ✏️ Editar
         </button>
@@ -343,6 +343,14 @@ function renderPostCard(post) {
       const len = editor.value.length;
       counter.textContent = `${len} / 2500 caracteres`;
       counter.className = `char-counter ${len <= 2100 ? 'ok' : len <= 2500 ? 'warn' : 'over'}`;
+    });
+  }
+
+  // Carousel button (uses data-attribute to avoid inline base64 in onclick)
+  const carouselBtn = card.querySelector('.carousel-btn');
+  if (carouselBtn) {
+    carouselBtn.addEventListener('click', () => {
+      PostActions.showCarousel(carouselBtn.dataset.postid, carouselBtn.dataset.carousel);
     });
   }
 
