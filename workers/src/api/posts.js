@@ -584,8 +584,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     systemInstruction: { role: "system", parts: [{ text: systemPrompt }] },
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 2500,
-      responseMimeType: "application/json"
+      maxOutputTokens: 2500
     }
   };
 
