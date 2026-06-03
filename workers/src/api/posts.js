@@ -476,9 +476,24 @@ export async function generatePostFromDraft(db, env, id) {
 
   const postText = generatedData.post || '';
   const firstComment = generatedData.first_comment || null;
+  // Support both 'carousel' and 'carrusel' key names from Gemini
+  const carouselData = generatedData.carousel || generatedData.carrusel || null;
 
   if (!postText) {
     throw new Error('Generated JSON did not contain a "post" field.');
+  }
+
+  // Encode carousel JSON as base64 so it can be stored in media_base64
+  // The frontend detects this by checking if it starts with 'CAROUSEL:'
+  let carouselBase64 = null;
+  if (carouselData) {
+    try {
+      const carouselStr = 'CAROUSEL:' + JSON.stringify(carouselData);
+      carouselBase64 = btoa(unescape(encodeURIComponent(carouselStr)));
+    } catch (e) {
+      // If encoding fails, skip carousel - don't fail the whole generation
+      console.error('Failed to encode carousel:', e);
+    }
   }
 
   // Update post in D1
@@ -486,6 +501,7 @@ export async function generatePostFromDraft(db, env, id) {
     status: 'pending',
     content: postText,
     first_comment: firstComment,
+    ...(carouselBase64 ? { media_base64: carouselBase64 } : {}),
   });
 
   return updatedPost;

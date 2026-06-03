@@ -304,7 +304,7 @@ function renderPostCard(post) {
         <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">
           👁 Preview
         </button>
-        ${post.media_base64 ? `<button class="btn btn-ghost btn-sm" onclick="PostActions.showPDF('${post.id}', '${post.media_base64}')">📄 Ver PDF</button>` : ''}
+        ${post.media_base64 ? `<button class="btn btn-ghost btn-sm" onclick="PostActions.showCarousel('${post.id}', '${post.media_base64}')">🎴 Ver Carrusel</button>` : ''}
         <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">
           ✏️ Editar
         </button>
@@ -351,16 +351,53 @@ function renderPostCard(post) {
 
 // ── Post Actions ───────────────────────────────────────────
 const PostActions = {
-  showPDF(postId, base64) {
-    const pdfWindow = window.open("");
-    if (pdfWindow) {
-      pdfWindow.document.write(
-        `<iframe width='100%' height='100%' style='border:none;margin:0;padding:0;' src='data:application/pdf;base64,${base64}'></iframe>`
-      );
-      pdfWindow.document.body.style.margin = "0";
-      pdfWindow.document.title = "Carrusel PDF";
-    } else {
-      Toast.show('Por favor, permite los popups para ver el PDF.', 'warning');
+  showCarousel(postId, base64) {
+    try {
+      const decoded = decodeURIComponent(escape(atob(base64)));
+      if (decoded.startsWith('CAROUSEL:')) {
+        // New format: JSON carousel data
+        const slides = JSON.parse(decoded.slice(9));
+        const slideArr = Array.isArray(slides) ? slides : (slides.slides || []);
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        let currentSlide = 0;
+        const render = () => {
+          const s = slideArr[currentSlide];
+          const iscover = s.slide_type === 'cover' || currentSlide === 0;
+          const bullets = (s.bullets || []).map(b => `<li style="margin-bottom:8px;font-size:15px;line-height:1.5;color:#3a3a3a">${b}</li>`).join('');
+          overlay.innerHTML = `
+            <div style="background:#F9F6F0;border-radius:16px;max-width:520px;width:100%;padding:40px;position:relative;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 25px 60px rgba(0,0,0,0.4);">
+              <button onclick="this.closest('[style*=fixed]').remove()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#666">✕</button>
+              <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#7A8B7B;text-transform:uppercase;margin-bottom:8px">${s.pre_title || (iscover ? 'ACTUALIDAD' : '')}</div>
+              <h2 style="margin:0 0 10px;font-size:${iscover?'24px':'20px'};font-weight:800;color:#1a1a1a;line-height:1.3">${s.title || ''}</h2>
+              ${s.subtitle ? `<p style="color:#555;font-size:14px;margin:0 0 20px;border-left:3px solid #7A8B7B;padding-left:12px">${s.subtitle}</p>` : ''}
+              ${bullets ? `<ul style="padding-left:20px;margin:0">${bullets}</ul>` : ''}
+              ${iscover ? '' : `<div style="position:absolute;bottom:16px;right:20px;font-size:12px;color:#7A8B7B;font-weight:600">${currentSlide}/${slideArr.length-1} →</div>`}
+              <div style="margin-top:24px;display:flex;justify-content:space-between;align-items:center">
+                <button onclick="" id="prev-slide" style="padding:8px 16px;background:#e8e4dc;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600" ${currentSlide===0?'disabled style="opacity:0.4"':''}>← Anterior</button>
+                <span style="font-size:12px;color:#888">${currentSlide+1} / ${slideArr.length}</span>
+                <button onclick="" id="next-slide" style="padding:8px 16px;background:#1a1a1a;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600" ${currentSlide===slideArr.length-1?'disabled style="opacity:0.4"':''}>Siguiente →</button>
+              </div>
+            </div>`;
+          overlay.querySelector('#prev-slide')?.addEventListener('click', () => { if(currentSlide>0){currentSlide--;render();} });
+          overlay.querySelector('#next-slide')?.addEventListener('click', () => { if(currentSlide<slideArr.length-1){currentSlide++;render();} });
+        };
+        render();
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+      } else {
+        // Legacy: real PDF
+        const pdfWindow = window.open("");
+        if (pdfWindow) {
+          pdfWindow.document.write(`<iframe width='100%' height='100%' style='border:none;margin:0;padding:0;' src='data:application/pdf;base64,${base64}'></iframe>`);
+          pdfWindow.document.body.style.margin = "0";
+          pdfWindow.document.title = "Carrusel PDF";
+        } else {
+          Toast.show('Por favor, permite los popups para ver el PDF.', 'warning');
+        }
+      }
+    } catch(e) {
+      Toast.show('Error al mostrar el carrusel: ' + e.message, 'error');
     }
   },
 
