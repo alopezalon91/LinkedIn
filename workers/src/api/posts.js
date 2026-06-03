@@ -510,7 +510,7 @@ export async function generatePostFromDraft(db, env, id) {
 /**
  * Regenerate the carousel only, based on an edited post text.
  */
-export async function regenerateCarousel(db, id, newPostText) {
+export async function regenerateCarousel(db, env, id, newPostText) {
   // 1. Get the post
   const post = await getPost(db, id);
   if (!post) {
@@ -572,7 +572,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
 }
 `;
 
-  const geminiApiKey = typeof GEMINI_API_KEY !== 'undefined' ? GEMINI_API_KEY : null;
+  const geminiApiKey = env.GEMINI_API_KEY;
   if (!geminiApiKey) {
     throw new Error('GEMINI_API_KEY is not defined in the worker environment.');
   }

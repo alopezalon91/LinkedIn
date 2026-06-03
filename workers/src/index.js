@@ -414,7 +414,7 @@ async function _handleRegenerateCarousel(db, env, postId, editedContent) {
       return errorResponse('content_edited is required for carousel regeneration', 400);
     }
     const { regenerateCarousel } = await import('./api/posts.js');
-    const post = await regenerateCarousel(db, postId, editedContent);
+    const post = await regenerateCarousel(db, env, postId, editedContent);
     return jsonResponse(post);
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
