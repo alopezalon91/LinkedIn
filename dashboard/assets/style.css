@@ -791,6 +791,9 @@ body {
   line-height: 1.6;
   color: rgba(0,0,0,0.85);
   white-space: pre-wrap;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: 10px;
 }
 
 .linkedin-hashtags { color: #0a66c2; margin-top: 8px; font-size: 14px; }
