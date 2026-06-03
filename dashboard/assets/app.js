@@ -210,6 +210,21 @@ function renderStatusPill(status) {
 }
 
 // ── Post Card Renderer ─────────────────────────────────────
+function toBoldUnicode(text) {
+  return text.split('').map(char => {
+    const code = char.charCodeAt(0);
+    if (code >= 65 && code <= 90) return String.fromCodePoint(code + 120211);
+    if (code >= 97 && code <= 122) return String.fromCodePoint(code + 120205);
+    if (code >= 48 && code <= 57) return String.fromCodePoint(code + 120764);
+    return char;
+  }).join('');
+}
+
+function formatLinkedInText(text) {
+  // Parses Markdown bold **text** to Unicode bold
+  return (text || '').replace(/\*\*(.*?)\*\*/g, (m, p1) => toBoldUnicode(p1));
+}
+
 function renderPostCard(post) {
   const card = document.createElement('div');
   card.className = `post-card urgency-${post.urgency}`;
@@ -218,7 +233,8 @@ function renderPostCard(post) {
   card.dataset.urgency = post.urgency;
   card.dataset.id = post.id;
 
-  const previewText = (post.content_edited || post.content || '').replace(/</g, '&lt;');
+  const baseText = post.content_edited || post.content || '';
+  const previewText = formatLinkedInText(baseText).replace(/</g, '&lt;');
   const confidence = post.confidence_score || 0;
   let sourceInfo = '';
   if (post.source_name) {
@@ -778,7 +794,7 @@ const PostActions = {
     const editor = document.getElementById(`editor-${postId}`);
     const content = (editor?.classList.contains('visible') ? editor.value : (post.content_edited || post.content)) || '';
 
-    document.getElementById('preview-body').textContent = content;
+    document.getElementById('preview-body').textContent = formatLinkedInText(content);
     document.getElementById('preview-modal').classList.add('visible');
 
     document.getElementById('approve-from-preview').onclick = () => {

@@ -56,8 +56,11 @@ export async function publishPost(db, env, postId) {
   }
 
   // 3. Decide which content to publish (prefer user-edited version)
-  const textToPublish = (post.content_edited ?? post.content).trim();
+  let textToPublish = (post.content_edited ?? post.content).trim();
   if (!textToPublish) throw new Error('Post content is empty — cannot publish');
+
+  // Convert markdown bold to Unicode bold for LinkedIn
+  textToPublish = formatLinkedInText(textToPublish);
 
   // 4. If post has a PDF, upload it first to get the asset URN
   let mediaUrn = null;
@@ -165,6 +168,20 @@ export async function publishPost(db, env, postId) {
  *
  * See: https://learn.microsoft.com/en-us/linkedin/marketing/integrations/community-management/shares/posts-api#create-a-post
  */
+function toBoldUnicode(text) {
+  return text.split('').map(char => {
+    const code = char.charCodeAt(0);
+    if (code >= 65 && code <= 90) return String.fromCodePoint(code + 120211);
+    if (code >= 97 && code <= 122) return String.fromCodePoint(code + 120205);
+    if (code >= 48 && code <= 57) return String.fromCodePoint(code + 120764);
+    return char;
+  }).join('');
+}
+
+function formatLinkedInText(text) {
+  return (text || '').replace(/\*\*(.*?)\*\*/g, (m, p1) => toBoldUnicode(p1));
+}
+
 function buildPostPayload(authorUrn, text, mediaUrn = null) {
   const payload = {
     author: authorUrn,
