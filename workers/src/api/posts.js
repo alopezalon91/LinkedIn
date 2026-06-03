@@ -606,6 +606,15 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     throw new Error('Gemini API returned an empty or invalid response.');
   }
 
+  // Strip markdown backticks if Gemini includes them
+  if (generatedText.startsWith("```")) {
+    const parts = generatedText.split("```");
+    generatedText = parts[1] || generatedText;
+    if (generatedText.startsWith("json")) {
+      generatedText = generatedText.substring(4).trim();
+    }
+  }
+
   let generatedData;
   try {
     generatedData = JSON.parse(generatedText);
