@@ -157,8 +157,8 @@ async function route(request, env, ctx, url, path, method) {
     return handleCheckSources(db, request);
   }
 
-  // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate|generate ────
-  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate|generate)$/);
+  // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate|generate|regenerate-carousel ────
+  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate|generate|regenerate-carousel)$/);
   if (subActionMatch && method === 'POST') {
     const [, postId, action] = subActionMatch;
     return handlePostAction(db, env, request, postId, action);
@@ -346,6 +346,7 @@ async function handlePostAction(db, env, request, postId, action) {
     case 'schedule': return _handleSchedule(db, postId, body.scheduled_at);
     case 'regenerate': return _handleRegenerate(db, env, postId, body.instructions);
     case 'generate': return _handleGenerate(db, env, postId);
+    case 'regenerate-carousel': return _handleRegenerateCarousel(db, env, postId, body.content_edited);
     default:         return errorResponse(`Unknown action: ${action}`, 400);
   }
 }
@@ -401,6 +402,19 @@ async function _handleRegenerate(db, env, postId, instructions) {
 async function _handleGenerate(db, env, postId) {
   try {
     const post = await generatePostFromDraft(db, env, postId);
+    return jsonResponse(post);
+  } catch (err) {
+    return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
+  }
+}
+
+async function _handleRegenerateCarousel(db, env, postId, editedContent) {
+  try {
+    if (!editedContent) {
+      return errorResponse('content_edited is required for carousel regeneration', 400);
+    }
+    const { regenerateCarousel } = await import('./api/posts.js');
+    const post = await regenerateCarousel(db, postId, editedContent);
     return jsonResponse(post);
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);

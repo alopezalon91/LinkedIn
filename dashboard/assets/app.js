@@ -77,6 +77,10 @@ const API = {
     method: 'PATCH',
     body: JSON.stringify({ action: 'review', content_edited: editedContent || null }),
   }),
+  regenerateCarousel: (id, editedContent) => API.request(`/api/posts/${id}/regenerate-carousel`, {
+    method: 'POST',
+    body: JSON.stringify({ content_edited: editedContent }),
+  }),
 
   rejectPost: (id) => API.request(`/api/posts/${id}`, {
     method: 'PATCH',
@@ -711,22 +715,48 @@ const PostActions = {
     }
   },
 
-  toggleEdit(postId) {
+  async toggleEdit(postId) {
     const editor = document.getElementById(`editor-${postId}`);
     const preview = document.getElementById(`preview-${postId}`);
     const expandBtn = document.getElementById(`expand-btn-${postId}`);
     const editBtn = document.getElementById(`edit-btn-${postId}`);
     const rewriteSec = document.getElementById(`ai-rewrite-section-${postId}`);
-    const isEditing = editor.classList.toggle('visible');
+    const isEditing = editor.classList.contains('visible');
 
-    if (isEditing) {
+    if (!isEditing) {
+      // Opening editor
+      editor.classList.add('visible');
       preview.style.display = 'none';
       expandBtn.style.display = 'none';
       editBtn.innerHTML = '✅ Aplicar edición';
       if (rewriteSec) rewriteSec.style.display = 'block';
       editor.focus();
     } else {
+      // Closing editor
       const newContent = editor.value;
+      const originalContent = State.posts.find(p => p.id === postId)?.content || '';
+      const previousEditedContent = State.posts.find(p => p.id === postId)?.content_edited || '';
+      const hasChanged = newContent.trim() !== (previousEditedContent || originalContent).trim();
+
+      if (hasChanged) {
+        editBtn.disabled = true;
+        editBtn.innerHTML = '<div class="loading-spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;margin-right:4px;"></div> Actualizando carrusel...';
+        try {
+          const res = await API.regenerateCarousel(postId, newContent);
+          // Update local state with new media_base64
+          const postIndex = State.posts.findIndex(p => p.id === postId);
+          if (postIndex !== -1) {
+            State.posts[postIndex].media_base64 = res.media_base64;
+            State.posts[postIndex].content_edited = newContent;
+          }
+          Toast.show('Carrusel regenerado con tus cambios ✅', 'success');
+        } catch (e) {
+          Toast.show('Error al regenerar carrusel: ' + e.message, 'error');
+        }
+        editBtn.disabled = false;
+      }
+
+      editor.classList.remove('visible');
       preview.textContent = newContent;
       preview.style.display = '';
       expandBtn.style.display = '';

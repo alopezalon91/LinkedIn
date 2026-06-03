@@ -507,6 +507,128 @@ export async function generatePostFromDraft(db, env, id) {
   return updatedPost;
 }
 
+/**
+ * Regenerate the carousel only, based on an edited post text.
+ */
+export async function regenerateCarousel(db, id, newPostText) {
+  // 1. Get the post
+  const post = await getPost(db, id);
+  if (!post) {
+    throw new Error('Post not found');
+  }
+
+  // 2. Prepare prompt
+  const systemPrompt = `Eres un experto estratega de contenido fiscal y financiero en LinkedIn.`;
+  const prompt = `
+=== FORMATO DE SALIDA (CRÍTICO) ===
+El usuario ha editado su post de LinkedIn y ahora tiene este texto:
+"${newPostText}"
+
+Genera un nuevo Carrusel de 6 diapositivas para acompañar perfectamente a este texto editado.
+Devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura exacta.
+El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada y "interior" para el resto.
+PROHIBIDO ESCRIBIR PUNTOS FINALES (.) AL FINAL DE CADA BULLET.
+PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
+{
+  "carousel": [
+    {
+      "slide_type": "cover",
+      "pre_title": "ACTUALIDAD",
+      "title": "Título editorial de alto impacto",
+      "subtitle": "Promesa de valor o sumario",
+      "bullets": []
+    },
+    {
+      "slide_type": "interior",
+      "pre_title": "1/4",
+      "title": "La letra pequeña",
+      "subtitle": "El impacto económico crudo",
+      "bullets": [
+        "De 2 a 3 puntos densos"
+      ]
+    },
+    {
+      "slide_type": "interior",
+      "pre_title": "2/4",
+      "title": "¿Quién está en el radar?",
+      "subtitle": "Perfil de los afectados",
+      "bullets": []
+    },
+    {
+      "slide_type": "interior",
+      "pre_title": "3/4",
+      "title": "Qué ejecutar hoy",
+      "subtitle": "Mitiga el impacto de inmediato",
+      "bullets": []
+    },
+    {
+      "slide_type": "interior",
+      "pre_title": "4/4",
+      "title": "Mi enfoque de trinchera",
+      "subtitle": "La estrategia de Alberto López",
+      "bullets": []
+    }
+  ]
+}
+`;
+
+  const geminiApiKey = typeof GEMINI_API_KEY !== 'undefined' ? GEMINI_API_KEY : null;
+  if (!geminiApiKey) {
+    throw new Error('GEMINI_API_KEY is not defined in the worker environment.');
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+  
+  const payload = {
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    systemInstruction: { role: "system", parts: [{ text: systemPrompt }] },
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 2500,
+      responseMimeType: "application/json"
+    }
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  let generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!generatedText) {
+    throw new Error('Gemini API returned an empty or invalid response.');
+  }
+
+  let generatedData;
+  try {
+    generatedData = JSON.parse(generatedText);
+  } catch (err) {
+    throw new Error(`Failed to parse Gemini output as JSON: ${err.message}`);
+  }
+
+  const carouselData = generatedData.carousel || generatedData.carrusel || null;
+  if (!carouselData) {
+    throw new Error('Generated JSON did not contain a "carousel" field.');
+  }
+
+  let carouselBase64 = null;
+  const carouselStr = 'CAROUSEL:' + JSON.stringify(carouselData);
+  carouselBase64 = btoa(unescape(encodeURIComponent(carouselStr)));
+
+  const updatedPost = await updatePost(db, id, {
+    media_base64: carouselBase64
+  });
+
+  return updatedPost;
+}
+
 // ─── Deduplication ────────────────────────────────────────────────────────────
 
 /**
