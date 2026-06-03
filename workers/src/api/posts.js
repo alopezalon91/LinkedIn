@@ -631,7 +631,8 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
   carouselBase64 = btoa(unescape(encodeURIComponent(carouselStr)));
 
   const updatedPost = await updatePost(db, id, {
-    media_base64: carouselBase64
+    media_base64: carouselBase64,
+    content_edited: newPostText
   });
 
   return updatedPost;
