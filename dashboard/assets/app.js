@@ -8,9 +8,9 @@
 
 // ── Configuration ─────────────────────────────────────────
 const CONFIG = {
-  // Replace with your actual Cloudflare Worker URL after deployment
-  WORKER_URL: localStorage.getItem('worker_url') || 'https://mytaxbot-linkedin.YOUR_SUBDOMAIN.workers.dev',
-  DASHBOARD_SECRET: localStorage.getItem('dashboard_secret') || '',
+  // Cloudflare Worker API endpoint
+  WORKER_URL: localStorage.getItem('worker_url') || 'https://mytaxbot-linkedin.a-lopezalon91.workers.dev',
+  DASHBOARD_SECRET: localStorage.getItem('dashboard_secret') || 'd5a8fb21e7d97b0a790518d6bc1f9b3e',
   LINKEDIN_NAME: 'Alberto López',
   LINKEDIN_TITLE: 'Gestor contable y fiscal · MyTaxBot',
 };
