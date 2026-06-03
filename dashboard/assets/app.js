@@ -384,16 +384,16 @@ const PostActions = {
           const iscover = s.slide_type === 'cover' || currentSlide === 0;
           
           const bulletsHtml = (s.bullets || []).map(b => 
-            `<li style="position:relative;padding-left:24px;margin-bottom:20px;font-size:18px;font-weight:700;color:#2B2D2F;line-height:1.4;"><span style="position:absolute;left:0;color:#2B2D2F;">•</span>${b}</li>`
+            `<li style="position:relative;padding-left:20px;margin-bottom:16px;font-size:16px;font-weight:700;color:#2B2D2F;line-height:1.35;"><span style="position:absolute;left:0;color:#2B2D2F;">•</span>${b}</li>`
           ).join('');
 
           const signatureHtml = iscover 
-            ? `<div style="position:absolute;bottom:8%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;">
-                 <img src="/assets/img/monogram_solid.png" style="height:55px;margin-bottom:12px;opacity:0.9;">
+            ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
+                 <img src="/assets/img/monogram_solid.png" style="height:50px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
                  <div style="font-family:'Lora',serif;font-weight:500;font-size:15px;color:#2B2D2F;letter-spacing:2px;">Alberto López</div>
                </div>`
-            : `<div style="position:absolute;bottom:5%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
-                 <img src="/assets/img/monogram_solid.png" style="height:45px;margin-bottom:8px;opacity:0.9;">
+            : `<div style="position:absolute;bottom:4%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
+                 <img src="/assets/img/monogram_solid.png" style="height:40px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
                  <div style="font-family:'Lora',serif;font-weight:500;font-size:13px;color:#2B2D2F;letter-spacing:2px;">Alberto López</div>
                </div>`;
 
@@ -401,23 +401,23 @@ const PostActions = {
 
           const slideContent = iscover ? `
             <!-- COVER LAYOUT -->
-            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
-              ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:12px 28px;font-weight:800;font-size:16px;letter-spacing:1px;margin-bottom:30px;">${s.pre_title}</div>` : ''}
-              ${s.title ? `<h1 style="font-size:42px;font-weight:800;color:#2B2D2F;line-height:1.15;margin:0 0 24px 0;">${s.title}</h1>` : ''}
-              ${s.subtitle ? `<p style="font-size:22px;font-weight:500;color:#2B2D2F;line-height:1.4;margin:0;">${s.subtitle}</p>` : ''}
+            <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;overflow-y:auto;overflow-x:hidden;">
+              ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:10px 24px;font-weight:800;font-size:15px;letter-spacing:1px;margin-bottom:24px;flex-shrink:0;">${s.pre_title}</div>` : ''}
+              ${s.title ? `<h1 style="font-size:38px;font-weight:800;color:#2B2D2F;line-height:1.15;margin:0 0 20px 0;flex-shrink:0;">${s.title}</h1>` : ''}
+              ${s.subtitle ? `<p style="font-size:20px;font-weight:500;color:#2B2D2F;line-height:1.4;margin:0;flex-shrink:0;">${s.subtitle}</p>` : ''}
             </div>
           ` : `
             <!-- INTERIOR LAYOUT -->
-            <div style="position:absolute;inset:0;padding:10%;display:flex;flex-direction:column;z-index:2;">
-              ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:8px 20px;font-weight:800;font-size:14px;letter-spacing:1px;margin-bottom:30px;">${s.pre_title}</div>` : ''}
-              ${s.title ? `<h2 style="font-size:32px;font-weight:800;color:#2B2D2F;line-height:1.15;margin:0 0 20px 0;">${s.title}</h2>` : ''}
-              ${s.subtitle ? `<p style="font-size:20px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 30px 0;">${s.subtitle}</p>` : ''}
+            <div style="position:absolute;top:0;left:0;right:0;bottom:18%;padding:10% 10% 0 10%;display:flex;flex-direction:column;z-index:2;overflow-y:auto;overflow-x:hidden;">
+              ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:6px 16px;font-weight:800;font-size:13px;letter-spacing:1px;margin-bottom:24px;flex-shrink:0;">${s.pre_title}</div>` : ''}
+              ${s.title ? `<h2 style="font-size:28px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 16px 0;flex-shrink:0;">${s.title}</h2>` : ''}
+              ${s.subtitle ? `<p style="font-size:18px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 24px 0;flex-shrink:0;">${s.subtitle}</p>` : ''}
               ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;">${bulletsHtml}</ul>` : ''}
             </div>
             <!-- Separator Line -->
             <div style="position:absolute;bottom:17%;left:10%;right:10%;height:2px;background:#7A8B7B;z-index:2;"></div>
             <!-- Pagination -->
-            <div style="position:absolute;bottom:7%;right:10%;font-size:16px;font-weight:700;color:#7A8B7B;z-index:2;">${currentSlide + 1} / ${slideArr.length} →</div>
+            <div style="position:absolute;bottom:6%;right:10%;font-size:15px;font-weight:700;color:#7A8B7B;z-index:2;">${currentSlide + 1} / ${slideArr.length} →</div>
           `;
 
           overlay.innerHTML = `
