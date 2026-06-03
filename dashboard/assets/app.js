@@ -325,22 +325,26 @@ function renderPostCard(post) {
     </div>
   `;
 
-  // Expand/collapse toggle
+  // Expand/collapse toggle (only for non-draft posts that have the expand button)
   const expandBtn = card.querySelector(`#expand-btn-${post.id}`);
   const previewEl = card.querySelector(`#preview-${post.id}`);
-  expandBtn.addEventListener('click', () => {
-    const isExp = previewEl.classList.toggle('expanded');
-    expandBtn.textContent = isExp ? 'Ver menos ▴' : 'Ver completo ▾';
-  });
+  if (expandBtn && previewEl) {
+    expandBtn.addEventListener('click', () => {
+      const isExp = previewEl.classList.toggle('expanded');
+      expandBtn.textContent = isExp ? 'Ver menos ▴' : 'Ver completo ▾';
+    });
+  }
 
-  // Live char counter on editor
+  // Live char counter on editor (only for non-draft posts)
   const editor = card.querySelector(`#editor-${post.id}`);
   const counter = card.querySelector(`#counter-${post.id}`);
-  editor.addEventListener('input', () => {
-    const len = editor.value.length;
-    counter.textContent = `${len} / 2500 caracteres`;
-    counter.className = `char-counter ${len <= 2100 ? 'ok' : len <= 2500 ? 'warn' : 'over'}`;
-  });
+  if (editor && counter) {
+    editor.addEventListener('input', () => {
+      const len = editor.value.length;
+      counter.textContent = `${len} / 2500 caracteres`;
+      counter.className = `char-counter ${len <= 2100 ? 'ok' : len <= 2500 ? 'warn' : 'over'}`;
+    });
+  }
 
   return card;
 }
