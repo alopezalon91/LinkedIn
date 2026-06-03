@@ -218,7 +218,7 @@ function renderPostCard(post) {
   card.dataset.urgency = post.urgency;
   card.dataset.id = post.id;
 
-  const previewText = (post.content || '').replace(/</g, '&lt;');
+  const previewText = (post.content_edited || post.content || '').replace(/</g, '&lt;');
   const confidence = post.confidence_score || 0;
   let sourceInfo = '';
   if (post.source_name) {
