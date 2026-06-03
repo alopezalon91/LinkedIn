@@ -776,7 +776,7 @@ const PostActions = {
     if (!post) return;
     State.currentPreviewPostId = postId;
     const editor = document.getElementById(`editor-${postId}`);
-    const content = (editor?.classList.contains('visible') ? editor.value : post.content) || '';
+    const content = (editor?.classList.contains('visible') ? editor.value : (post.content_edited || post.content)) || '';
 
     document.getElementById('preview-body').textContent = content;
     document.getElementById('preview-modal').classList.add('visible');
