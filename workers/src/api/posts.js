@@ -32,6 +32,10 @@ export async function listPosts(db, params = {}) {
   if (status) {
     if (status === 'pending') {
       conditions.push("p.status IN ('pending', 'draft')");
+    } else if (status === 'reviewed') {
+      conditions.push("p.status IN ('reviewed', 'approved')");
+    } else if (status === 'history') {
+      conditions.push("p.status IN ('published', 'rejected')");
     } else if (status === 'all') {
       conditions.push("p.status NOT IN ('pending', 'draft')");
     } else {
@@ -634,6 +638,8 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
       generatedText = generatedText.substring(4).trim();
     }
   }
+
+  console.error("Gemini returned raw text:", generatedText);
 
   let generatedData;
   try {

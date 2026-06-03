@@ -1073,7 +1073,7 @@ const Pages = {
 
   async queue() {
     try {
-      const statusFilter = State.currentView === 'history' ? 'published' : State.currentView;
+      const statusFilter = State.currentView;
       const [postsRes, statsRes] = await Promise.all([
         API.getPosts({ status: statusFilter }),
         API.getStats().catch(() => null),
@@ -1287,12 +1287,12 @@ const Pages = {
 
   async history() {
     try {
-      const [allPosts, statsRes] = await Promise.all([
-        API.getPosts({ status: 'all', limit: 200 }),
+      const [postsRes, statsRes] = await Promise.all([
+        API.getPosts({ status: 'history', limit: 200 }),
         API.getStats().catch(() => null),
       ]);
       
-      State.historyPosts = allPosts.posts || [];
+      State.historyPosts = postsRes.posts || [];
       State.historyStatusFilter = 'all';
       State.historyTypeFilter = 'all';
       State.historySearchQuery = '';
