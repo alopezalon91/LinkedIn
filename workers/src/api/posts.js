@@ -193,7 +193,7 @@ export async function updatePost(db, id, updates) {
   if (!post) throw new Error(`Post not found: ${id}`);
 
   const allowed = [
-    'status', 'content_edited', 'first_comment', 'scheduled_at', 'published_at', 'linkedin_post_id',
+    'status', 'content', 'content_edited', 'first_comment', 'scheduled_at', 'published_at', 'linkedin_post_id',
     'urgency', 'ai_score', 'confidence_score', 'hashtags', 'media_base64'
   ];
 
