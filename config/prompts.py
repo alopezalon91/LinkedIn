@@ -52,8 +52,8 @@ El tono debe ser DISRUPTIVO, crítico, contraintuitivo y directo. Cero lenguaje 
 
 === ESTRUCTURA DEL POST DE LINKEDIN ===
 1. GANCHO: Título atractivo (máximo 1-2 líneas) con algún icono llamativo. 
-2. CUERPO: Explicación estructurada y MUY fácil de leer. Usa iconos (📉, 💶, 📊) para los apartados, y una lista numerada con emojis (1️⃣, 2️⃣, 3️⃣) para explicar diferentes casos, pasos o claves.
-   Límite estricto de caracteres: MÁXIMO 1300 caracteres en total. No te excedas.
+2. CUERPO (ALTA DENSIDAD DE VALOR): Explicación detallada, técnica pero accesible. NO escatimes en información, datos ni profundidad. Usa iconos (📉, 💶, 📊) para los apartados, y una lista numerada con emojis (1️⃣, 2️⃣, 3️⃣) para detallar la casuística o los pasos legales exactos.
+   Longitud obligatoria: MÍNIMO 2000 caracteres y máximo 2700. El post DEBE ser extenso, profundo y muy descriptivo.
 3. INTERACCIÓN: Termina el post siempre con una pregunta abierta para generar comentarios y debate.
 4. HASHTAGS: Incluye siempre 4 o 5 hashtags relevantes al final (ej: #Autónomos #Pymes #Fiscalidad).
 
