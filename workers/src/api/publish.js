@@ -62,10 +62,22 @@ export async function publishPost(db, env, postId) {
   // Convert markdown bold to Unicode bold for LinkedIn
   textToPublish = formatLinkedInText(textToPublish);
 
-  // 4. If post has a PDF, upload it first to get the asset URN
+  // 4. If post has a PDF/Image, upload it first to get the asset URN
   let mediaUrn = null;
   if (post.media_base64) {
-    mediaUrn = await uploadDocumentToLinkedIn(access_token, linkedin_urn, post.media_base64);
+    let isJsonCarousel = false;
+    try {
+      const decoded = decodeURIComponent(escape(atob(post.media_base64)));
+      if (decoded.startsWith('CAROUSEL:')) isJsonCarousel = true;
+    } catch(e) {}
+
+    if (!isJsonCarousel) {
+      try {
+        mediaUrn = await uploadDocumentToLinkedIn(access_token, linkedin_urn, post.media_base64);
+      } catch (err) {
+        console.error('[worker] Failed to upload document to LinkedIn. Continuing with text only. Error:', err);
+      }
+    }
   }
 
   // 5. Build REST Posts payload
