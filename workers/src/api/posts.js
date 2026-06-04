@@ -549,7 +549,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     {
       "slide_type": "interior",
       "pre_title": "1/4",
-      "title": "La letra pequeña",
+      "title": "Título personalizado y descriptivo sobre el problema (ej: Inspección sorpresa, El nuevo recargo, etc.)",
       "subtitle": "El impacto económico crudo",
       "bullets": [
         "De 2 a 3 puntos densos"
@@ -558,21 +558,21 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     {
       "slide_type": "interior",
       "pre_title": "2/4",
-      "title": "¿Quién está en el radar?",
+      "title": "Título personalizado y descriptivo sobre los afectados (ej: Autónomos societarios, Pymes de más de 8M, etc.)",
       "subtitle": "Perfil de los afectados",
       "bullets": []
     },
     {
       "slide_type": "interior",
       "pre_title": "3/4",
-      "title": "Qué ejecutar hoy",
+      "title": "Título personalizado y descriptivo sobre la acción a tomar (ej: Revisa tu facturación, Modifica el software, etc.)",
       "subtitle": "Mitiga el impacto de inmediato",
       "bullets": []
     },
     {
       "slide_type": "interior",
       "pre_title": "4/4",
-      "title": "Mi enfoque de trinchera",
+      "title": "Título personalizado y descriptivo sobre la estrategia (ej: Optimización del IVA, Deducción por I+D+i, etc.)",
       "subtitle": "La estrategia de Alberto López",
       "bullets": []
     }

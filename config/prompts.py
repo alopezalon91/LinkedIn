@@ -88,7 +88,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     {{
       "slide_type": "interior",
       "pre_title": "EL PROBLEMA",
-      "title": "La letra pequeña",
+      "title": "Título personalizado y descriptivo sobre el problema (ej: Inspección sorpresa, El nuevo recargo, etc.)",
       "subtitle": "El impacto económico crudo",
       "bullets": [
         "De 2 a 3 puntos densos que saquen a la luz el problema",
@@ -98,7 +98,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     {{
       "slide_type": "interior",
       "pre_title": "AFECTADOS",
-      "title": "¿Quién está en el radar?",
+      "title": "Título personalizado y descriptivo sobre los afectados (ej: Autónomos societarios, Pymes de más de 8M, etc.)",
       "subtitle": "Perfil exacto de los afectados",
       "bullets": [
         "Perfiles exactos o límites de facturación",
@@ -109,7 +109,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     {{
       "slide_type": "interior",
       "pre_title": "QUÉ HACER HOY",
-      "title": "Qué ejecutar hoy",
+      "title": "Título personalizado y descriptivo sobre la acción a tomar (ej: Revisa tu facturación, Modifica el software, etc.)",
       "subtitle": "Mitiga el impacto de inmediato",
       "bullets": [
         "Acción inmediata a nivel de software",
@@ -120,7 +120,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     {{
       "slide_type": "interior",
       "pre_title": "ESTRATEGIA",
-      "title": "Mi enfoque de trinchera",
+      "title": "Título personalizado y descriptivo sobre el enfoque estratégico (ej: Optimización del IVA, Deducción por I+D+i, etc.)",
       "subtitle": "Estrategia a seguir para tu caso",
       "bullets": [
         "Hack legal o técnica fiscal avanzada (ej. amortización acelerada, provisiones, reestructuración)",
