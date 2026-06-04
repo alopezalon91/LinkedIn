@@ -458,12 +458,15 @@ class LearningModel:
         rejections = []
         for d in decisions:
             if d.get("decision") == "rejected" and d.get("rejection_reason"):
-                rejections.append({
-                    "content": d.get("content", ""),
-                    "reason": d.get("rejection_reason", ""),
-                    "sector": d.get("sector", ""),
-                    "type": d.get("source_type", ""),
-                })
+                reason = d.get("rejection_reason", "").strip()
+                # Exclude generic placeholder rejections so they do not penalize similar news topics
+                if reason and reason.lower() not in ("rechazado sin comentarios", "rechazado sin comentarios.", "sin comentarios", "sin motivo", "ninguno", "no reason"):
+                    rejections.append({
+                        "content": d.get("content", ""),
+                        "reason": reason,
+                        "sector": d.get("sector", ""),
+                        "type": d.get("source_type", ""),
+                    })
         return rejections[:limit]
 
     def get_recent_edit_reasons(self, limit: int = 5) -> list[dict[str, str]]:
