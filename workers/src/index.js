@@ -319,7 +319,7 @@ async function handleUpdatePost(db, request, postId) {
 
   // Route to specialised handlers if action shorthand keys are present
   if (updates.action === 'approve' || 'approved' in updates || updates.status === 'approved') {
-    return _handleApprove(db, postId, updates.content_edited ?? null);
+    return _handleApprove(db, postId, updates.content_edited ?? null, updates.media_base64 ?? null);
   }
   if (updates.action === 'reject' || updates.status === 'rejected') {
     return _handleReject(db, postId);
