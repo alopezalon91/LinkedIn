@@ -324,7 +324,6 @@ function renderPostCard(post) {
         <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">
           👁 Preview
         </button>
-        ${post.media_base64 ? `<button class="btn btn-ghost btn-sm carousel-btn" data-postid="${post.id}" data-carousel="${post.media_base64}">🎴 Ver Carrusel</button>` : ''}
         <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">
           ✏️ Editar
         </button>
@@ -332,12 +331,15 @@ function renderPostCard(post) {
           ❌ Rechazar
         </button>
         ${State.currentView === 'scheduled'
-          ? `<button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
+          ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
+             <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
           : State.currentView === 'reviewed'
-          ? `<button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
+          ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
+             <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
           : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
+             <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
         }
@@ -443,7 +445,7 @@ const PostActions = {
             <!-- Separator Line -->
             <div style="position:absolute;bottom:17%;left:10%;right:10%;height:2px;background:#7A8B7B;z-index:2;"></div>
             <!-- Pagination -->
-            <div style="position:absolute;bottom:6%;right:10%;font-size:15px;font-weight:700;color:#7A8B7B;z-index:2;">${currentSlide + 1} / ${slideArr.length} →</div>
+            <div style="position:absolute;bottom:6%;right:10%;font-size:15px;font-weight:700;color:#7A8B7B;z-index:2;">${currentSlide + 1} / ${slideArr.length} ${currentSlide === slideArr.length - 1 ? '' : '→'}</div>
           `;
 
           overlay.innerHTML = `
@@ -604,6 +606,157 @@ const PostActions = {
     }
   },
 
+  async generateCarouselImages(post, mediaBase64) {
+    return new Promise((resolve, reject) => {
+      try {
+        const decoded = decodeURIComponent(escape(atob(mediaBase64)));
+        const data = JSON.parse(decoded.replace('CAROUSEL:', ''));
+        const slideArr = Array.isArray(data) ? data : (data.slides || []);
+        
+        // Add fonts if not present
+        if (!document.getElementById('carousel-fonts')) {
+          const fontLink = document.createElement('link');
+          fontLink.id = 'carousel-fonts';
+          fontLink.rel = 'stylesheet';
+          fontLink.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Lora:wght@500&display=swap';
+          document.head.appendChild(fontLink);
+        }
+
+        // Create an offscreen container to render the slides
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.width = '1080px';
+        container.style.height = '1080px';
+        container.style.background = '#F9F6F0';
+        container.style.fontFamily = "'Montserrat', sans-serif";
+        container.style.overflow = 'hidden';
+        document.body.appendChild(container);
+
+        const images = [];
+
+        const renderSlide = async (index) => {
+          if (index >= slideArr.length) {
+            document.body.removeChild(container);
+            const finalPayload = { type: 'multi-image', images };
+            resolve(btoa(unescape(encodeURIComponent(JSON.stringify(finalPayload)))));
+            return;
+          }
+
+          const s = slideArr[index];
+          const iscover = s.slide_type === 'cover' || index === 0;
+          container.innerHTML = '';
+          
+          const bulletsHtml = (s.bullets || []).map(b => 
+            `<li style="position:relative;padding-left:36px;margin-bottom:28px;font-size:30px;font-weight:700;color:#2B2D2F;line-height:1.35;"><span style="position:absolute;left:0;color:#2B2D2F;">•</span>${b}</li>`
+          ).join('');
+
+          const signatureHtml = iscover 
+            ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
+                 <img src="/assets/img/monogram_solid.png" style="height:90px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
+                 <div style="font-family:'Lora',serif;font-weight:500;font-size:26px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
+               </div>`
+            : `<div style="position:absolute;bottom:4%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
+                 <img src="/assets/img/monogram_solid.png" style="height:72px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
+                 <div style="font-family:'Lora',serif;font-weight:500;font-size:24px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
+               </div>`;
+
+          const watermarkImg = iscover ? 'logo_watermark_cover.png' : 'logo_watermark_interior.png';
+
+          const slideContent = iscover ? `
+            <!-- COVER LAYOUT -->
+            <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
+              ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:18px 43px;font-weight:800;font-size:27px;letter-spacing:2px;margin-bottom:43px;">${s.pre_title}</div>` : ''}
+              ${s.title ? `<h1 style="font-size:68px;font-weight:800;color:#2B2D2F;line-height:1.15;margin:0 0 36px 0;">${s.title}</h1>` : ''}
+              ${s.subtitle ? `<p style="font-size:36px;font-weight:500;color:#2B2D2F;line-height:1.4;margin:0;">${s.subtitle}</p>` : ''}
+            </div>
+          ` : `
+            <!-- INTERIOR LAYOUT -->
+            <div style="position:absolute;top:0;left:0;right:0;bottom:18%;padding:10% 10% 0 10%;display:flex;flex-direction:column;z-index:2;">
+              ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:10px 28px;font-weight:800;font-size:24px;letter-spacing:2px;margin-bottom:43px;">${s.pre_title}</div>` : ''}
+              ${s.title ? `<h2 style="font-size:50px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 28px 0;">${s.title}</h2>` : ''}
+              ${s.subtitle ? `<p style="font-size:32px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 43px 0;">${s.subtitle}</p>` : ''}
+              ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;">${bulletsHtml}</ul>` : ''}
+            </div>
+            <!-- Separator Line -->
+            <div style="position:absolute;bottom:17%;left:10%;right:10%;height:4px;background:#7A8B7B;z-index:2;"></div>
+            <!-- Pagination -->
+            <div style="position:absolute;bottom:6%;right:10%;font-size:27px;font-weight:700;color:#7A8B7B;z-index:2;">${index + 1} / ${slideArr.length} ${index === slideArr.length - 1 ? '' : '→'}</div>
+          `;
+
+          container.innerHTML = `
+            <div style="position:relative;width:1080px;height:1080px;background:#F9F6F0;overflow:hidden;font-family:'Montserrat',sans-serif;">
+              <!-- Watermark -->
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;">
+                <img src="/assets/img/${watermarkImg}" style="width:60%;object-fit:contain;">
+              </div>
+              ${slideContent}
+              ${signatureHtml}
+            </div>
+          `;
+          
+          // Wait a tick for fonts and images to load
+          await new Promise(r => setTimeout(r, 500));
+          
+          // Use html2canvas to capture the element
+          const canvas = await html2canvas(container, {
+            scale: 1,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#F9F6F0'
+          });
+          
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+          images.push(dataUrl);
+          
+          await renderSlide(index + 1);
+        };
+
+        renderSlide(0).catch(err => {
+          document.body.removeChild(container);
+          reject(err);
+        });
+
+      } catch (e) {
+        reject(e);
+      }
+    });
+  },
+
+  async previewCarousel(postId) {
+    const post = State.posts.find(p => p.id === postId);
+    if (!post || !post.media_base64) {
+      Toast.show('Este post no tiene carrusel.', 'warning');
+      return;
+    }
+    
+    Toast.show('Generando imágenes del carrusel...', 'info');
+    let media = post.media_base64;
+    
+    try {
+      const decoded = decodeURIComponent(escape(atob(media)));
+      if (decoded.startsWith('CAROUSEL:')) {
+        media = await PostActions.generateCarouselImages(post, media);
+      }
+      
+      const newDecoded = decodeURIComponent(escape(atob(media)));
+      if (newDecoded.startsWith('{"type":"multi-image"')) {
+        const payload = JSON.parse(newDecoded);
+        const w = window.open('');
+        w.document.write('<h2>Vista Previa del Carrusel (Imágenes a publicar)</h2><div style="display:flex; flex-direction:column; gap:20px; align-items:center; background:#f3f2ef; padding:20px;">');
+        payload.images.forEach((img, i) => {
+          w.document.write('<div style="background:white; padding:10px; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1);"><h3 style="margin-top:0">Diapositiva ' + (i+1) + '</h3><img src="' + img + '" style="max-width:100%; border:1px solid #ccc; border-radius:4px;" /></div>');
+        });
+        w.document.write('</div>');
+      } else {
+        Toast.show('Formato de imagen no reconocido.', 'error');
+      }
+    } catch(err) {
+      Toast.show('Error generando vista previa: ' + err.message, 'error');
+    }
+  },
+
   async publishNow(postId) {
     const editor = document.getElementById(`editor-${postId}`);
     const isEditing = editor && editor.classList.contains('visible');
@@ -716,7 +869,18 @@ const PostActions = {
         btn.disabled = true;
         btn.innerHTML = '<div class="loading-spinner"></div>';
       }
-      await API.approvePost(postId, editedContent);
+      
+      const post = State.posts.find(p => p.id === postId);
+      let newMedia = null;
+      if (post && post.media_base64 && post.media_base64.length < 50000) {
+        const decoded = decodeURIComponent(escape(atob(post.media_base64)));
+        if (decoded.startsWith('CAROUSEL:')) {
+          Toast.show('Renderizando imágenes...', 'info');
+          newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
+        }
+      }
+      
+      await API.approvePost(postId, editedContent, newMedia);
       await API.recordFeedback({
         post_id: postId,
         decision: 'edited',
