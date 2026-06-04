@@ -151,7 +151,7 @@
       <div class="setup-section-sub">Opcional. Permite lanzar los scrapers manualmente desde el dashboard.</div>
       <div class="form-group">
         <label class="form-label" for="github-repo">Repositorio (usuario/repo)</label>
-        <input class="form-input" type="text" id="github-repo" placeholder="alberto-lopez/LinkedIn" />
+        <input class="form-input" type="text" id="github-repo" placeholder="alopezalon91/LinkedIn" />
       </div>
       <div class="form-group">
         <label class="form-label" for="github-token">GitHub Personal Access Token</label>
@@ -214,9 +214,16 @@ const fields = {
   'github-token': 'github_token',
 };
 
+const defaults = {
+  worker_url: 'https://mytaxbot-linkedin.a-lopezalon91.workers.dev',
+  dashboard_secret: 'd5a8fb21e7d97b0a790518d6bc1f9b3e',
+  github_repo: 'alopezalon91/LinkedIn',
+  github_token: '',
+};
+
 Object.entries(fields).forEach(([elId, key]) => {
   const el = document.getElementById(elId);
-  if (el) el.value = localStorage.getItem(key) || '';
+  if (el) el.value = localStorage.getItem(key) || defaults[key] || '';
 });
 
 // Update LinkedIn redirect URI display

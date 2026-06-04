@@ -9,7 +9,7 @@
 // ── Configuration ─────────────────────────────────────────
 const CONFIG = {
   // Cloudflare Worker API endpoint
-  WORKER_URL: localStorage.getItem('worker_url') || 'https://linkedin-bot.a-lopezalon91.workers.dev',
+  WORKER_URL: localStorage.getItem('worker_url') || 'https://mytaxbot-linkedin.a-lopezalon91.workers.dev',
   DASHBOARD_SECRET: localStorage.getItem('dashboard_secret') || 'd5a8fb21e7d97b0a790518d6bc1f9b3e',
   LINKEDIN_NAME: 'Alberto López',
   LINKEDIN_TITLE: 'Gestor contable y fiscal',
@@ -103,7 +103,7 @@ const API = {
 
   triggerWorkflow: async (workflow, inputs = null) => {
     const token = localStorage.getItem('github_token') || '';
-    let repo  = localStorage.getItem('github_repo') || '';
+    let repo  = localStorage.getItem('github_repo') || 'alopezalon91/LinkedIn';
     if (!token || !repo) {
       Toast.show('Configura el token de GitHub en Configuración', 'error');
       return false;
