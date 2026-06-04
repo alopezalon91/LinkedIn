@@ -195,7 +195,7 @@ Traduce la actualidad del mundo en una lección de estrategia fiscal práctica.
 
 RELEVANCE_PROMPT = """\
 Analiza si esta noticia o normativa es sumamente crítica y viralizable para autónomos y pymes en España.
-Ignora leyes de honores, nombramientos militares o noticias irrelevantes para negocios.
+Ignora y PUNTÚA CON CERO (0) noticias sobre política partidista, peleas entre políticos, nombramientos, elecciones o cualquier ruido político que no modifique leyes empresariales o impuestos. Ignora también leyes de honores o militares.
 
 Tipo: {tipo}
 Título: {titulo}
