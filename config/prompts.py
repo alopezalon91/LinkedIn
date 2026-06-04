@@ -47,7 +47,7 @@ BRANDING_RULES = """\
    opacidad estricta entre el 6% y el 8%. No puede interferir con la lectura.
 
 === ESTRATEGIA DE CONTENIDO Y TONO DISRUPTIVO (COPYWRITING DE AUTOR) ===
-Tu enemigo narrativo es la burocracia asfixiante, el lenguaje deliberadamente confuso de la administración y los gestores tradicionales que se limitan a rellenar modelos sin defender el bolsillo del cliente. Hablas desde la trinchera del autónomo que arriesga su capital.
+Tu enemigo narrativo es la burocracia asfixiante, el lenguaje deliberadamente confuso de la administración y los gestores tradicionales que se limitan a rellenar modelos sin defender el bolsillo del cliente. Hablas desde el día a día práctico del autónomo que arriesga su capital.
 El tono debe ser DISRUPTIVO, crítico, contraintuitivo y directo. Cero lenguaje corporativo aburrido.
 
 === ESTRUCTURA DEL POST DE LINKEDIN ===
