@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cola de Revisión — MyTaxBot LinkedIn</title>
+  <link rel="icon" type="image/png" href="/assets/img/favicon.png" />
   <meta name="description" content="Dashboard de revisión y aprobación de posts para LinkedIn de MyTaxBot" />
   <link rel="stylesheet" href="assets/style.css?v=3" />
 </head>
@@ -102,8 +103,9 @@
     <div class="view-tabs" style="display: flex; gap: 20px; border-bottom: 1px solid var(--border); margin-bottom: 24px; padding-bottom: 0;">
       <button class="view-tab active" data-view="pending" style="background: none; border: none; color: var(--text-primary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid var(--accent-blue); font-weight: 500;">⏳ Pendientes</button>
       <button class="view-tab" data-view="reviewed" style="background: none; border: none; color: var(--text-secondary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500;">👀 Revisados</button>
+      <button class="view-tab" data-view="approved" style="background: none; border: none; color: var(--text-secondary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500;">✅ Aprobados</button>
       <button class="view-tab" data-view="scheduled" style="background: none; border: none; color: var(--text-secondary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500;">📅 Programados</button>
-      <button class="view-tab" data-view="history" style="background: none; border: none; color: var(--text-secondary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500;">📚 Historial</button>
+      <button class="view-tab" data-view="published" style="background: none; border: none; color: var(--text-secondary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500;">🚀 Publicados</button>
     </div>
 
     <!-- Stats row -->
@@ -294,7 +296,7 @@
 <div class="toast-container" id="toast-container"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="assets/app.js?v=3"></script>
+<script src="assets/app.js?v=6"></script>
 <script>
   // Initialize queue page
   document.addEventListener('DOMContentLoaded', () => {
