@@ -93,7 +93,7 @@ export default {
       const { results } = await db.prepare(`
         SELECT id FROM posts 
         WHERE status = 'scheduled' 
-          AND scheduled_at <= datetime('now')
+          AND datetime(scheduled_at) <= datetime('now')
       `).all();
 
       if (!results || results.length === 0) {
