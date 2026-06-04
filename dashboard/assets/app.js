@@ -1,5 +1,5 @@
 /**
- * MyTaxBot LinkedIn Automation — Dashboard App
+ * Alberto López LinkedIn Automation — Dashboard App
  * Single JS module that powers all three dashboard pages.
  * Uses the Cloudflare Workers API (configured via WORKER_URL).
  */
@@ -9,10 +9,10 @@
 // ── Configuration ─────────────────────────────────────────
 const CONFIG = {
   // Cloudflare Worker API endpoint
-  WORKER_URL: localStorage.getItem('worker_url') || 'https://mytaxbot-linkedin.a-lopezalon91.workers.dev',
+  WORKER_URL: localStorage.getItem('worker_url') || 'https://linkedin-bot.a-lopezalon91.workers.dev',
   DASHBOARD_SECRET: localStorage.getItem('dashboard_secret') || 'd5a8fb21e7d97b0a790518d6bc1f9b3e',
   LINKEDIN_NAME: 'Alberto López',
-  LINKEDIN_TITLE: 'Gestor contable y fiscal · MyTaxBot',
+  LINKEDIN_TITLE: 'Gestor contable y fiscal',
 };
 
 // Sector display names
