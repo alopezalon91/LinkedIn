@@ -340,20 +340,33 @@ async function handlePostAction(db, env, request, postId, action) {
   const body = await parseJSON(request);
 
   switch (action) {
-    case 'approve':  return _handleApprove(db, postId, body.content_edited ?? null);
+    case 'approve':  return _handleApprove(db, postId, body.content_edited ?? null, body.media_base64 ?? null);
     case 'reject':   return _handleReject(db, postId);
     case 'review':   return _handleReview(db, postId, body.content_edited ?? null);
-    case 'schedule': return _handleSchedule(db, postId, body.scheduled_at);
+    case 'schedule': return _handleSchedule(db, postId, body.scheduled_at, body.media_base64 ?? null);
     case 'regenerate': return _handleRegenerate(db, env, postId, body.instructions);
     case 'generate': return _handleGenerate(db, env, postId);
     case 'regenerate-carousel': return _handleRegenerateCarousel(db, env, postId, body.content_edited);
+    case 'update':   return _handleGenericUpdate(db, postId, body);
     default:         return errorResponse(`Unknown action: ${action}`, 400);
   }
 }
 
-async function _handleApprove(db, postId, editedContent) {
+async function _handleGenericUpdate(db, postId, data) {
   try {
-    const { post, editRatio } = await approvePost(db, postId, editedContent);
+    const { updatePost } = await import('./api/posts.js');
+    // Remove the "action" key so we only pass the fields to update
+    const { action, ...updates } = data;
+    const post = await updatePost(db, postId, updates);
+    return jsonResponse(post);
+  } catch (err) {
+    return errorResponse(err.message, 400);
+  }
+}
+
+async function _handleApprove(db, postId, editedContent, mediaBase64) {
+  try {
+    const { post, editRatio } = await approvePost(db, postId, editedContent, mediaBase64);
     return jsonResponse({ post, edit_ratio: editRatio });
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
@@ -378,9 +391,9 @@ async function _handleReject(db, postId) {
   }
 }
 
-async function _handleSchedule(db, postId, scheduledAt) {
+async function _handleSchedule(db, postId, scheduledAt, mediaBase64) {
   try {
-    const post = await schedulePost(db, postId, scheduledAt);
+    const post = await schedulePost(db, postId, scheduledAt, mediaBase64);
     return jsonResponse(post);
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);

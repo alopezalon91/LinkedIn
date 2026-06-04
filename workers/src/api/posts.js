@@ -236,7 +236,7 @@ export async function updatePost(db, id, updates) {
  * Approve a post, optionally with an edited version of the content.
  * Returns { post, editRatio } — editRatio 0 = unchanged, 1 = totally rewritten.
  */
-export async function approvePost(db, id, editedContent = null) {
+export async function approvePost(db, id, editedContent = null, mediaBase64 = null) {
   const post = await getPost(db, id);
   if (!post) throw new Error(`Post not found: ${id}`);
 
@@ -246,6 +246,10 @@ export async function approvePost(db, id, editedContent = null) {
   if (editedContent && editedContent.trim() !== post.content.trim()) {
     updates.content_edited = editedContent;
     editRatio = levenshteinRatio(post.content, editedContent);
+  }
+  
+  if (mediaBase64) {
+    updates.media_base64 = mediaBase64;
   }
 
   const updated = await updatePost(db, id, updates);

@@ -68,9 +68,9 @@ const API = {
 
   getPost: (id) => API.request(`/api/posts/${id}`),
 
-  approvePost: (id, editedContent) => API.request(`/api/posts/${id}`, {
+  approvePost: (id, editedContent, mediaBase64) => API.request(`/api/posts/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ action: 'approve', content_edited: editedContent || null }),
+    body: JSON.stringify({ action: 'approve', content_edited: editedContent || null, media_base64: mediaBase64 || null }),
   }),
 
   reviewPost: (id, editedContent) => API.request(`/api/posts/${id}`, {
@@ -87,9 +87,9 @@ const API = {
     body: JSON.stringify({ action: 'reject' }),
   }),
 
-  schedulePost: (id, scheduledAt) => API.request(`/api/posts/${id}`, {
+  schedulePost: (id, scheduledAt, mediaBase64) => API.request(`/api/posts/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ action: 'schedule', scheduled_at: scheduledAt }),
+    body: JSON.stringify({ action: 'schedule', scheduled_at: scheduledAt, media_base64: mediaBase64 || null }),
   }),
 
   publishPost: (id) => API.request(`/api/publish/${id}`, { method: 'POST' }),
@@ -494,6 +494,7 @@ const PostActions = {
     document.getElementById('confirm-schedule-btn').onclick = async () => {
       const date = document.getElementById('schedule-date').value;
       const time = document.getElementById('schedule-time').value;
+      
       if (!date || !time) {
         Toast.show('Selecciona fecha y hora', 'warning');
         return;
@@ -505,10 +506,20 @@ const PostActions = {
       const editedContent = isEditing ? editor.value : null;
 
       try {
-        if (editedContent) {
-          await API.approvePost(postId, editedContent); // Save edits first
+        const post = State.posts.find(p => p.id === postId);
+        let newMedia = null;
+        if (post && post.media_base64 && post.media_base64.length < 50000) {
+          const decoded = decodeURIComponent(escape(atob(post.media_base64)));
+          if (decoded.startsWith('CAROUSEL:')) {
+            Toast.show('Renderizando imágenes...', 'info');
+            newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
+          }
         }
-        await API.schedulePost(postId, isoStr);
+        
+        if (editedContent) {
+          await API.approvePost(postId, editedContent, newMedia); // Save edits first
+        }
+        await API.schedulePost(postId, isoStr, newMedia);
         Toast.show('Post programado ✅', 'success');
         modal.classList.remove('visible');
         removePostCard(postId);
@@ -557,16 +568,29 @@ const PostActions = {
         btn.disabled = true;
         btn.innerHTML = '<div class="loading-spinner"></div>';
       }
-      await API.approvePost(postId, null);
+      
+      const post = State.posts.find(p => p.id === postId);
+      let newMedia = null;
+      if (post && post.media_base64 && post.media_base64.length < 50000) {
+        // Might be JSON carousel
+        const decoded = decodeURIComponent(escape(atob(post.media_base64)));
+        if (decoded.startsWith('CAROUSEL:')) {
+          Toast.show('Renderizando imágenes del carrusel...', 'info');
+          newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
+        }
+      }
+
+      await API.approvePost(postId, null, newMedia);
+      
       await API.recordFeedback({
         post_id: postId,
         decision: 'approved',
         edit_ratio: 0,
         time_to_decide_seconds: null,
-        post_type: State.posts.find(p => p.id === postId)?.type,
-        sector: State.posts.find(p => p.id === postId)?.sector,
-        source_name: State.posts.find(p => p.id === postId)?.source_name,
-        ai_score: State.posts.find(p => p.id === postId)?.ai_score,
+        post_type: post?.type,
+        sector: post?.sector,
+        source_name: post?.source_name,
+        ai_score: post?.ai_score,
         char_count: originalContent.length,
       });
       Toast.show('Post aprobado ✅', 'success');
@@ -598,6 +622,18 @@ const PostActions = {
         btn.disabled = true;
         btn.innerHTML = '<div class="loading-spinner"></div> Publicando...';
       }
+      
+      const post = State.posts.find(p => p.id === postId);
+      let newMedia = null;
+      if (post && post.media_base64 && post.media_base64.length < 50000) {
+        const decoded = decodeURIComponent(escape(atob(post.media_base64)));
+        if (decoded.startsWith('CAROUSEL:')) {
+          Toast.show('Renderizando carrusel...', 'info');
+          newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
+        }
+      }
+
+      await API.approvePost(postId, null, newMedia);
       await API.publishPost(postId);
       Toast.show('¡Publicado con éxito en LinkedIn! 🚀', 'success');
       removePostCard(postId);

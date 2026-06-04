@@ -62,16 +62,32 @@ export async function publishPost(db, env, postId) {
   // Convert markdown bold to Unicode bold for LinkedIn
   textToPublish = formatLinkedInText(textToPublish);
 
-  // 4. If post has a PDF/Image, upload it first to get the asset URN
   let mediaUrn = null;
+  let multiImageUrns = [];
+
   if (post.media_base64) {
     let isJsonCarousel = false;
+    let isMultiImage = false;
+    let decodedStr = '';
+    
     try {
-      const decoded = decodeURIComponent(escape(atob(post.media_base64)));
-      if (decoded.startsWith('CAROUSEL:')) isJsonCarousel = true;
+      decodedStr = decodeURIComponent(escape(atob(post.media_base64)));
+      if (decodedStr.startsWith('CAROUSEL:')) isJsonCarousel = true;
+      if (decodedStr.startsWith('{"type":"multi-image"')) isMultiImage = true;
     } catch(e) {}
 
-    if (!isJsonCarousel) {
+    if (isMultiImage) {
+      try {
+        const payload = JSON.parse(decodedStr);
+        for (const dataUri of payload.images) {
+          const base64Data = dataUri.split(',')[1] || dataUri;
+          const urn = await uploadImageToLinkedIn(access_token, linkedin_urn, base64Data);
+          if (urn) multiImageUrns.push(urn);
+        }
+      } catch (err) {
+        console.error('[worker] Failed to upload multi-image to LinkedIn. Error:', err);
+      }
+    } else if (!isJsonCarousel) {
       try {
         mediaUrn = await uploadDocumentToLinkedIn(access_token, linkedin_urn, post.media_base64);
       } catch (err) {
@@ -81,7 +97,7 @@ export async function publishPost(db, env, postId) {
   }
 
   // 5. Build REST Posts payload
-  const payload = buildPostPayload(linkedin_urn, textToPublish, mediaUrn);
+  const payload = buildPostPayload(linkedin_urn, textToPublish, multiImageUrns.length > 0 ? multiImageUrns : mediaUrn);
 
   // 5. POST to LinkedIn
   const response = await fetch(LINKEDIN_POSTS_URL, {
@@ -194,7 +210,7 @@ function formatLinkedInText(text) {
   return (text || '').replace(/\*\*(.*?)\*\*/g, (m, p1) => toBoldUnicode(p1));
 }
 
-function buildPostPayload(authorUrn, text, mediaUrn = null) {
+function buildPostPayload(authorUrn, text, mediaUrnOrArray = null) {
   const payload = {
     author: authorUrn,
     commentary: text,
@@ -205,15 +221,75 @@ function buildPostPayload(authorUrn, text, mediaUrn = null) {
     lifecycleState: 'PUBLISHED',
   };
 
-  if (mediaUrn) {
-    payload.content = {
-      media: {
-        id: mediaUrn,
-        title: "Documento Adjunto"
-      }
-    };
+  if (mediaUrnOrArray) {
+    if (Array.isArray(mediaUrnOrArray) && mediaUrnOrArray.length > 0) {
+      // Multiple Images API structure
+      payload.content = {
+        multiImage: {
+          images: mediaUrnOrArray.map(urn => ({ id: urn }))
+        }
+      };
+    } else if (typeof mediaUrnOrArray === 'string') {
+      // Single Document/Media structure
+      payload.content = {
+        media: {
+          id: mediaUrnOrArray,
+          title: "Documento Adjunto"
+        }
+      };
+    }
   }
   return payload;
+}
+
+// ─── Image Upload (Multiple) ──────────────────────────────────────────────────
+
+async function uploadImageToLinkedIn(access_token, authorUrn, base64Data) {
+  const registerRes = await fetch('https://api.linkedin.com/rest/images?action=initializeUpload', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${access_token}`,
+      'Content-Type': 'application/json',
+      'LinkedIn-Version': LINKEDIN_VERSION,
+      'X-RestLi-Protocol-Version': '2.0.0'
+    },
+    body: JSON.stringify({
+      initializeUploadRequest: {
+        owner: authorUrn
+      }
+    })
+  });
+
+  if (!registerRes.ok) {
+    const err = await registerRes.text();
+    throw new Error(`Failed to initialize image upload: ${err}`);
+  }
+
+  const registerData = await registerRes.json();
+  const uploadUrl = registerData.value.uploadUrl;
+  const imageUrn = registerData.value.image;
+
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${access_token}`,
+      'Content-Type': 'application/octet-stream'
+    },
+    body: bytes
+  });
+
+  if (!uploadRes.ok) {
+    const err = await uploadRes.text();
+    throw new Error(`Failed to upload image binary: ${err}`);
+  }
+
+  return imageUrn;
 }
 
 // ─── Document Upload ──────────────────────────────────────────────────────────
