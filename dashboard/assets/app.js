@@ -15,6 +15,17 @@ const CONFIG = {
   LINKEDIN_TITLE: 'Gestor contable y fiscal',
 };
 
+// Initialize localStorage defaults if not set, for seamless zero-setup on new machines/subdomains
+if (!localStorage.getItem('worker_url')) {
+  localStorage.setItem('worker_url', CONFIG.WORKER_URL);
+}
+if (!localStorage.getItem('dashboard_secret')) {
+  localStorage.setItem('dashboard_secret', CONFIG.DASHBOARD_SECRET);
+}
+if (!localStorage.getItem('github_repo')) {
+  localStorage.setItem('github_repo', 'alopezalon91/LinkedIn');
+}
+
 // Sector display names
 const SECTOR_LABELS = {
   ecommerce:         '🛒 E-commerce',

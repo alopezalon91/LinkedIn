@@ -223,7 +223,13 @@ const defaults = {
 
 Object.entries(fields).forEach(([elId, key]) => {
   const el = document.getElementById(elId);
-  if (el) el.value = localStorage.getItem(key) || defaults[key] || '';
+  if (el) {
+    const val = localStorage.getItem(key) || defaults[key] || '';
+    el.value = val;
+    if (val && !localStorage.getItem(key)) {
+      localStorage.setItem(key, val);
+    }
+  }
 });
 
 // Update LinkedIn redirect URI display
