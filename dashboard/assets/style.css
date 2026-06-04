@@ -147,8 +147,6 @@ body {
   width: 36px;
   height: 36px;
   object-fit: contain;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 2px 8px rgba(44, 77, 55, 0.1);
 }
 
 .form-input {
