@@ -680,14 +680,39 @@ export async function getExistingSourceIds(db, sourceIds) {
     return [];
   }
   
-  // Create placeholders e.g. "?, ?, ?"
-  const placeholders = sourceIds.map(() => '?').join(', ');
-  
+  // 1. Fetch recent posts from D1 database to check against
   const result = await db.prepare(
-    `SELECT source_id FROM posts WHERE source_id IN (${placeholders})`
-  )
-    .bind(...sourceIds)
-    .all();
+    `SELECT source_id, type FROM posts ORDER BY created_at DESC LIMIT 200`
+  ).all();
+  
+  const existingPosts = result.results ?? [];
+  const foundIds = [];
+  
+  for (const inputId of sourceIds) {
+    // Exact match check first
+    const exactMatch = existingPosts.find(p => p.source_id === inputId);
+    if (exactMatch) {
+      foundIds.push(inputId);
+      continue;
+    }
     
-  return (result.results ?? []).map(row => row.source_id);
+    // Fuzzy match check for news slugs (not BOE IDs)
+    if (inputId.startsWith('BOE-')) {
+      continue; // BOE only uses exact matches
+    }
+    
+    // Check against existing database source_ids (which are slugs)
+    for (const p of existingPosts) {
+      if (p.type === 'actualidad' && p.source_id && !p.source_id.startsWith('BOE-')) {
+        // Compute Levenshtein ratio (0 = identical, 1 = completely different)
+        const ratio = levenshteinRatio(inputId, p.source_id);
+        if (ratio <= 0.18) { // 18% edit distance threshold (roughly 82% similarity)
+          foundIds.push(inputId);
+          break;
+        }
+      }
+    }
+  }
+  
+  return foundIds;
 }

@@ -365,6 +365,39 @@ body {
 .filter-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
 .filter-btn.active { background: var(--accent-blue); color: white; }
 
+.filter-select {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition);
+  font-family: var(--font-sans);
+}
+
+.filter-select:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.filter-select:focus {
+  border-color: var(--accent-blue);
+}
+
+.sort-icon {
+  font-size: 11px;
+  color: var(--text-muted);
+  user-select: none;
+  display: inline-block;
+  margin-left: 4px;
+  transition: color var(--transition);
+}
+
 .search-box {
   display: flex;
   align-items: center;

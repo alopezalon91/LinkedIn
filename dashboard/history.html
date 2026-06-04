@@ -95,6 +95,12 @@
         <button class="filter-btn" data-type="normativa">Normativa</button>
         <button class="filter-btn" data-type="actualidad">Actualidad</button>
       </div>
+      <select id="hist-sector-select" class="filter-select">
+        <option value="all">Sectores: Todos</option>
+      </select>
+      <select id="hist-source-select" class="filter-select">
+        <option value="all">Fuentes: Todas</option>
+      </select>
       <div class="search-box">
         <span>🔍</span>
         <input type="text" id="hist-search" placeholder="Buscar en historial…" />
@@ -106,12 +112,12 @@
       <table class="history-table" id="history-table">
         <thead>
           <tr>
-            <th style="padding-left:20px">Fecha</th>
-            <th>Tipo</th>
-            <th>Sector</th>
+            <th id="th-date" style="padding-left:20px; cursor:pointer; user-select:none;">Fecha <span class="sort-icon" id="sort-icon-date"> ▼</span></th>
+            <th id="th-type" style="cursor:pointer; user-select:none;">Tipo <span class="sort-icon" id="sort-icon-type"> ⇅</span></th>
+            <th id="th-sector" style="cursor:pointer; user-select:none;">Sector <span class="sort-icon" id="sort-icon-sector"> ⇅</span></th>
             <th>Post (preview)</th>
-            <th>Fuente</th>
-            <th>Estado</th>
+            <th id="th-source" style="cursor:pointer; user-select:none;">Fuente <span class="sort-icon" id="sort-icon-source"> ⇅</span></th>
+            <th id="th-status" style="cursor:pointer; user-select:none;">Estado <span class="sort-icon" id="sort-icon-status"> ⇅</span></th>
             <th>Acciones</th>
           </tr>
         </thead>

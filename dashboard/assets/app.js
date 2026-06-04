@@ -1506,7 +1506,11 @@ const Pages = {
       State.historyPosts = postsRes.posts || [];
       State.historyStatusFilter = 'all';
       State.historyTypeFilter = 'all';
+      State.historySectorFilter = 'all';
+      State.historySourceFilter = 'all';
       State.historySearchQuery = '';
+      State.historySortColumn = 'date';
+      State.historySortDirection = 'desc';
 
       // Stats
       const published = State.historyPosts.filter(p => p.status === 'published').length;
@@ -1521,6 +1525,43 @@ const Pages = {
       // Pending count in sidebar
       if (document.getElementById('pending-count')) {
         document.getElementById('pending-count').textContent = statsRes?.posts?.pending || '—';
+      }
+
+      // Populate Sector dropdown
+      const sectorSelect = document.getElementById('hist-sector-select');
+      if (sectorSelect) {
+        sectorSelect.innerHTML = '<option value="all">Sectores: Todos</option>';
+        const sectors = [...new Set(State.historyPosts.map(p => p.sector).filter(Boolean))];
+        sectors.forEach(sec => {
+          const label = SECTOR_LABELS[sec] || sec;
+          const opt = document.createElement('option');
+          opt.value = sec;
+          opt.textContent = label;
+          sectorSelect.appendChild(opt);
+        });
+        
+        sectorSelect.onchange = (e) => {
+          State.historySectorFilter = e.target.value;
+          applyHistoryFilters();
+        };
+      }
+
+      // Populate Source dropdown
+      const sourceSelect = document.getElementById('hist-source-select');
+      if (sourceSelect) {
+        sourceSelect.innerHTML = '<option value="all">Fuentes: Todas</option>';
+        const sources = [...new Set(State.historyPosts.map(p => p.source_name).filter(Boolean))];
+        sources.forEach(src => {
+          const opt = document.createElement('option');
+          opt.value = src;
+          opt.textContent = src;
+          sourceSelect.appendChild(opt);
+        });
+        
+        sourceSelect.onchange = (e) => {
+          State.historySourceFilter = e.target.value;
+          applyHistoryFilters();
+        };
       }
 
       // Bind filter events
@@ -1556,6 +1597,23 @@ const Pages = {
         };
       }
 
+      // Bind sortable headers
+      const sortableHeaders = {
+        'date': document.getElementById('th-date'),
+        'type': document.getElementById('th-type'),
+        'sector': document.getElementById('th-sector'),
+        'source': document.getElementById('th-source'),
+        'status': document.getElementById('th-status'),
+      };
+      
+      Object.entries(sortableHeaders).forEach(([col, el]) => {
+        if (el) {
+          el.addEventListener('click', () => {
+            toggleHistorySort(col);
+          });
+        }
+      });
+
       // Initial render
       applyHistoryFilters();
 
@@ -1566,6 +1624,32 @@ const Pages = {
 };
 
 // ── History page dynamic filtering ───────────────────────────
+function toggleHistorySort(column) {
+  if (State.historySortColumn === column) {
+    State.historySortDirection = State.historySortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    State.historySortColumn = column;
+    State.historySortDirection = 'asc';
+  }
+  
+  // Update sort icons in table headers
+  const columns = ['date', 'type', 'sector', 'source', 'status'];
+  columns.forEach(col => {
+    const iconEl = document.getElementById(`sort-icon-${col}`);
+    if (iconEl) {
+      if (col === State.historySortColumn) {
+        iconEl.textContent = State.historySortDirection === 'asc' ? ' ▲' : ' ▼';
+        iconEl.style.color = 'var(--accent-blue)';
+      } else {
+        iconEl.textContent = ' ⇅';
+        iconEl.style.color = 'var(--text-muted)';
+      }
+    }
+  });
+  
+  applyHistoryFilters();
+}
+
 function applyHistoryFilters() {
   const tbody = document.getElementById('history-body');
   if (!tbody) return;
@@ -1577,6 +1661,12 @@ function applyHistoryFilters() {
     // Type filter
     const matchType = State.historyTypeFilter === 'all' || post.type === State.historyTypeFilter;
 
+    // Sector filter
+    const matchSector = State.historySectorFilter === 'all' || post.sector === State.historySectorFilter;
+    
+    // Source filter
+    const matchSource = State.historySourceFilter === 'all' || post.source_name === State.historySourceFilter;
+
     // Search query
     const content = (post.content_edited || post.content || '').toLowerCase();
     const sector = (post.sector || '').toLowerCase();
@@ -1586,7 +1676,42 @@ function applyHistoryFilters() {
                         sector.includes(State.historySearchQuery) || 
                         source.includes(State.historySearchQuery);
 
-    return matchStatus && matchType && matchSearch;
+    return matchStatus && matchType && matchSector && matchSource && matchSearch;
+  });
+
+  // Sort the filtered posts
+  filtered.sort((a, b) => {
+    let valA, valB;
+    
+    switch (State.historySortColumn) {
+      case 'date':
+        valA = new Date(a.published_at || a.created_at).getTime();
+        valB = new Date(b.published_at || b.created_at).getTime();
+        break;
+      case 'type':
+        valA = a.type || '';
+        valB = b.type || '';
+        break;
+      case 'sector':
+        valA = a.sector || '';
+        valB = b.sector || '';
+        break;
+      case 'source':
+        valA = a.source_name || '';
+        valB = b.source_name || '';
+        break;
+      case 'status':
+        valA = a.status || '';
+        valB = b.status || '';
+        break;
+      default:
+        valA = new Date(a.published_at || a.created_at).getTime();
+        valB = new Date(b.published_at || b.created_at).getTime();
+    }
+    
+    if (valA < valB) return State.historySortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return State.historySortDirection === 'asc' ? 1 : -1;
+    return 0;
   });
 
   if (filtered.length === 0) {

@@ -98,6 +98,33 @@ def _fetch_feed_raw(url: str) -> Optional[feedparser.FeedParserDict]:
 
     log.error("All retries exhausted for feed: %s", url)
     return None
+def normalize_title(title: str, article_url: str) -> str:
+    """
+    Normalizes a title to generate a stable, readable slug for duplicate checking.
+    """
+    import unicodedata
+    # 1. Lowercase
+    t = title.lower()
+    # 2. Remove accents and diacritics
+    t = "".join(
+        c for c in unicodedata.normalize("NFD", t)
+        if unicodedata.category(c) != "Mn"
+    )
+    # 3. Replace non-alphanumeric characters with spaces
+    t = "".join(c if c.isalnum() else " " for c in t)
+    # 4. Remove common Spanish stopwords
+    stopwords = {
+        "el", "la", "los", "las", "un", "una", "unos", "unas",
+        "de", "del", "en", "para", "por", "con", "sin", "sobre",
+        "y", "o", "u", "a", "al", "que", "se", "su", "sus", "como"
+    }
+    words = [w for w in t.split() if w not in stopwords]
+    # 5. Join words with hyphens
+    slug = "-".join(words)
+    # 6. Fallback to URL hash if slug is empty
+    if not slug:
+        slug = hashlib.md5(article_url.encode()).hexdigest()[:12]
+    return slug[:100]
 
 
 # ---------------------------------------------------------------------------
@@ -154,8 +181,8 @@ def fetch_rss_feed(url: str, source_name: str) -> list[dict]:
         else:
             published = getattr(entry, "published", "")
 
-        # Generate stable ID from URL hash
-        article_id = hashlib.md5(article_url.encode()).hexdigest()[:12]
+        # Generate stable ID from normalized title slug
+        article_id = normalize_title(title, article_url)
 
         # Filter out articles older than 24 hours to save API processing time
         from datetime import timedelta
