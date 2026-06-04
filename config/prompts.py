@@ -87,7 +87,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     }},
     {{
       "slide_type": "interior",
-      "pre_title": "1/4",
+      "pre_title": "EL PROBLEMA",
       "title": "La letra pequeña",
       "subtitle": "El impacto económico crudo",
       "bullets": [
@@ -97,7 +97,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     }},
     {{
       "slide_type": "interior",
-      "pre_title": "2/4",
+      "pre_title": "AFECTADOS",
       "title": "¿Quién está en el radar?",
       "subtitle": "Perfil exacto de los afectados",
       "bullets": [
@@ -108,7 +108,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     }},
     {{
       "slide_type": "interior",
-      "pre_title": "3/4",
+      "pre_title": "QUÉ HACER HOY",
       "title": "Qué ejecutar hoy",
       "subtitle": "Mitiga el impacto de inmediato",
       "bullets": [
@@ -119,11 +119,11 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     }},
     {{
       "slide_type": "interior",
-      "pre_title": "4/4",
+      "pre_title": "ESTRATEGIA",
       "title": "Mi enfoque de trinchera",
-      "subtitle": "La estrategia de Alberto López",
+      "subtitle": "Estrategia a seguir para tu caso",
       "bullets": [
-        "Hack legal exclusivo de Alberto López (ej. amortización acelerada, provisiones, reestructuración)",
+        "Hack legal o técnica fiscal avanzada (ej. amortización acelerada, provisiones, reestructuración)",
         "PROHIBIDO dar consejos motivacionales o genéricos",
         "Debe ser ingeniería financiera o contable real"
       ]
