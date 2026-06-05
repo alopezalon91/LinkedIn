@@ -329,12 +329,98 @@ function safeJsonParse(str, fallback) {
 
 // ─── Regenerate / Rewrite Post with IA ────────────────────────────────────────
 
+// Helper to call Gemini with a fallback to Groq
+async function callAIWithFallback(env, systemPrompt, prompt, responseMimeType = "text/plain", responseSchema = null) {
+  // 1. Try Gemini
+  if (env.GEMINI_API_KEY) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+      
+      const payload = {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: responseMimeType === "application/json" ? 2500 : 2048,
+        }
+      };
+
+      if (responseMimeType === "application/json") {
+        payload.generationConfig.responseMimeType = "application/json";
+        if (responseSchema) {
+          payload.generationConfig.responseSchema = responseSchema;
+        }
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text;
+      } else {
+        const errText = await res.text();
+        console.warn(`Gemini API call failed (status ${res.status}): ${errText}. Trying Groq fallback...`);
+      }
+    } catch (err) {
+      console.warn(`Gemini call failed with exception: ${err.message}. Trying Groq fallback...`);
+    }
+  }
+
+  // 2. Try Groq fallback
+  if (env.GROQ_API_KEY) {
+    console.log("Calling Groq API fallback...");
+    try {
+      const url = "https://api.groq.com/openai/v1/chat/completions";
+      const payload = {
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 2048
+      };
+
+      if (responseMimeType === "application/json") {
+        payload.response_format = { type: "json_object" };
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        const text = result.choices?.[0]?.message?.content;
+        if (text) return text;
+      } else {
+        const errText = await res.text();
+        console.error(`Groq API call failed (status ${res.status}): ${errText}`);
+      }
+    } catch (err) {
+      console.error(`Groq call failed with exception: ${err.message}`);
+    }
+  }
+
+  throw new Error("Both Gemini and Groq API calls failed or are not configured.");
+}
+
 export async function regeneratePost(db, env, id, instructions) {
   const post = await getPost(db, id);
   if (!post) throw new Error(`Post not found: ${id}`);
 
-  if (!env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured on the Worker.');
+  if (!env.GEMINI_API_KEY && !env.GROQ_API_KEY) {
+    throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
   }
 
   const systemInstruction = `Eres el asistente de Alberto López, gestor contable y fiscal en MyTaxBot (gestoría online para autónomos, pymes y emprendedores en toda España). Tu objetivo es reescribir una publicación de LinkedIn a partir de un borrador existente y de las nuevas instrucciones de Alberto.
@@ -349,39 +435,7 @@ ${instructions}
 
 Por favor, reescribe el post completo siguiendo las instrucciones de Alberto y respetando el formato original. Devuelve únicamente el texto del post reescrito y la nueva encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: systemInstruction }]
-      },
-      contents: [{
-        role: 'user',
-        parts: [{ text: prompt }]
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2048
-      }
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-  }
-
-  const result = await response.json();
-  const rewrittenText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rewrittenText) {
-    throw new Error('Gemini API returned an empty or invalid response.');
-  }
-
+  const rewrittenText = await callAIWithFallback(env, systemInstruction, prompt, "text/plain");
   const cleanRewrittenText = rewrittenText.trim();
 
   // Update the post content in D1
@@ -423,8 +477,8 @@ export async function generatePostFromDraft(db, env, id) {
     throw new Error(`Only posts with status 'draft' can be generated, got '${post.status}'`);
   }
 
-  if (!env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured on the Worker.');
+  if (!env.GEMINI_API_KEY && !env.GROQ_API_KEY) {
+    throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
   }
 
   let draftData;
@@ -441,31 +495,7 @@ export async function generatePostFromDraft(db, env, id) {
 
   const systemInstruction = "Actúa como un fiscalista disruptor, implacable y experto en copywriting de LinkedIn. IMPORTANTE: Responde SIEMPRE con un objeto JSON válido.";
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 1.0,
-        responseMimeType: "application/json"
-      }
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-  }
-
-  const result = await response.json();
-  let generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!generatedText) {
-    throw new Error('Gemini API returned an empty or invalid response.');
-  }
+  let generatedText = await callAIWithFallback(env, systemInstruction, prompt, "application/json");
 
   if (generatedText.startsWith("```")) {
     const parts = generatedText.split("```");
@@ -479,7 +509,7 @@ export async function generatePostFromDraft(db, env, id) {
   try {
     generatedData = JSON.parse(generatedText);
   } catch (err) {
-    throw new Error(`Failed to parse Gemini output as JSON: ${err.message}`);
+    throw new Error(`Failed to parse AI output as JSON: ${err.message}`);
   }
 
   const postText = generatedData.post || '';
@@ -580,61 +610,34 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
 }
 `;
 
-  const geminiApiKey = env.GEMINI_API_KEY;
-  if (!geminiApiKey) {
-    throw new Error('GEMINI_API_KEY is not defined in the worker environment.');
+  if (!env.GEMINI_API_KEY && !env.GROQ_API_KEY) {
+    throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
-  
-  const payload = {
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    systemInstruction: { role: "system", parts: [{ text: systemPrompt }] },
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 2500,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "object",
-        properties: {
-          carousel: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                slide_type: { type: "string", enum: ["cover", "interior"] },
-                pre_title: { type: "string" },
-                title: { type: "string" },
-                subtitle: { type: "string" },
-                bullets: { type: "array", items: { type: "string" } }
-              },
-              required: ["slide_type", "pre_title", "title", "subtitle", "bullets"]
-            }
-          }
-        },
-        required: ["carousel"]
+  const responseSchema = {
+    type: "object",
+    properties: {
+      carousel: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            slide_type: { type: "string", enum: ["cover", "interior"] },
+            pre_title: { type: "string" },
+            title: { type: "string" },
+            subtitle: { type: "string" },
+            bullets: { type: "array", items: { type: "string" } }
+          },
+          required: ["slide_type", "pre_title", "title", "subtitle", "bullets"]
+        }
       }
-    }
+    },
+    required: ["carousel"]
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  let generatedText = await callAIWithFallback(env, systemPrompt, prompt, "application/json", responseSchema);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-  }
-
-  const result = await response.json();
-  let generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!generatedText) {
-    throw new Error('Gemini API returned an empty or invalid response.');
-  }
-
-  // Strip markdown backticks if Gemini includes them
+  // Strip markdown backticks if AI includes them
   if (generatedText.startsWith("```")) {
     const parts = generatedText.split("```");
     generatedText = parts[1] || generatedText;
@@ -643,13 +646,13 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     }
   }
 
-  console.error("Gemini returned raw text:", generatedText);
+  console.error("AI returned raw text:", generatedText);
 
   let generatedData;
   try {
     generatedData = JSON.parse(generatedText);
   } catch (err) {
-    throw new Error(`Failed to parse Gemini output as JSON: ${err.message}`);
+    throw new Error(`Failed to parse AI output as JSON: ${err.message}`);
   }
 
   const carouselData = generatedData.carousel || generatedData.carrusel || null;
