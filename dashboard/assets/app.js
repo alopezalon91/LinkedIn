@@ -306,6 +306,11 @@ function renderPostCard(post) {
             <button id="ai-mic-btn-${post.id}" onclick="PostActions.startVoiceRewrite('${post.id}')" style="position:absolute; right:115px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;" title="Dictar instrucciones">🎙️</button>
             <button class="btn btn-primary btn-sm" id="ai-rewrite-btn-${post.id}" onclick="PostActions.regenerateWithIA('${post.id}')" style="flex-shrink:0;">🪄 Rehacer post</button>
           </div>
+          <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+            <button class="btn btn-ghost btn-sm" id="ai-carousel-btn-${post.id}" onclick="PostActions.regenerateCarouselWithIA('${post.id}')" style="border: 1px dashed var(--border-strong); background: transparent; display: flex; align-items: center; gap: 5px;">
+              📸 Rehacer carrusel (según el texto editado)
+            </button>
+          </div>
           <div id="ai-rewrite-status-${post.id}" style="font-size:11px; color:var(--accent-red); margin-top:6px; display:none; align-items:center; gap:5px;">
             <span class="pulse-dot"></span> Grabando voz... Pulsa de nuevo el micrófono para parar.
           </div>
@@ -1157,6 +1162,58 @@ const PostActions = {
       if (rewriteBtn) {
         rewriteBtn.disabled = false;
         rewriteBtn.innerHTML = '🪄 Rehacer post';
+      }
+      if (statusEl) {
+        statusEl.style.display = 'none';
+      }
+    }
+  },
+
+  async regenerateCarouselWithIA(postId) {
+    const editor = document.getElementById(`editor-${postId}`);
+    const content = editor ? editor.value.trim() : '';
+    if (!content) {
+      Toast.show('El texto del post no puede estar vacío', 'warning');
+      return;
+    }
+
+    const carouselBtn = document.getElementById(`ai-carousel-btn-${postId}`);
+    const statusEl = document.getElementById(`ai-rewrite-status-${postId}`);
+
+    try {
+      if (carouselBtn) {
+        carouselBtn.disabled = true;
+        carouselBtn.innerHTML = '<div class="loading-spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; margin-right:5px;"></div> Procesando...';
+      }
+      if (statusEl) {
+        statusEl.style.color = 'var(--accent-blue)';
+        statusEl.innerHTML = '<span class="pulse-dot" style="background-color:var(--accent-blue);"></span> Regenerando carrusel con IA...';
+        statusEl.style.display = 'flex';
+      }
+
+      const response = await API.request(`/api/posts/${postId}/regenerate-carousel`, {
+        method: 'POST',
+        body: JSON.stringify({ content_edited: content })
+      });
+
+      // Update state and UI
+      const postIdx = State.posts.findIndex(p => p.id === postId);
+      if (postIdx !== -1) {
+        State.posts[postIdx].media_base64 = response.media_base64;
+        State.posts[postIdx].content_edited = response.content_edited;
+      }
+
+      Toast.show('Carrusel regenerado con IA exitosamente 📸', 'success');
+      
+      // Re-render
+      renderQueue();
+
+    } catch (err) {
+      Toast.show(`Error al rehacer carrusel: ${err.message}`, 'error');
+    } finally {
+      if (carouselBtn) {
+        carouselBtn.disabled = false;
+        carouselBtn.innerHTML = '📸 Rehacer carrusel (según el texto editado)';
       }
       if (statusEl) {
         statusEl.style.display = 'none';
