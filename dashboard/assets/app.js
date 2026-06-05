@@ -1288,28 +1288,29 @@ const PostActions = {
       
       slideArr.forEach((s, idx) => {
         const isCover = s.slide_type === 'cover' || idx === 0;
+        const slideLabel = isCover ? '🖼️ Portada' : `📄 Diapositiva ${idx}`;
         html += `
           <div class="slide-edit-card" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 6px;">
-            <div style="font-size: 11px; font-weight: bold; color: var(--accent-blue); margin-bottom: 8px;">
-              ${isCover ? 'PORTADA' : `DIAPOSITIVA ${idx + 1}`}
+            <div style="font-size: 11px; font-weight: bold; color: var(--accent-blue); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
+              ${slideLabel}
             </div>
             <div style="display: flex; flex-direction: column; gap: 8px;">
               <div>
-                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Pre-título:</label>
-                <input type="text" class="slide-input-pretitle-${postId}" data-index="${idx}" value="${s.pre_title || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
+                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">🏷️ Categoría (etiqueta roja):</label>
+                <input type="text" class="slide-input-pretitle-${postId}" data-index="${idx}" value="${s.pre_title || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" placeholder="Ej: ACTUALIDAD, EL PROBLEMA..." />
               </div>
               <div>
-                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Título:</label>
+                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">📝 Título:</label>
                 <input type="text" class="slide-input-title-${postId}" data-index="${idx}" value="${s.title || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
               </div>
               <div>
-                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Subtítulo:</label>
+                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">💬 Subtítulo:</label>
                 <input type="text" class="slide-input-subtitle-${postId}" data-index="${idx}" value="${s.subtitle || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
               </div>
               ${!isCover ? `
               <div>
-                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Puntos (uno por línea):</label>
-                <textarea class="slide-input-bullets-${postId}" data-index="${idx}" rows="2" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; resize: vertical; outline: none; font-family: inherit;">${(s.bullets || []).join('\n')}</textarea>
+                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">• Puntos clave (uno por línea):</label>
+                <textarea class="slide-input-bullets-${postId}" data-index="${idx}" rows="3" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; resize: vertical; outline: none; font-family: inherit;">${(s.bullets || []).join('\n')}</textarea>
               </div>
               ` : ''}
             </div>
