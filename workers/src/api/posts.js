@@ -329,8 +329,29 @@ function safeJsonParse(str, fallback) {
 
 // ─── Regenerate / Rewrite Post with IA ────────────────────────────────────────
 
+// Helper to retrieve GROQ_API_KEY from env or D1 database cache
+async function getGroqKey(db, env) {
+  if (env.GROQ_API_KEY) {
+    return env.GROQ_API_KEY;
+  }
+  try {
+    const row = await db.prepare("SELECT value FROM stats_cache WHERE key = 'secret:GROQ_API_KEY'").first();
+    if (row && row.value) {
+      try {
+        return JSON.parse(row.value);
+      } catch (e) {
+        return row.value;
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error("Failed to read GROQ_API_KEY from database:", e);
+    return null;
+  }
+}
+
 // Helper to call Gemini with a fallback to Groq
-async function callAIWithFallback(env, systemPrompt, prompt, responseMimeType = "text/plain", responseSchema = null) {
+async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeType = "text/plain", responseSchema = null) {
   // 1. Try Gemini
   if (env.GEMINI_API_KEY) {
     try {
@@ -372,7 +393,8 @@ async function callAIWithFallback(env, systemPrompt, prompt, responseMimeType = 
   }
 
   // 2. Try Groq fallback
-  if (env.GROQ_API_KEY) {
+  const groqKey = await getGroqKey(db, env);
+  if (groqKey) {
     console.log("Calling Groq API fallback...");
     try {
       const url = "https://api.groq.com/openai/v1/chat/completions";
@@ -393,7 +415,7 @@ async function callAIWithFallback(env, systemPrompt, prompt, responseMimeType = 
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+          'Authorization': `Bearer ${groqKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
@@ -419,7 +441,8 @@ export async function regeneratePost(db, env, id, instructions) {
   const post = await getPost(db, id);
   if (!post) throw new Error(`Post not found: ${id}`);
 
-  if (!env.GEMINI_API_KEY && !env.GROQ_API_KEY) {
+  const groqKey = await getGroqKey(db, env);
+  if (!env.GEMINI_API_KEY && !groqKey) {
     throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
   }
 
@@ -435,7 +458,7 @@ ${instructions}
 
 Por favor, reescribe el post completo siguiendo las instrucciones de Alberto y respetando el formato original. Devuelve únicamente el texto del post reescrito y la nueva encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.`;
 
-  const rewrittenText = await callAIWithFallback(env, systemInstruction, prompt, "text/plain");
+  const rewrittenText = await callAIWithFallback(db, env, systemInstruction, prompt, "text/plain");
   const cleanRewrittenText = rewrittenText.trim();
 
   // Update the post content in D1
@@ -477,7 +500,8 @@ export async function generatePostFromDraft(db, env, id) {
     throw new Error(`Only posts with status 'draft' can be generated, got '${post.status}'`);
   }
 
-  if (!env.GEMINI_API_KEY && !env.GROQ_API_KEY) {
+  const groqKey = await getGroqKey(db, env);
+  if (!env.GEMINI_API_KEY && !groqKey) {
     throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
   }
 
@@ -495,7 +519,7 @@ export async function generatePostFromDraft(db, env, id) {
 
   const systemInstruction = "Actúa como un fiscalista disruptor, implacable y experto en copywriting de LinkedIn. IMPORTANTE: Responde SIEMPRE con un objeto JSON válido.";
 
-  let generatedText = await callAIWithFallback(env, systemInstruction, prompt, "application/json");
+  let generatedText = await callAIWithFallback(db, env, systemInstruction, prompt, "application/json");
 
   if (generatedText.startsWith("```")) {
     const parts = generatedText.split("```");
@@ -610,7 +634,8 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
 }
 `;
 
-  if (!env.GEMINI_API_KEY && !env.GROQ_API_KEY) {
+  const groqKey = await getGroqKey(db, env);
+  if (!env.GEMINI_API_KEY && !groqKey) {
     throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
   }
 
@@ -635,7 +660,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     required: ["carousel"]
   };
 
-  let generatedText = await callAIWithFallback(env, systemPrompt, prompt, "application/json", responseSchema);
+  let generatedText = await callAIWithFallback(db, env, systemPrompt, prompt, "application/json", responseSchema);
 
   // Strip markdown backticks if AI includes them
   if (generatedText.startsWith("```")) {
