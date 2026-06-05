@@ -79,6 +79,11 @@ const API = {
 
   getPost: (id) => API.request(`/api/posts/${id}`),
 
+  updatePost: (id, updates) => API.request(`/api/posts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  }),
+
   approvePost: (id, editedContent, mediaBase64) => API.request(`/api/posts/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ action: 'approve', content_edited: editedContent || null, media_base64: mediaBase64 || null }),
@@ -297,6 +302,9 @@ function renderPostCard(post) {
             </button>
           </div>
         ` : ''}
+
+        <!-- Carousel Slide Editor (visible only when editing and has carousel) -->
+        <div class="carousel-editor-section" id="carousel-editor-section-${post.id}" style="display:none; margin-top:12px; padding:12px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:6px;"></div>
   
         <!-- AI Rewrite Section (visible only when editing) -->
         <div class="ai-rewrite-section" id="ai-rewrite-section-${post.id}" style="display:none; margin-top:12px; padding:12px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:6px;">
@@ -987,7 +995,9 @@ const PostActions = {
     const expandBtn = document.getElementById(`expand-btn-${postId}`);
     const editBtn = document.getElementById(`edit-btn-${postId}`);
     const rewriteSec = document.getElementById(`ai-rewrite-section-${postId}`);
+    const carouselSec = document.getElementById(`carousel-editor-section-${postId}`);
     const isEditing = editor.classList.contains('visible');
+    const post = State.posts.find(p => p.id === postId);
 
     if (!isEditing) {
       // Opening editor
@@ -996,28 +1006,55 @@ const PostActions = {
       expandBtn.style.display = 'none';
       editBtn.innerHTML = '✅ Aplicar edición';
       if (rewriteSec) rewriteSec.style.display = 'block';
+      
+      // Render slide editor if post has carousel
+      if (post && post.media_base64 && carouselSec) {
+        PostActions.renderSlideEditor(postId, post);
+      }
+      
       editor.focus();
     } else {
       // Closing editor
       const newContent = editor.value;
-      const originalContent = State.posts.find(p => p.id === postId)?.content || '';
-      const previousEditedContent = State.posts.find(p => p.id === postId)?.content_edited || '';
-      const hasChanged = newContent.trim() !== (previousEditedContent || originalContent).trim();
+      const originalContent = post?.content || '';
+      const previousEditedContent = post?.content_edited || '';
+      const hasPostChanged = newContent.trim() !== (previousEditedContent || originalContent).trim();
 
-      if (hasChanged) {
+      // Read edited slides
+      let newMediaBase64 = post?.media_base64 || null;
+      let hasCarouselChanged = false;
+      
+      if (post && post.media_base64 && carouselSec && carouselSec.style.display !== 'none') {
+        const editedSlides = PostActions.getEditedSlides(postId, post);
+        if (editedSlides) {
+          const carouselStr = 'CAROUSEL:' + JSON.stringify(editedSlides);
+          newMediaBase64 = btoa(unescape(encodeURIComponent(carouselStr)));
+          hasCarouselChanged = newMediaBase64 !== post.media_base64;
+        }
+      }
+
+      if (hasPostChanged || hasCarouselChanged) {
         editBtn.disabled = true;
-        editBtn.innerHTML = '<div class="loading-spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;margin-right:4px;"></div> Actualizando carrusel...';
+        editBtn.innerHTML = '<div class="loading-spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;margin-right:4px;"></div> Guardando cambios...';
         try {
-          const res = await API.regenerateCarousel(postId, newContent);
-          // Update local state with new media_base64
+          const updates = {};
+          if (hasPostChanged) updates.content_edited = newContent;
+          if (hasCarouselChanged) updates.media_base64 = newMediaBase64;
+
+          const res = await API.updatePost(postId, updates);
+          
+          // Update local state
           const postIndex = State.posts.findIndex(p => p.id === postId);
           if (postIndex !== -1) {
             State.posts[postIndex].media_base64 = res.media_base64;
-            State.posts[postIndex].content_edited = newContent;
+            State.posts[postIndex].content_edited = res.content_edited;
           }
-          Toast.show('Carrusel regenerado con tus cambios ✅', 'success');
+          Toast.show('Cambios guardados con éxito ✅', 'success');
+          
+          renderQueue();
+          return;
         } catch (e) {
-          Toast.show('Error al regenerar carrusel: ' + e.message, 'error');
+          Toast.show('Error al guardar cambios: ' + e.message, 'error');
         }
         editBtn.disabled = false;
       }
@@ -1028,6 +1065,7 @@ const PostActions = {
       expandBtn.style.display = '';
       editBtn.innerHTML = '✏️ Editar';
       if (rewriteSec) rewriteSec.style.display = 'none';
+      if (carouselSec) carouselSec.style.display = 'none';
     }
   },
 
@@ -1218,6 +1256,112 @@ const PostActions = {
       if (statusEl) {
         statusEl.style.display = 'none';
       }
+    }
+  },
+
+  renderSlideEditor(postId, post) {
+    const container = document.getElementById(`carousel-editor-section-${postId}`);
+    if (!container || !post.media_base64) return;
+    
+    try {
+      const decoded = decodeURIComponent(escape(atob(post.media_base64)));
+      if (!decoded.startsWith('CAROUSEL:')) {
+        container.style.display = 'none';
+        return;
+      }
+      
+      const data = JSON.parse(decoded.replace('CAROUSEL:', ''));
+      const slideArr = Array.isArray(data) ? data : (data.carousel || data.slides || []);
+      if (!slideArr || slideArr.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      
+      container.style.display = 'block';
+      
+      let html = `
+        <h4 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 13px; display: flex; align-items: center; gap: 8px;">
+          📸 Editar Diapositivas del Carrusel:
+        </h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; max-height: 300px; overflow-y: auto; padding-right: 6px;">
+      `;
+      
+      slideArr.forEach((s, idx) => {
+        const isCover = s.slide_type === 'cover' || idx === 0;
+        html += `
+          <div class="slide-edit-card" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 6px;">
+            <div style="font-size: 11px; font-weight: bold; color: var(--accent-blue); margin-bottom: 8px;">
+              ${isCover ? 'PORTADA' : `DIAPOSITIVA ${idx + 1}`}
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div>
+                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Pre-título:</label>
+                <input type="text" class="slide-input-pretitle-${postId}" data-index="${idx}" value="${s.pre_title || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
+              </div>
+              <div>
+                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Título:</label>
+                <input type="text" class="slide-input-title-${postId}" data-index="${idx}" value="${s.title || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
+              </div>
+              <div>
+                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Subtítulo:</label>
+                <input type="text" class="slide-input-subtitle-${postId}" data-index="${idx}" value="${s.subtitle || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
+              </div>
+              ${!isCover ? `
+              <div>
+                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Puntos (uno por línea):</label>
+                <textarea class="slide-input-bullets-${postId}" data-index="${idx}" rows="2" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; resize: vertical; outline: none; font-family: inherit;">${(s.bullets || []).join('\n')}</textarea>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      });
+      
+      html += `</div>`;
+      container.innerHTML = html;
+    } catch (e) {
+      console.error('Error rendering slide editor:', e);
+      container.style.display = 'none';
+    }
+  },
+
+  getEditedSlides(postId, post) {
+    const container = document.getElementById(`carousel-editor-section-${postId}`);
+    if (!container || container.style.display === 'none') return null;
+    
+    try {
+      const decoded = decodeURIComponent(escape(atob(post.media_base64)));
+      const data = JSON.parse(decoded.replace('CAROUSEL:', ''));
+      const slideArr = Array.isArray(data) ? data : (data.carousel || data.slides || []);
+      
+      const newSlides = [];
+      
+      slideArr.forEach((s, idx) => {
+        const isCover = s.slide_type === 'cover' || idx === 0;
+        
+        const preTitleInput = container.querySelector(`.slide-input-pretitle-${postId}[data-index="${idx}"]`);
+        const titleInput = container.querySelector(`.slide-input-title-${postId}[data-index="${idx}"]`);
+        const subtitleInput = container.querySelector(`.slide-input-subtitle-${postId}[data-index="${idx}"]`);
+        const bulletsInput = !isCover ? container.querySelector(`.slide-input-bullets-${postId}[data-index="${idx}"]`) : null;
+        
+        const pre_title = preTitleInput ? preTitleInput.value.trim() : '';
+        const title = titleInput ? titleInput.value.trim() : '';
+        const subtitle = subtitleInput ? subtitleInput.value.trim() : '';
+        const bullets = bulletsInput ? bulletsInput.value.split('\n').map(b => b.trim()).filter(Boolean) : [];
+        
+        newSlides.push({
+          slide_type: isCover ? 'cover' : 'interior',
+          pre_title,
+          title,
+          subtitle,
+          bullets
+        });
+      });
+      
+      return newSlides;
+    } catch (e) {
+      console.error('Error reading edited slides:', e);
+      return null;
     }
   },
 
