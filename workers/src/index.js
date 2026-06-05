@@ -200,11 +200,6 @@ async function route(request, env, ctx, url, path, method) {
     return handleListDecisions(db);
   }
 
-  // ── Set Groq API Key (Temporary secure endpoint for automatic setup) ───────
-  if (path === '/api/config/set-groq-key' && method === 'POST') {
-    return handleSetGroqKey(db, request);
-  }
-
 
   // ── 404 ───────────────────────────────────────────────────────────────────
   return errorResponse(`Route not found: ${method} ${path}`, 404);
@@ -529,26 +524,6 @@ async function handleListDecisions(db) {
       LIMIT 50
     `).all();
     return jsonResponse(res.results ?? []);
-  } catch (err) {
-    return errorResponse(err.message, 500);
-  }
-}
-
-// ── Set Groq API Key handler ──────────────────────────────────────────────────
-async function handleSetGroqKey(db, request) {
-  try {
-    const data = await parseJSON(request);
-    const key = data.groq_key;
-    if (!key) {
-      return errorResponse('Missing groq_key parameter', 400);
-    }
-    const now = new Date().toISOString();
-    // stats_cache values must be JSON-serialised to match the schema
-    const value = JSON.stringify(key);
-    await db.prepare(
-      `INSERT OR REPLACE INTO stats_cache (key, value, updated_at) VALUES ('secret:GROQ_API_KEY', ?, ?)`
-    ).bind(value, now).run();
-    return jsonResponse({ success: true, message: 'Groq API Key stored successfully in D1 database.' });
   } catch (err) {
     return errorResponse(err.message, 500);
   }
