@@ -34,12 +34,14 @@ BRANDING_RULES = """\
    Nombre del profesional en la firma: Forzar tipografía serif elegante y estilizada ('Playfair Display' o 'Lora' en peso Medium), con tracking/espaciado expandido para actuar como logotipo.
    Está TERMINANTEMENTE PROHIBIDO usar fuentes básicas del sistema.
 
-3. MAQUETACIÓN POR LIENZO (slide_type cover vs interior):
+3. MAQUETACIÓN POR LIENZO (slide_type cover vs interior vs closing):
    - cover (Portada): Firma centrada horizontalmente en la parte inferior. Sin línea de footer.
      Sin paginación. Tamaño de firma un 20% mayor que en interiores.
-   - interior (Páginas 2 a 6): Firma en esquina inferior izquierda. Paginación (ej: "2 / 6 →")
+   - interior (Páginas de contenido): Firma en esquina inferior izquierda. Paginación (ej: "2 / 6 →")
      en esquina inferior derecha. Separadas por línea fina en Verde Sage (#7A8B7B).
      Límite visual: Máximo 40 palabras por slide interior para mantener el 40% de espacio en blanco.
+   - closing (Diapositiva de cierre): Diseño centrado como la portada, pre-título verde sage (#7A8B7B)
+     con el texto 'DEBATE' o 'TU TURNO', firma centrada horizontalmente abajo. Sin paginación y sin bullets.
 
 4. FONDO LIMPIO (SIN RUIDO VISUAL):
    Fondo plano arena claro #F9F6F0 en todas las diapositivas.
@@ -76,9 +78,10 @@ REGLA DEL ALGORITMO: PROHIBIDO meter enlaces externos en el cuerpo. Debes inyect
 JSON_FORMAT_RULES = """\
 === FORMATO DE SALIDA (CRÍTICO) ===
 Devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura exacta.
-El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada y "interior" para el resto.
+El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada, "interior" para el desarrollo, y "closing" para el cierre.
 PROHIBIDO ESCRIBIR PUNTOS FINALES (.) AL FINAL DE CADA BULLET. No uses puntos en los bullets del carrusel.
 PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
+PROHIBIDO USAR FRACCIONES O NÚMEROS DE DIAPOSITIVA (como "1/4", "2/5", "5/5") en el campo "pre_title". El "pre_title" debe ser siempre una categoría temática corta en mayúsculas (como "EL PROBLEMA", "AFECTADOS", "QUÉ HACER HOY", "ESTRATEGIA", "REGLA CLAVE", "CONSEJO PRÁCTICO"). La numeración del carrusel ya se renderiza de forma automática en otra sección de la diapositiva.
 {{
   "post": "Texto optimizado para LinkedIn con gancho de impacto y firma final...",
   "first_comment": "Enlace original o texto de contacto para el primer comentario...",
@@ -132,6 +135,13 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
         "PROHIBIDO dar consejos motivacionales o genéricos",
         "Debe ser ingeniería financiera o contable real"
       ]
+    }},
+    {{
+      "slide_type": "closing",
+      "pre_title": "DEBATE",
+      "title": "¿La pregunta final de debate adaptada del post?",
+      "subtitle": "¡Comenta tu opinión abajo! 👇",
+      "bullets": []
     }}
   ]
 }}

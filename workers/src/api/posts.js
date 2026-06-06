@@ -589,9 +589,10 @@ El usuario ha editado su post de LinkedIn y ahora tiene este texto:
 
 Genera un nuevo Carrusel de 6 diapositivas para acompañar perfectamente a este texto editado.
 Devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura exacta.
-El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada y "interior" para el resto.
+El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada, "interior" para el contenido, y "closing" para la diapositiva de cierre al final.
 PROHIBIDO ESCRIBIR PUNTOS FINALES (.) AL FINAL DE CADA BULLET.
 PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
+PROHIBIDO USAR FRACCIONES O NÚMEROS DE DIAPOSITIVA (como "1/4", "2/5", "5/5") en el campo "pre_title". El "pre_title" debe ser siempre una categoría temática corta en mayúsculas (como "EL PROBLEMA", "AFECTADOS", "QUÉ HACER HOY", "ESTRATEGIA", "REGLA CLAVE", "CONSEJO PRÁCTICO"). La numeración del carrusel ya se renderiza de forma automática en otra sección de la diapositiva.
 {
   "carousel": [
     {
@@ -603,7 +604,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     },
     {
       "slide_type": "interior",
-      "pre_title": "1/4",
+      "pre_title": "EL PROBLEMA",
       "title": "Título personalizado y descriptivo sobre el problema (ej: Inspección sorpresa, El nuevo recargo, etc.)",
       "subtitle": "El impacto económico crudo",
       "bullets": [
@@ -612,23 +613,30 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
     },
     {
       "slide_type": "interior",
-      "pre_title": "2/4",
+      "pre_title": "AFECTADOS",
       "title": "Título personalizado y descriptivo sobre los afectados (ej: Autónomos societarios, Pymes de más de 8M, etc.)",
       "subtitle": "Perfil de los afectados",
       "bullets": []
     },
     {
       "slide_type": "interior",
-      "pre_title": "3/4",
+      "pre_title": "QUÉ HACER HOY",
       "title": "Título personalizado y descriptivo sobre la acción a tomar (ej: Revisa tu facturación, Modifica el software, etc.)",
       "subtitle": "Mitiga el impacto de inmediato",
       "bullets": []
     },
     {
       "slide_type": "interior",
-      "pre_title": "4/4",
+      "pre_title": "ESTRATEGIA",
       "title": "Título personalizado y descriptivo sobre la estrategia (ej: Optimización del IVA, Deducción por I+D+i, etc.)",
       "subtitle": "La estrategia de Alberto López",
+      "bullets": []
+    },
+    {
+      "slide_type": "closing",
+      "pre_title": "DEBATE",
+      "title": "¿La pregunta abierta dirigida al lector para incentivar comentarios y debate (sacada del post)?",
+      "subtitle": "¡Comenta tu opinión abajo! 👇",
       "bullets": []
     }
   ]
@@ -648,7 +656,7 @@ PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
         items: {
           type: "object",
           properties: {
-            slide_type: { type: "string", enum: ["cover", "interior"] },
+            slide_type: { type: "string", enum: ["cover", "interior", "closing"] },
             pre_title: { type: "string" },
             title: { type: "string" },
             subtitle: { type: "string" },

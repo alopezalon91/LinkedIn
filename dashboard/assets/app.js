@@ -434,12 +434,13 @@ const PostActions = {
         const render = () => {
           const s = slideArr[currentSlide];
           const iscover = s.slide_type === 'cover' || currentSlide === 0;
+          const isclosing = s.slide_type === 'closing';
           
           const bulletsHtml = (s.bullets || []).map(b => 
             `<li style="position:relative;padding-left:20px;margin-bottom:16px;font-size:16px;font-weight:700;color:#2B2D2F;line-height:1.35;"><span style="position:absolute;left:0;color:#2B2D2F;">•</span>${b}</li>`
           ).join('');
 
-          const signatureHtml = iscover 
+          const signatureHtml = (iscover || isclosing) 
             ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
                  <img src="/assets/img/monogram_solid.png" style="height:50px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
                  <div style="font-family:'Lora',serif;font-weight:500;font-size:15px;color:#2B2D2F;letter-spacing:2px;">Alberto López</div>
@@ -449,28 +450,42 @@ const PostActions = {
                  <div style="font-family:'Lora',serif;font-weight:500;font-size:13px;color:#2B2D2F;letter-spacing:2px;">Alberto López</div>
                </div>`;
 
-          const watermarkImg = iscover ? 'logo_watermark_cover.png' : 'logo_watermark_interior.png';
+          const watermarkImg = (iscover || isclosing) ? 'logo_watermark_cover.png' : 'logo_watermark_interior.png';
 
-          const slideContent = iscover ? `
-            <!-- COVER LAYOUT -->
-            <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;overflow-y:auto;overflow-x:hidden;">
-              ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:10px 24px;font-weight:800;font-size:15px;letter-spacing:1px;margin-bottom:24px;flex-shrink:0;">${s.pre_title}</div>` : ''}
-              ${s.title ? `<h1 style="font-size:38px;font-weight:800;color:#2B2D2F;line-height:1.15;margin:0 0 20px 0;flex-shrink:0;">${s.title}</h1>` : ''}
-              ${s.subtitle ? `<p style="font-size:20px;font-weight:500;color:#2B2D2F;line-height:1.4;margin:0;flex-shrink:0;">${s.subtitle}</p>` : ''}
-            </div>
-          ` : `
-            <!-- INTERIOR LAYOUT -->
-            <div style="position:absolute;top:0;left:0;right:0;bottom:18%;padding:10% 10% 0 10%;display:flex;flex-direction:column;z-index:2;overflow-y:auto;overflow-x:hidden;">
-              ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:6px 16px;font-weight:800;font-size:13px;letter-spacing:1px;margin-bottom:24px;flex-shrink:0;">${s.pre_title}</div>` : ''}
-              ${s.title ? `<h2 style="font-size:28px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 16px 0;flex-shrink:0;">${s.title}</h2>` : ''}
-              ${s.subtitle ? `<p style="font-size:18px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 24px 0;flex-shrink:0;">${s.subtitle}</p>` : ''}
-              ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;">${bulletsHtml}</ul>` : ''}
-            </div>
-            <!-- Separator Line -->
-            <div style="position:absolute;bottom:17%;left:10%;right:10%;height:2px;background:#7A8B7B;z-index:2;"></div>
-            <!-- Pagination -->
-            <div style="position:absolute;bottom:6%;right:10%;font-size:15px;font-weight:700;color:#7A8B7B;z-index:2;">${currentSlide + 1} / ${slideArr.length} ${currentSlide === slideArr.length - 1 ? '' : '→'}</div>
-          `;
+          let slideContent = '';
+          if (iscover) {
+            slideContent = `
+              <!-- COVER LAYOUT -->
+              <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;overflow-y:auto;overflow-x:hidden;">
+                ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:10px 24px;font-weight:800;font-size:15px;letter-spacing:1px;margin-bottom:24px;flex-shrink:0;">${s.pre_title}</div>` : ''}
+                ${s.title ? `<h1 style="font-size:38px;font-weight:800;color:#2B2D2F;line-height:1.15;margin:0 0 20px 0;flex-shrink:0;">${s.title}</h1>` : ''}
+                ${s.subtitle ? `<p style="font-size:20px;font-weight:500;color:#2B2D2F;line-height:1.4;margin:0;flex-shrink:0;">${s.subtitle}</p>` : ''}
+              </div>
+            `;
+          } else if (isclosing) {
+            slideContent = `
+              <!-- CLOSING LAYOUT -->
+              <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;overflow-y:auto;overflow-x:hidden;">
+                ${s.pre_title ? `<div style="background:#7A8B7B;color:#FFF;border-radius:99px;padding:10px 24px;font-weight:800;font-size:15px;letter-spacing:1px;margin-bottom:24px;flex-shrink:0;">${s.pre_title}</div>` : ''}
+                ${s.title ? `<h1 style="font-size:34px;font-weight:800;color:#2B2D2F;line-height:1.25;margin:0 0 24px 0;flex-shrink:0;">${s.title}</h1>` : ''}
+                ${s.subtitle ? `<p style="font-size:22px;font-weight:700;color:#C2593F;line-height:1.4;margin:0;flex-shrink:0;">${s.subtitle}</p>` : ''}
+              </div>
+            `;
+          } else {
+            slideContent = `
+              <!-- INTERIOR LAYOUT -->
+              <div style="position:absolute;top:0;left:0;right:0;bottom:18%;padding:10% 10% 0 10%;display:flex;flex-direction:column;z-index:2;overflow-y:auto;overflow-x:hidden;">
+                ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:6px 16px;font-weight:800;font-size:13px;letter-spacing:1px;margin-bottom:24px;flex-shrink:0;">${s.pre_title}</div>` : ''}
+                ${s.title ? `<h2 style="font-size:28px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 16px 0;flex-shrink:0;">${s.title}</h2>` : ''}
+                ${s.subtitle ? `<p style="font-size:18px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 24px 0;flex-shrink:0;">${s.subtitle}</p>` : ''}
+                ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;">${bulletsHtml}</ul>` : ''}
+              </div>
+              <!-- Separator Line -->
+              <div style="position:absolute;bottom:17%;left:10%;right:10%;height:2px;background:#7A8B7B;z-index:2;"></div>
+              <!-- Pagination -->
+              <div style="position:absolute;bottom:6%;right:10%;font-size:15px;font-weight:700;color:#7A8B7B;z-index:2;">${currentSlide + 1} / ${slideArr.length} ${currentSlide === slideArr.length - 1 ? '' : '→'}</div>
+            `;
+          }
 
           overlay.innerHTML = `
             <div style="position:relative;width:100%;max-width:600px;aspect-ratio:1/1;background:#F9F6F0;border-radius:12px;overflow:hidden;font-family:'Montserrat',sans-serif;box-shadow:0 25px 60px rgba(0,0,0,0.5);">
@@ -668,15 +683,16 @@ const PostActions = {
             return;
           }
 
-          const s = slideArr[index];
+           const s = slideArr[index];
           const iscover = s.slide_type === 'cover' || index === 0;
+          const isclosing = s.slide_type === 'closing';
           container.innerHTML = '';
           
           const bulletsHtml = (s.bullets || []).map(b => 
             `<li style="position:relative;padding-left:36px;margin-bottom:28px;font-size:30px;font-weight:700;color:#2B2D2F;line-height:1.35;"><span style="position:absolute;left:0;color:#2B2D2F;">•</span>${b}</li>`
           ).join('');
 
-          const signatureHtml = iscover 
+          const signatureHtml = (iscover || isclosing) 
             ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
                  <img src="/assets/img/monogram_solid.png" style="height:90px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
                  <div style="font-family:'Lora',serif;font-weight:500;font-size:26px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
@@ -686,28 +702,42 @@ const PostActions = {
                  <div style="font-family:'Lora',serif;font-weight:500;font-size:24px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
                </div>`;
 
-          const watermarkImg = iscover ? 'logo_watermark_cover.png' : 'logo_watermark_interior.png';
+          const watermarkImg = (iscover || isclosing) ? 'logo_watermark_cover.png' : 'logo_watermark_interior.png';
 
-          const slideContent = iscover ? `
-            <!-- COVER LAYOUT -->
-            <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
-              ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:18px 43px;font-weight:800;font-size:27px;letter-spacing:2px;margin-bottom:43px;">${s.pre_title}</div>` : ''}
-              ${s.title ? `<h1 style="font-size:68px;font-weight:800;color:#2B2D2F;line-height:1.15;margin:0 0 36px 0;">${s.title}</h1>` : ''}
-              ${s.subtitle ? `<p style="font-size:36px;font-weight:500;color:#2B2D2F;line-height:1.4;margin:0;">${s.subtitle}</p>` : ''}
-            </div>
-          ` : `
-            <!-- INTERIOR LAYOUT -->
-            <div style="position:absolute;top:0;left:0;right:0;bottom:18%;padding:10% 10% 0 10%;display:flex;flex-direction:column;z-index:2;">
-              ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:10px 28px;font-weight:800;font-size:24px;letter-spacing:2px;margin-bottom:43px;">${s.pre_title}</div>` : ''}
-              ${s.title ? `<h2 style="font-size:50px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 28px 0;">${s.title}</h2>` : ''}
-              ${s.subtitle ? `<p style="font-size:32px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 43px 0;">${s.subtitle}</p>` : ''}
-              ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;">${bulletsHtml}</ul>` : ''}
-            </div>
-            <!-- Separator Line -->
-            <div style="position:absolute;bottom:17%;left:10%;right:10%;height:4px;background:#7A8B7B;z-index:2;"></div>
-            <!-- Pagination -->
-            <div style="position:absolute;bottom:6%;right:10%;font-size:27px;font-weight:700;color:#7A8B7B;z-index:2;">${index + 1} / ${slideArr.length} ${index === slideArr.length - 1 ? '' : '→'}</div>
-          `;
+          let slideContent = '';
+          if (iscover) {
+            slideContent = `
+              <!-- COVER LAYOUT -->
+              <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
+                ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:18px 43px;font-weight:800;font-size:27px;letter-spacing:2px;margin-bottom:43px;">${s.pre_title}</div>` : ''}
+                ${s.title ? `<h1 style="font-size:68px;font-weight:800;color:#2B2D2F;line-height:1.15;margin:0 0 36px 0;">${s.title}</h1>` : ''}
+                ${s.subtitle ? `<p style="font-size:36px;font-weight:500;color:#2B2D2F;line-height:1.4;margin:0;">${s.subtitle}</p>` : ''}
+              </div>
+            `;
+          } else if (isclosing) {
+            slideContent = `
+              <!-- CLOSING LAYOUT -->
+              <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
+                ${s.pre_title ? `<div style="background:#7A8B7B;color:#FFF;border-radius:99px;padding:18px 43px;font-weight:800;font-size:27px;letter-spacing:2px;margin-bottom:43px;">${s.pre_title}</div>` : ''}
+                ${s.title ? `<h1 style="font-size:60px;font-weight:800;color:#2B2D2F;line-height:1.25;margin:0 0 43px 0;">${s.title}</h1>` : ''}
+                ${s.subtitle ? `<p style="font-size:40px;font-weight:700;color:#C2593F;line-height:1.4;margin:0;">${s.subtitle}</p>` : ''}
+              </div>
+            `;
+          } else {
+            slideContent = `
+              <!-- INTERIOR LAYOUT -->
+              <div style="position:absolute;top:0;left:0;right:0;bottom:18%;padding:10% 10% 0 10%;display:flex;flex-direction:column;z-index:2;">
+                ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:10px 28px;font-weight:800;font-size:24px;letter-spacing:2px;margin-bottom:43px;">${s.pre_title}</div>` : ''}
+                ${s.title ? `<h2 style="font-size:50px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 28px 0;">${s.title}</h2>` : ''}
+                ${s.subtitle ? `<p style="font-size:32px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 43px 0;">${s.subtitle}</p>` : ''}
+                ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;">${bulletsHtml}</ul>` : ''}
+              </div>
+              <!-- Separator Line -->
+              <div style="position:absolute;bottom:17%;left:10%;right:10%;height:4px;background:#7A8B7B;z-index:2;"></div>
+              <!-- Pagination -->
+              <div style="position:absolute;bottom:6%;right:10%;font-size:27px;font-weight:700;color:#7A8B7B;z-index:2;">${index + 1} / ${slideArr.length} ${index === slideArr.length - 1 ? '' : '→'}</div>
+            `;
+          }
 
           container.innerHTML = `
             <div style="position:relative;width:1080px;height:1080px;background:#F9F6F0;overflow:hidden;font-family:'Montserrat',sans-serif;">
@@ -1288,7 +1318,8 @@ const PostActions = {
       
       slideArr.forEach((s, idx) => {
         const isCover = s.slide_type === 'cover' || idx === 0;
-        const slideLabel = isCover ? '🖼️ Portada' : `📄 Diapositiva ${idx}`;
+        const isClosing = s.slide_type === 'closing';
+        const slideLabel = isCover ? '🖼️ Portada' : (isClosing ? '🏁 Cierre (Pregunta/Debate)' : `📄 Diapositiva ${idx}`);
         html += `
           <div class="slide-edit-card" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 6px;">
             <div style="font-size: 11px; font-weight: bold; color: var(--accent-blue); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
@@ -1307,7 +1338,7 @@ const PostActions = {
                 <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">💬 Subtítulo:</label>
                 <input type="text" class="slide-input-subtitle-${postId}" data-index="${idx}" value="${s.subtitle || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
               </div>
-              ${!isCover ? `
+              ${(!isCover && !isClosing) ? `
               <div>
                 <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">• Puntos clave (uno por línea):</label>
                 <textarea class="slide-input-bullets-${postId}" data-index="${idx}" rows="3" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; resize: vertical; outline: none; font-family: inherit;">${(s.bullets || []).join('\n')}</textarea>
@@ -1339,11 +1370,12 @@ const PostActions = {
       
       slideArr.forEach((s, idx) => {
         const isCover = s.slide_type === 'cover' || idx === 0;
+        const isClosing = s.slide_type === 'closing';
         
         const preTitleInput = container.querySelector(`.slide-input-pretitle-${postId}[data-index="${idx}"]`);
         const titleInput = container.querySelector(`.slide-input-title-${postId}[data-index="${idx}"]`);
         const subtitleInput = container.querySelector(`.slide-input-subtitle-${postId}[data-index="${idx}"]`);
-        const bulletsInput = !isCover ? container.querySelector(`.slide-input-bullets-${postId}[data-index="${idx}"]`) : null;
+        const bulletsInput = (!isCover && !isClosing) ? container.querySelector(`.slide-input-bullets-${postId}[data-index="${idx}"]`) : null;
         
         const pre_title = preTitleInput ? preTitleInput.value.trim() : '';
         const title = titleInput ? titleInput.value.trim() : '';
@@ -1351,7 +1383,7 @@ const PostActions = {
         const bullets = bulletsInput ? bulletsInput.value.split('\n').map(b => b.trim()).filter(Boolean) : [];
         
         newSlides.push({
-          slide_type: isCover ? 'cover' : 'interior',
+          slide_type: isCover ? 'cover' : (isClosing ? 'closing' : 'interior'),
           pre_title,
           title,
           subtitle,
