@@ -436,20 +436,22 @@ const PostActions = {
           const iscover = s.slide_type === 'cover' || currentSlide === 0;
           const isclosing = s.slide_type === 'closing';
           
-          const bulletsHtml = (s.bullets || []).map(b => 
-            `<li style="position:relative;padding-left:20px;margin-bottom:16px;font-size:16px;font-weight:700;color:#2B2D2F;line-height:1.35;"><span style="position:absolute;left:0;color:#2B2D2F;">•</span>${b}</li>`
+          const bullets = (s.bullets || []).slice(0, 5);
+          const bulletsHtml = bullets.map(b => 
+            `<li style="position:relative;padding-left:18px;margin-bottom:10px;font-size:14px;font-weight:700;color:#2B2D2F;line-height:1.3;"><span style="position:absolute;left:0;color:#C2593F;">•</span>${b}</li>`
           ).join('');
 
           const signatureHtml = (iscover || isclosing) 
             ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
-                 <img src="/assets/img/monogram_solid.png" style="height:50px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
-                 <div style="font-family:'Lora',serif;font-weight:500;font-size:15px;color:#2B2D2F;letter-spacing:2px;">Alberto López</div>
+                 <img src="/assets/img/monogram_solid.png" style="height:50px;object-fit:contain;margin-bottom:4px;opacity:${isclosing ? '0.5' : '0.9'};filter:${isclosing ? 'invert(1) brightness(2)' : 'none'};">
+                 <div style="font-family:'Lora',serif;font-weight:500;font-size:15px;color:${isclosing ? '#F9F6F0' : '#2B2D2F'};letter-spacing:2px;">Alberto López</div>
                </div>`
             : `<div style="position:absolute;bottom:4%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
                  <img src="/assets/img/monogram_solid.png" style="height:40px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
                  <div style="font-family:'Lora',serif;font-weight:500;font-size:13px;color:#2B2D2F;letter-spacing:2px;">Alberto López</div>
                </div>`;
 
+          const bgColor = isclosing ? '#2B2D2F' : '#F9F6F0';
           const watermarkImg = (iscover || isclosing) ? 'logo_watermark_cover.png' : 'logo_watermark_interior.png';
 
           let slideContent = '';
@@ -464,21 +466,22 @@ const PostActions = {
             `;
           } else if (isclosing) {
             slideContent = `
-              <!-- CLOSING LAYOUT -->
-              <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;overflow-y:auto;overflow-x:hidden;">
-                ${s.pre_title ? `<div style="background:#7A8B7B;color:#FFF;border-radius:99px;padding:10px 24px;font-weight:800;font-size:15px;letter-spacing:1px;margin-bottom:24px;flex-shrink:0;">${s.pre_title}</div>` : ''}
-                ${s.title ? `<h1 style="font-size:34px;font-weight:800;color:#2B2D2F;line-height:1.25;margin:0 0 24px 0;flex-shrink:0;">${s.title}</h1>` : ''}
-                ${s.subtitle ? `<p style="font-size:22px;font-weight:700;color:#C2593F;line-height:1.4;margin:0;flex-shrink:0;">${s.subtitle}</p>` : ''}
+              <!-- CLOSING LAYOUT - DARK DRAMATIC -->
+              <div style="position:absolute;top:0;left:0;right:0;bottom:18%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
+                ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:8px 20px;font-weight:800;font-size:12px;letter-spacing:2px;margin-bottom:28px;flex-shrink:0;text-transform:uppercase;">${s.pre_title}</div>` : ''}
+                <div style="font-size:48px;margin-bottom:16px;flex-shrink:0;">💬</div>
+                ${s.title ? `<h1 style="font-size:22px;font-weight:800;color:#F9F6F0;line-height:1.3;margin:0 0 24px 0;flex-shrink:0;">${s.title}</h1>` : ''}
+                ${s.subtitle ? `<div style="font-size:16px;font-weight:700;color:#C2593F;letter-spacing:1px;">${s.subtitle}</div>` : ''}
               </div>
             `;
           } else {
             slideContent = `
               <!-- INTERIOR LAYOUT -->
-              <div style="position:absolute;top:0;left:0;right:0;bottom:18%;padding:10% 10% 0 10%;display:flex;flex-direction:column;z-index:2;overflow-y:auto;overflow-x:hidden;">
-                ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:6px 16px;font-weight:800;font-size:13px;letter-spacing:1px;margin-bottom:24px;flex-shrink:0;">${s.pre_title}</div>` : ''}
-                ${s.title ? `<h2 style="font-size:28px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 16px 0;flex-shrink:0;">${s.title}</h2>` : ''}
-                ${s.subtitle ? `<p style="font-size:18px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 24px 0;flex-shrink:0;">${s.subtitle}</p>` : ''}
-                ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;">${bulletsHtml}</ul>` : ''}
+              <div style="position:absolute;top:0;left:0;right:0;bottom:22%;padding:8% 10% 0 10%;display:flex;flex-direction:column;z-index:2;overflow:hidden;">
+                ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:6px 16px;font-weight:800;font-size:13px;letter-spacing:1px;margin-bottom:18px;flex-shrink:0;">${s.pre_title}</div>` : ''}
+                ${s.title ? `<h2 style="font-size:22px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 12px 0;flex-shrink:0;">${s.title}</h2>` : ''}
+                ${s.subtitle ? `<p style="font-size:15px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 16px 0;flex-shrink:0;">${s.subtitle}</p>` : ''}
+                ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;overflow:hidden;">${bulletsHtml}</ul>` : ''}
               </div>
               <!-- Separator Line -->
               <div style="position:absolute;bottom:17%;left:10%;right:10%;height:2px;background:#7A8B7B;z-index:2;"></div>
@@ -488,12 +491,12 @@ const PostActions = {
           }
 
           overlay.innerHTML = `
-            <div style="position:relative;width:100%;max-width:600px;aspect-ratio:1/1;background:#F9F6F0;border-radius:12px;overflow:hidden;font-family:'Montserrat',sans-serif;box-shadow:0 25px 60px rgba(0,0,0,0.5);">
-              <button onclick="this.closest('[style*=fixed]').remove()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.8);border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;color:#2B2D2F;z-index:20;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.1);">✕</button>
+            <div style="position:relative;width:100%;max-width:600px;aspect-ratio:1/1;background:${bgColor};border-radius:12px;overflow:hidden;font-family:'Montserrat',sans-serif;box-shadow:0 25px 60px rgba(0,0,0,0.5);">
+              <button onclick="this.closest('[style*=fixed]').remove()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;color:${isclosing ? '#F9F6F0' : '#2B2D2F'};z-index:20;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.2);">✕</button>
               
               <!-- Watermark -->
               <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;pointer-events:none;">
-                <img src="/assets/img/${watermarkImg}" style="width:60%;max-width:350px;object-fit:contain;">
+                <img src="/assets/img/${watermarkImg}" style="width:60%;max-width:350px;object-fit:contain;filter:${isclosing ? 'invert(1) brightness(0.6) opacity(0.15)' : 'none'};">
               </div>
               
               ${slideContent}
@@ -685,24 +688,31 @@ const PostActions = {
 
            const s = slideArr[index];
           const iscover = s.slide_type === 'cover' || index === 0;
-          const isclosing = s.slide_type === 'closing';
+          const isclosing = s.slide_type === 'closing' || index === slideArr.length - 1;
           container.innerHTML = '';
           
           const bulletsHtml = (s.bullets || []).map(b => 
             `<li style="position:relative;padding-left:36px;margin-bottom:28px;font-size:30px;font-weight:700;color:#2B2D2F;line-height:1.35;"><span style="position:absolute;left:0;color:#2B2D2F;">•</span>${b}</li>`
           ).join('');
 
-          const signatureHtml = (iscover || isclosing) 
-            ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
-                 <img src="/assets/img/monogram_solid.png" style="height:90px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
-                 <div style="font-family:'Lora',serif;font-weight:500;font-size:26px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
+          const signatureHtml = isclosing
+            ? `<div style="position:absolute;bottom:6%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
+                 <img src="/assets/img/monogram_solid.svg" style="height:140px;object-fit:contain;margin-bottom:12px;opacity:0.95;">
+                 <div style="font-family:'Lora',serif;font-weight:500;font-size:32px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
                </div>`
-            : `<div style="position:absolute;bottom:4%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
-                 <img src="/assets/img/monogram_solid.png" style="height:72px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
-                 <div style="font-family:'Lora',serif;font-weight:500;font-size:24px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
-               </div>`;
+            : (iscover 
+              ? `<div style="position:absolute;bottom:6%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
+                   <img src="/assets/img/monogram_solid.svg" style="height:140px;object-fit:contain;margin-bottom:12px;opacity:0.95;">
+                   <div style="font-family:'Lora',serif;font-weight:500;font-size:32px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
+                 </div>`
+              : `<div style="position:absolute;bottom:4%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
+                   <img src="/assets/img/monogram_solid.svg" style="height:72px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
+                   <div style="font-family:'Lora',serif;font-weight:500;font-size:24px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
+                 </div>`);
 
-          const watermarkImg = (iscover || isclosing) ? 'logo_watermark_cover.png' : 'logo_watermark_interior.png';
+          const bgColor = isclosing ? '#7A8B7B' : '#F9F6F0';
+          const watermarkImg = (iscover || isclosing) ? 'logo_watermark_cover.svg' : 'logo_watermark_interior.svg';
+          const watermarkFilter = isclosing ? 'opacity(0.15)' : 'none';
 
           let slideContent = '';
           if (iscover) {
@@ -716,21 +726,21 @@ const PostActions = {
             `;
           } else if (isclosing) {
             slideContent = `
-              <!-- CLOSING LAYOUT -->
-              <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
-                ${s.pre_title ? `<div style="background:#7A8B7B;color:#FFF;border-radius:99px;padding:18px 43px;font-weight:800;font-size:27px;letter-spacing:2px;margin-bottom:43px;">${s.pre_title}</div>` : ''}
-                ${s.title ? `<h1 style="font-size:60px;font-weight:800;color:#2B2D2F;line-height:1.25;margin:0 0 43px 0;">${s.title}</h1>` : ''}
-                ${s.subtitle ? `<p style="font-size:40px;font-weight:700;color:#C2593F;line-height:1.4;margin:0;">${s.subtitle}</p>` : ''}
+              <!-- CLOSING LAYOUT - LIGHT GRAY -->
+              <div style="position:absolute;top:0;left:0;right:0;bottom:25%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
+                ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:16px 48px;font-weight:800;font-size:28px;letter-spacing:3px;margin-bottom:64px;flex-shrink:0;text-transform:uppercase;">${s.pre_title}</div>` : ''}
+                ${s.title ? `<h1 style="font-size:58px;font-weight:800;color:#2B2D2F;line-height:1.25;margin:0 0 40px 0;flex-shrink:0;">${s.title}</h1>` : ''}
+                ${s.subtitle ? `<div style="font-size:38px;font-weight:800;color:#F9F6F0;letter-spacing:2px;text-transform:uppercase;">${s.subtitle}</div>` : ''}
               </div>
             `;
           } else {
             slideContent = `
               <!-- INTERIOR LAYOUT -->
-              <div style="position:absolute;top:0;left:0;right:0;bottom:18%;padding:10% 10% 0 10%;display:flex;flex-direction:column;z-index:2;">
-                ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:10px 28px;font-weight:800;font-size:24px;letter-spacing:2px;margin-bottom:43px;">${s.pre_title}</div>` : ''}
-                ${s.title ? `<h2 style="font-size:50px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 28px 0;">${s.title}</h2>` : ''}
-                ${s.subtitle ? `<p style="font-size:32px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 43px 0;">${s.subtitle}</p>` : ''}
-                ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;">${bulletsHtml}</ul>` : ''}
+              <div style="position:absolute;top:0;left:0;right:0;bottom:22%;padding:8% 10% 0 10%;display:flex;flex-direction:column;z-index:2;overflow:hidden;">
+                ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:10px 28px;font-weight:800;font-size:24px;letter-spacing:2px;margin-bottom:32px;">${s.pre_title}</div>` : ''}
+                ${s.title ? `<h2 style="font-size:44px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 22px 0;flex-shrink:0;">${s.title}</h2>` : ''}
+                ${s.subtitle ? `<p style="font-size:28px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 32px 0;flex-shrink:0;">${s.subtitle}</p>` : ''}
+                ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;overflow:hidden;">${bulletsHtml}</ul>` : ''}
               </div>
               <!-- Separator Line -->
               <div style="position:absolute;bottom:17%;left:10%;right:10%;height:4px;background:#7A8B7B;z-index:2;"></div>
@@ -740,10 +750,10 @@ const PostActions = {
           }
 
           container.innerHTML = `
-            <div style="position:relative;width:1080px;height:1080px;background:#F9F6F0;overflow:hidden;font-family:'Montserrat',sans-serif;">
+            <div style="position:relative;width:1080px;height:1080px;background:${bgColor};overflow:hidden;font-family:'Montserrat',sans-serif;">
               <!-- Watermark -->
               <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;">
-                <img src="/assets/img/${watermarkImg}" style="width:60%;object-fit:contain;">
+                <img src="/assets/img/${watermarkImg}" style="width:60%;object-fit:contain;filter:${watermarkFilter};">
               </div>
               ${slideContent}
               ${signatureHtml}
@@ -758,7 +768,7 @@ const PostActions = {
             scale: 1,
             useCORS: true,
             logging: false,
-            backgroundColor: '#F9F6F0'
+            backgroundColor: bgColor
           });
           
           const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
@@ -1318,32 +1328,55 @@ const PostActions = {
       
       slideArr.forEach((s, idx) => {
         const isCover = s.slide_type === 'cover' || idx === 0;
-        const isClosing = s.slide_type === 'closing';
+        const isClosing = s.slide_type === 'closing' || idx === slideArr.length - 1;
         const slideLabel = isCover ? '🖼️ Portada' : (isClosing ? '🏁 Cierre (Pregunta/Debate)' : `📄 Diapositiva ${idx}`);
+        // Visual miniature of the slide
+        const bgCol = isClosing ? '#7A8B7B' : '#F9F6F0';
+        const textCol = '#2B2D2F';
+        const subtitleCol = isClosing ? '#F9F6F0' : '#7A8B7B';
+        const miniPre = s.pre_title ? `<div style="display:inline-block;background:#C2593F;color:#fff;border-radius:99px;padding:2px 8px;font-size:7px;font-weight:800;letter-spacing:1px;margin-bottom:6px;">${s.pre_title}</div>` : '';
+        const miniEmoji = '';
+        const miniTitle = s.title ? `<div style="font-size:${isCover ? '11px' : '9px'};font-weight:800;color:${textCol};line-height:1.2;margin-bottom:4px;">${s.title}</div>` : '';
+        const miniSubtitle = s.subtitle ? `<div style="font-size:7px;font-weight:600;color:${subtitleCol};margin-bottom:4px;">${s.subtitle}</div>` : '';
+        const miniBullets = (!isCover && !isClosing && s.bullets?.length) 
+          ? `<div style="font-size:6px;color:#2B2D2F;line-height:1.4;">${s.bullets.slice(0,4).map(b=>`• ${b}`).join('<br>')}</div>` : '';
+        const miniSep = (!isCover && !isClosing) ? `<div style="position:absolute;bottom:12%;left:8%;right:8%;height:1px;background:#7A8B7B;opacity:0.5;"></div>` : '';
+        const miniSig = (isClosing || isCover)
+          ? `<div style="position:absolute;bottom:6%;left:50%;transform:translateX(-50%);text-align:center;display:flex;flex-direction:column;align-items:center;"><div style="font-size:12px;font-weight:900;color:${textCol};opacity:0.9;margin-bottom:2px;">AL</div><div style="font-size:4px;font-weight:600;color:${textCol};opacity:0.7;">Alberto López</div></div>`
+          : `<div style="position:absolute;bottom:4%;left:8%;"><div style="font-size:5px;font-weight:600;color:${textCol};opacity:0.7;">Alberto López</div></div>`;
+        const miniNum = (!isCover && !isClosing) ? `<div style="position:absolute;bottom:4%;right:8%;font-size:5px;color:#7A8B7B;font-weight:700;">${idx+1}/${slideArr.length}</div>` : '';
+
         html += `
           <div class="slide-edit-card" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 6px;">
             <div style="font-size: 11px; font-weight: bold; color: var(--accent-blue); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
               ${slideLabel}
             </div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <div>
-                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">🏷️ Categoría (etiqueta roja):</label>
-                <input type="text" class="slide-input-pretitle-${postId}" data-index="${idx}" value="${s.pre_title || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" placeholder="Ej: ACTUALIDAD, EL PROBLEMA..." />
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <!-- MINIATURA VISUAL -->
+              <div style="flex-shrink:0;width:90px;height:90px;background:${bgCol};border-radius:6px;overflow:hidden;position:relative;display:flex;flex-direction:column;justify-content:center;padding:8px;box-sizing:border-box;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+                ${miniPre}${miniEmoji}${miniTitle}${miniSubtitle}${miniBullets}${miniSep}${miniSig}${miniNum}
               </div>
-              <div>
-                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">📝 Título:</label>
-                <input type="text" class="slide-input-title-${postId}" data-index="${idx}" value="${s.title || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
+              <!-- CAMPOS DE EDICIÓN -->
+              <div style="flex:1;display: flex; flex-direction: column; gap: 8px;">
+                <div>
+                  <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">🏷️ Categoría:</label>
+                  <input type="text" class="slide-input-pretitle-${postId}" data-index="${idx}" value="${s.pre_title || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" placeholder="Ej: ACTUALIDAD..." />
+                </div>
+                <div>
+                  <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">📝 Título:</label>
+                  <input type="text" class="slide-input-title-${postId}" data-index="${idx}" value="${s.title || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
+                </div>
+                <div>
+                  <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">💬 Subtítulo:</label>
+                  <input type="text" class="slide-input-subtitle-${postId}" data-index="${idx}" value="${s.subtitle || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
+                </div>
+                ${(!isCover && !isClosing) ? `
+                <div>
+                  <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">• Puntos clave (uno por línea):</label>
+                  <textarea class="slide-input-bullets-${postId}" data-index="${idx}" rows="3" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; resize: vertical; outline: none; font-family: inherit;">${(s.bullets || []).join('\n')}</textarea>
+                </div>
+                ` : ''}
               </div>
-              <div>
-                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">💬 Subtítulo:</label>
-                <input type="text" class="slide-input-subtitle-${postId}" data-index="${idx}" value="${s.subtitle || ''}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; outline: none;" />
-              </div>
-              ${(!isCover && !isClosing) ? `
-              <div>
-                <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">• Puntos clave (uno por línea):</label>
-                <textarea class="slide-input-bullets-${postId}" data-index="${idx}" rows="3" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px; padding: 6px; color: var(--text-primary); font-size: 12px; resize: vertical; outline: none; font-family: inherit;">${(s.bullets || []).join('\n')}</textarea>
-              </div>
-              ` : ''}
             </div>
           </div>
         `;
@@ -1370,7 +1403,7 @@ const PostActions = {
       
       slideArr.forEach((s, idx) => {
         const isCover = s.slide_type === 'cover' || idx === 0;
-        const isClosing = s.slide_type === 'closing';
+        const isClosing = s.slide_type === 'closing' || idx === slideArr.length - 1;
         
         const preTitleInput = container.querySelector(`.slide-input-pretitle-${postId}[data-index="${idx}"]`);
         const titleInput = container.querySelector(`.slide-input-title-${postId}[data-index="${idx}"]`);

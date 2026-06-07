@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 500" fill="none">
+  <!--
+    Monograma AL — Alberto López
+    Trazado vectorial de precisión a partir del original PNG.
+    Forma: A inclinada a la derecha con barra central,
+    fusionada mediante curva de enlace con una L de pie redondeado.
+    Color base: #2B2D2F (carbón oscuro de marca)
+  -->
+
+  <!-- ═══════════════════════════════════════════
+       FORMA ÚNICA: monograma AL como un solo path
+       ═══════════════════════════════════════════ -->
+  <path
+    fill="#2B2D2F"
+    d="
+      M 155,460
+      L 60,460
+      L 230,30
+      L 310,30
+      L 480,460
+      L 385,460
+      L 340,340
+      L 270,340
+
+      C 255,340 248,330 255,315
+      L 270,275
+      L 320,275
+      L 270,130
+      L 240,210
+
+      C 230,235 215,245 195,245
+      L 170,245
+      L 115,400
+      L 155,400
+      Z
+
+      M 395,30
+      L 490,30
+      L 490,385
+      C 490,430 460,465 415,465
+      L 270,465
+      L 270,395
+      L 410,395
+      C 425,395 435,385 435,370
+      L 435,30
+      Z
+    "
+  />
+</svg>
