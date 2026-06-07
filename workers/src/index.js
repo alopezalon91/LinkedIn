@@ -121,6 +121,48 @@ export default {
 async function route(request, env, ctx, url, path, method) {
   const db = env.DB;
 
+  if (url.pathname === '/api/test-gemini') {
+    try {
+      const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+      const res = await fetch(testUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: "Hola" }] }] })
+      });
+      const text = await res.text();
+      return new Response(JSON.stringify({ status: res.status, body: text }), { headers: { 'Content-Type': 'application/json' } });
+    } catch (err) {
+      return new Response(err.message, { status: 500 });
+    }
+  }
+
+  if (url.pathname === '/api/test-groq') {
+    try {
+      let groqKey = env.GROQ_API_KEY;
+      if (!groqKey) {
+        const row = await db.prepare("SELECT value FROM stats_cache WHERE key = 'secret:GROQ_API_KEY'").first();
+        if (row && row.value) {
+          try { groqKey = JSON.parse(row.value); } catch(e) { groqKey = row.value; }
+        }
+      }
+      const testUrl = "https://api.groq.com/openai/v1/chat/completions";
+      const payload = {
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: "hola" }],
+        max_tokens: 10
+      };
+      const res = await fetch(testUrl, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const text = await res.text();
+      return new Response(JSON.stringify({ status: res.status, key: groqKey ? groqKey.substring(0, 10) : 'null', body: text }), { headers: { 'Content-Type': 'application/json' } });
+    } catch (err) {
+      return new Response(err.message, { status: 500 });
+    }
+  }
+
   // ── Health check (no auth) ────────────────────────────────────────────────
   if (path === '/api/health' && method === 'GET') {
     return handleHealth(db);

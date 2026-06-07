@@ -89,7 +89,7 @@ def _call_groq_json(prompt: str, system_context: str = SYSTEM_CONTEXT, temperatu
     # Add explicit instructions to guarantee JSON for Llama 3
     system_instruction = system_context + "\n\nIMPORTANTE: Responde SIEMPRE con un objeto JSON válido según el esquema solicitado."
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": system_instruction},
             {"role": "user", "content": prompt}
@@ -124,7 +124,8 @@ def _extract_key_facts(full_text: str, source_id: str) -> str:
                 {"role": "system", "content": "You are a fast legal summarizer. Output only bullet points."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3
+            temperature=0.3,
+            max_tokens=1024
         )
         extracted = response.choices[0].message.content.strip()
         log.info("Extracted key facts for %s (Reduced %d -> %d chars)", source_id, len(full_text), len(extracted))
@@ -534,6 +535,10 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
     )
     if rejection_instructions:
         prompt += "\n" + rejection_instructions
+
+    fact_check_report = article.get("fact_check_report")
+    if fact_check_report:
+        prompt += f"\n\n=== REPORTE DE INVESTIGACIÓN Y VERACIDAD ===\n{fact_check_report}\n\nIMPORTANTE: Usa los datos exactos (fechas, sentencias) de este reporte para enriquecer el post. Si es Fake News o Clickbait, indícalo claramente en tu redacción."
 
     draft_json = {
         "title": article.get("title", ""),

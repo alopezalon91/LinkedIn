@@ -405,7 +405,7 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
           { role: "user", content: prompt }
         ],
         temperature: 0.7,
-        max_tokens: 2048
+        max_tokens: responseMimeType === "application/json" ? 2000 : 1000
       };
 
       if (responseMimeType === "application/json") {
@@ -446,9 +446,10 @@ export async function regeneratePost(db, env, id, instructions) {
     throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
   }
 
-  const systemInstruction = `Eres Alberto López. Gestor fiscal y contable. Escribes en primera persona. NUNCA en tercera persona. Tu rol es ser un transmisor objetivo: traduces normativas al lenguaje de la calle de forma precisa. NUNCA das opiniones personales, ni usas tono emocional. PROHIBIDO usar fórmulas de auto-referencia como "Destaco que...", "Quiero señalar...", "Me pregunto...". TUTEO OBLIGATORIO: Dirígete al lector siempre de "tú" ("tienes", "tu empresa"), NUNCA de "usted" ("tome medidas"). Ve directo al dato sin hablar de tu propia acción de comunicar. Te limitas a exponer los hechos y sus consecuencias legales.
-CRÍTICO: Usa párrafos cortos (1 a 3 líneas máximo) y deja SIEMPRE una línea en blanco (doble salto de línea: \n\n) entre cada párrafo o punto de lista. Usa listas numeradas (1️⃣, 2️⃣, 3️⃣) para los pasos. PROHIBIDO poner un icono al inicio de cada frase. Usa como máximo 2 o 3 iconos temáticos en todo el texto.
-REGLA ANTI-HUMO: CERO RELLENO. Si una frase no aporta un dato nuevo, un plazo o un importe, ELIMÍNALA. No digas obviedades como "Esto supone un cambio". CERO REDUNDANCIA. Prohibido repetir la misma palabra clave o frase en el texto. TONO DISRUPTIVO Y DE ALERTA: Escribe como un experto advirtiendo de un peligro ("Hacienda acaba de activar la guillotina..."), no como un telediario aburrido. El post TIENE QUE DAR EL DATO EXACTO, no generalidades.
+  const systemInstruction = `Eres Alberto López. Gestor fiscal y contable. Escribes en primera persona. NUNCA en tercera persona. Tu tono debe ser DISRUPTIVO, crítico, contraintuitivo y directo. Actúas como un experto advirtiendo de un peligro ("Hacienda acaba de activar la guillotina..."). Eres el azote de la burocracia asfixiante y el lenguaje confuso.
+PROHIBIDO usar fórmulas de auto-referencia como "Destaco que...", "Quiero señalar...", "Me pregunto...". TUTEO OBLIGATORIO: Dirígete al lector siempre de "tú" ("tienes", "tu empresa"), NUNCA de "usted" ("tome medidas"). Ve directo al dato sin hablar de tu propia acción de comunicar.
+CRÍTICO: Usa párrafos cortos (1 a 3 líneas máximo) y deja SIEMPRE una línea en blanco (doble salto de línea: \\n\\n) entre cada párrafo o punto de lista. Usa listas numeradas (1️⃣, 2️⃣, 3️⃣) para los pasos. PROHIBIDO poner un icono al inicio de cada frase. Usa como máximo 2 o 3 iconos temáticos en todo el texto.
+REGLA ANTI-HUMO: CERO RELLENO. Si una frase no aporta un dato nuevo, un plazo o un importe, ELIMÍNALA. No digas obviedades como "Esto supone un cambio". CERO REDUNDANCIA. Prohibido repetir la misma palabra clave o frase en el texto. El post TIENE QUE DAR EL DATO EXACTO, no generalidades.
 NO incluyas ninguna llamada a la acción comercial o promocional (como 'escríbeme', 'te ayudamos'). El post debe ser puramente informativo y de valor.`;
 
   const prompt = `=== POST ORIGINAL ===
@@ -513,12 +514,35 @@ export async function generatePostFromDraft(db, env, id) {
     throw new Error('Draft content is not valid JSON');
   }
 
-  const prompt = draftData.prompt;
+  let prompt = draftData.prompt;
   if (!prompt) {
     throw new Error('Draft JSON is missing the prompt string');
   }
 
-  const systemInstruction = "Eres Alberto López. Gestor fiscal y contable. Escribes en primera persona. NUNCA en tercera persona. Tu rol es ser un transmisor objetivo y preciso de la noticia o normativa. NUNCA das opiniones. PROHIBIDO usar fórmulas de auto-referencia como 'Destaco que...' o 'Me pregunto...'. TUTEO OBLIGATORIO: Dirígete al lector siempre de 'tú', NUNCA de 'usted'. Ve directo al dato sin meta-lenguaje. IMPORTANTE: Responde SIEMPRE con un objeto JSON válido.";
+  // Groq's llama-3.1-8b-instant has a 6000 TPM limit on free tier.
+  if (prompt.length > 9000) {
+    const rulesIndex = prompt.indexOf("=== [BRANDING_RULES]");
+    if (rulesIndex !== -1) {
+      const contentPart = prompt.substring(0, rulesIndex);
+      const rulesPart = prompt.substring(rulesIndex);
+      // Truncate content to 5000 chars to leave room for rules
+      const truncatedContent = contentPart.length > 5000 
+          ? contentPart.substring(0, 5000) + "\n\n[TEXTO TRUNCADO POR LÍMITE DE TAMAÑO]\n\n"
+          : contentPart;
+      prompt = truncatedContent + rulesPart;
+    } else {
+      prompt = prompt.substring(0, 9000) + "\n\n[TEXTO TRUNCADO POR LÍMITE DE TAMAÑO]";
+    }
+  }
+
+  const systemInstruction = `Eres Alberto López. Gestor fiscal y contable. Escribes en primera persona. NUNCA en tercera persona. Tu tono debe ser DISRUPTIVO, crítico, contraintuitivo y directo. Actúas como un experto advirtiendo de un peligro ("Hacienda acaba de activar la guillotina..."). Eres el azote de la burocracia asfixiante y el lenguaje confuso.
+PROHIBIDO usar fórmulas de auto-referencia como 'Destaco que...' o 'Me pregunto...'. TUTEO OBLIGATORIO: Dirígete al lector siempre de 'tú', NUNCA de 'usted'. Ve directo al dato sin meta-lenguaje.
+IMPORTANTE: Responde SIEMPRE con un objeto JSON válido con esta estructura exacta:
+{
+  "post": "El texto del post... NO pongas firma [AL] al final del texto del post.",
+  "first_comment": "Comentario...",
+  "carousel": [ { "slide_type": "cover", "pre_title": "...", "title": "...", "subtitle": "...", "bullets": [] } ]
+}`;
 
   let generatedText = await callAIWithFallback(db, env, systemInstruction, prompt, "application/json");
 

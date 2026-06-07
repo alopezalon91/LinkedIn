@@ -272,6 +272,16 @@ def run_news_module(query: Optional[str] = None) -> list[dict]:
     def _gen_post(article):
         score_data = article.get("_score_data", {})
         try:
+            from ai.researcher import verify_news_facts
+            title = article.get("title", "")
+            full_text = article.get("texto", "") or article.get("summary", "")
+            log.info("Running fact-check research for: %s", title)
+            fact_check_report = verify_news_facts(title, full_text)
+            if fact_check_report:
+                article["fact_check_report"] = fact_check_report
+                if "ALERTA ROJA" in fact_check_report.upper():
+                    article["title"] = f"🚨 ALERTA FAKE/CLICKBAIT: {title}"
+
             post = generate_actualidad_post(article, score_data)
             post["post_id"] = str(uuid.uuid4())
             log.info(
