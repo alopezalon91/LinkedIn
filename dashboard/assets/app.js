@@ -345,12 +345,7 @@ function renderPostCard(post) {
           ✨ Generar Post con IA
         </button>
       ` : `
-        <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">
-          👁 Preview
-        </button>
-        <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">
-          ✏️ Editar
-        </button>
+        <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">\n          👁 Preview\n        </button>\n        <button class="btn btn-ghost btn-sm" id="regen-orig-btn-${post.id}" onclick="PostActions.regenerateFromOriginal('${post.id}')" title="Volver a generar desde la noticia original">\n          🔄 Rehacer\n        </button>\n        <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">\n          ✏️ Editar\n        </button>
         <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">
           ❌ Rechazar
         </button>
@@ -443,12 +438,10 @@ const PostActions = {
 
           const signatureHtml = (iscover || isclosing) 
             ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
-                 <img src="/assets/img/monogram_solid.png" style="height:50px;object-fit:contain;margin-bottom:4px;opacity:${isclosing ? '0.5' : '0.9'};filter:${isclosing ? 'invert(1) brightness(2)' : 'none'};">
-                 <div style="font-family:'Lora',serif;font-weight:500;font-size:15px;color:${isclosing ? '#F9F6F0' : '#2B2D2F'};letter-spacing:2px;">Alberto López</div>
+                 <img src="/assets/img/${isclosing ? 'monogram_full_light.svg' : 'monogram_full.svg'}" style="height:65px;object-fit:contain;margin-bottom:4px;opacity:${isclosing ? '0.5' : '0.9'};">
                </div>`
             : `<div style="position:absolute;bottom:4%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
-                 <img src="/assets/img/monogram_solid.png" style="height:40px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
-                 <div style="font-family:'Lora',serif;font-weight:500;font-size:13px;color:#2B2D2F;letter-spacing:2px;">Alberto López</div>
+                 <img src="/assets/img/monogram_full.svg" style="height:50px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
                </div>`;
 
           const bgColor = isclosing ? '#2B2D2F' : '#F9F6F0';
@@ -589,6 +582,27 @@ const PostActions = {
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = '✨ Generar Post con IA';
+      }
+    }
+  },
+
+  async regenerateFromOriginal(postId) {
+    const btn = document.getElementById(`regen-orig-btn-${postId}`);
+    const confirmed = confirm('¿Rehacer el post desde la noticia original? Se perderá el texto generado actual.');
+    if (!confirmed) return;
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loading-spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; margin-right:5px;"></div> Rehaciendo...';
+      }
+      await API.request(`/api/posts/${postId}/generate`, { method: 'POST' });
+      Toast.show('¡Post regenerado con éxito! 🪄', 'success');
+      Pages.queue();
+    } catch (err) {
+      Toast.show(`Error al rehacer el post: ${err.message}`, 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '🔄 Rehacer';
       }
     }
   },
@@ -1342,8 +1356,12 @@ const PostActions = {
           ? `<div style="font-size:6px;color:#2B2D2F;line-height:1.4;">${s.bullets.slice(0,4).map(b=>`• ${b}`).join('<br>')}</div>` : '';
         const miniSep = (!isCover && !isClosing) ? `<div style="position:absolute;bottom:12%;left:8%;right:8%;height:1px;background:#7A8B7B;opacity:0.5;"></div>` : '';
         const miniSig = (isClosing || isCover)
-          ? `<div style="position:absolute;bottom:6%;left:50%;transform:translateX(-50%);text-align:center;display:flex;flex-direction:column;align-items:center;"><div style="font-size:12px;font-weight:900;color:${textCol};opacity:0.9;margin-bottom:2px;">AL</div><div style="font-size:4px;font-weight:600;color:${textCol};opacity:0.7;">Alberto López</div></div>`
-          : `<div style="position:absolute;bottom:4%;left:8%;"><div style="font-size:5px;font-weight:600;color:${textCol};opacity:0.7;">Alberto López</div></div>`;
+          ? `<div style="position:absolute;bottom:6%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
+               <img src="/assets/img/${isClosing ? 'monogram_full_light.svg' : 'monogram_full.svg'}" style="height:35px;object-fit:contain;margin-bottom:4px;opacity:${isClosing ? '0.5' : '0.9'};">
+             </div>`
+          : `<div style="position:absolute;bottom:4%;left:8%;display:flex;flex-direction:column;align-items:center;z-index:10;">
+               <img src="/assets/img/monogram_full.svg" style="height:25px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
+             </div>`;
         const miniNum = (!isCover && !isClosing) ? `<div style="position:absolute;bottom:4%;right:8%;font-size:5px;color:#7A8B7B;font-weight:700;">${idx+1}/${slideArr.length}</div>` : '';
 
         html += `
