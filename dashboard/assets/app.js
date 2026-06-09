@@ -432,9 +432,10 @@ const PostActions = {
           const isclosing = s.slide_type === 'closing';
           
           const bullets = (s.bullets || []).slice(0, 5);
-          const bulletsHtml = bullets.map(b => 
-            `<li style="position:relative;padding-left:18px;margin-bottom:10px;font-size:14px;font-weight:700;color:#2B2D2F;line-height:1.3;"><span style="position:absolute;left:0;color:#C2593F;">•</span>${b}</li>`
-          ).join('');
+          const bulletsHtml = bullets.map(b => {
+            const parsedBold = b.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            return `<li style="position:relative;padding-left:18px;margin-bottom:10px;font-size:14px;font-weight:500;color:#2B2D2F;line-height:1.3;"><span style="position:absolute;left:0;color:#C2593F;">•</span>${parsedBold}</li>`;
+          }).join('');
 
           const signatureHtml = (iscover || isclosing) 
             ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
@@ -445,7 +446,7 @@ const PostActions = {
                </div>`;
 
           const bgColor = isclosing ? '#2B2D2F' : '#F9F6F0';
-          const watermarkImg = (iscover || isclosing) ? 'logo_watermark_cover.png' : 'logo_watermark_interior.png';
+          const watermarkImg = (iscover || isclosing) ? 'logo_watermark_cover.svg' : 'logo_watermark_interior.svg';
 
           let slideContent = '';
           if (iscover) {
@@ -464,7 +465,7 @@ const PostActions = {
                 ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:8px 20px;font-weight:800;font-size:12px;letter-spacing:2px;margin-bottom:28px;flex-shrink:0;text-transform:uppercase;">${s.pre_title}</div>` : ''}
                 <div style="font-size:48px;margin-bottom:16px;flex-shrink:0;">💬</div>
                 ${s.title ? `<h1 style="font-size:22px;font-weight:800;color:#F9F6F0;line-height:1.3;margin:0 0 24px 0;flex-shrink:0;">${s.title}</h1>` : ''}
-                ${s.subtitle ? `<div style="font-size:16px;font-weight:700;color:#C2593F;letter-spacing:1px;">${s.subtitle}</div>` : ''}
+                ${s.subtitle ? `<div style="font-size:16px;font-weight:700;color:#F9F6F0;letter-spacing:1px;">${s.subtitle}</div>` : ''}
               </div>
             `;
           } else {
@@ -744,7 +745,7 @@ const PostActions = {
               <div style="position:absolute;top:0;left:0;right:0;bottom:25%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
                 ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:16px 48px;font-weight:800;font-size:28px;letter-spacing:3px;margin-bottom:64px;flex-shrink:0;text-transform:uppercase;">${s.pre_title}</div>` : ''}
                 ${s.title ? `<h1 style="font-size:58px;font-weight:800;color:#2B2D2F;line-height:1.25;margin:0 0 40px 0;flex-shrink:0;">${s.title}</h1>` : ''}
-                ${s.subtitle ? `<div style="font-size:38px;font-weight:800;color:#F9F6F0;letter-spacing:2px;text-transform:uppercase;">${s.subtitle}</div>` : ''}
+                ${s.subtitle ? `<div style="font-size:38px;font-weight:800;color:#2B2D2F;letter-spacing:2px;text-transform:uppercase;">${s.subtitle}</div>` : ''}
               </div>
             `;
           } else {
@@ -1598,8 +1599,14 @@ const Pages = {
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         newBtn.addEventListener('click', () => {
-          document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.view-tab').forEach(b => {
+            b.classList.remove('active');
+            b.style.borderBottom = '2px solid transparent';
+            b.style.color = 'var(--text-secondary)';
+          });
           newBtn.classList.add('active');
+          newBtn.style.borderBottom = '2px solid var(--accent-blue)';
+          newBtn.style.color = 'var(--text-primary)';
           State.currentView = newBtn.dataset.view;
           Pages.queue(); // reload view
         });
