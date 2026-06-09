@@ -1,0 +1,43 @@
+name: "🔄 Sync PDFs (Renderizar Carruseles)"
+
+on:
+  schedule:
+    # Se ejecuta cada hora
+    - cron: '15 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Forzar ejecución manual'
+        required: false
+        type: boolean
+
+jobs:
+  render-pdfs:
+    name: Render and Sync PDFs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🐍 Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: 📄 Renderizar y Sincronizar PDFs
+        env:
+          CF_WORKER_URL:   ${{ secrets.WORKER_URL }}
+          CF_WORKER_TOKEN: ${{ secrets.WORKER_SECRET }}
+        run: |
+          echo "🔄 Iniciando sincronización de PDFs — $(date '+%Y-%m-%d %H:%M UTC')"
+          python sync_pdfs.py
+
+      - name: 📊 Resumen
+        if: always()
+        run: echo "✅ Sincronización de PDFs completada."
