@@ -121,7 +121,7 @@ def _extract_key_facts(full_text: str, source_id: str) -> str:
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",  # Extremely fast and cheap
             messages=[
-                {"role": "system", "content": "You are a fast legal summarizer. Output only bullet points."},
+                {"role": "system", "content": "You are a fast legal analyst. Output strictly the requested 'Ficha de Datos Técnicos' format without any introductory text."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,

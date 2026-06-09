@@ -102,7 +102,7 @@
     <!-- View Tabs -->
     <div class="view-tabs" style="display: flex; gap: 20px; border-bottom: 1px solid var(--border); margin-bottom: 24px; padding-bottom: 0;">
       <button class="view-tab active" data-view="pending" style="background: none; border: none; color: var(--text-primary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid var(--accent-blue); font-weight: 500;">⏳ Pendientes</button>
-      <button class="view-tab" data-view="reviewed" style="background: none; border: none; color: var(--text-secondary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500;">👀 Revisados</button>
+
       <button class="view-tab" data-view="approved" style="background: none; border: none; color: var(--text-secondary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500;">✅ Aprobados</button>
       <button class="view-tab" data-view="scheduled" style="background: none; border: none; color: var(--text-secondary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500;">📅 Programados</button>
       <button class="view-tab" data-view="published" style="background: none; border: none; color: var(--text-secondary); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500;">🚀 Publicados</button>
@@ -279,10 +279,10 @@
       <button class="btn-icon" onclick="document.getElementById('schedule-modal').classList.remove('visible')">✕</button>
     </div>
     <div class="modal-body">
-      <p style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary);">Selecciona la fecha y hora para publicar.<br><br><strong style="color:var(--accent-amber)">⚠️ Atención:</strong> El sistema comprueba los posts programados cada hora en punto (ej. 16:00, 17:00). Si programas un post para las 10:30, se publicará a las 11:00.</p>
+      <p style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary);">Selecciona la fecha y hora para publicar.<br><br><strong style="color:var(--accent-amber)">⚠️ Atención:</strong> El sistema comprueba los posts programados cada media hora (ej. 16:00, 16:30). Si programas un post para las 10:15, se publicará a las 10:30.</p>
       <div style="display: flex; gap: 10px; margin-bottom: 20px;">
         <input type="date" id="schedule-date" class="form-input" style="flex: 1;" />
-        <input type="time" id="schedule-time" class="form-input" style="flex: 1;" />
+        <input type="time" id="schedule-time" class="form-input" style="flex: 1;" step="1800" />
       </div>
       <div style="display:flex; justify-content: flex-end; gap: 10px;">
         <button class="btn btn-ghost" onclick="document.getElementById('schedule-modal').classList.remove('visible')">Cancelar</button>

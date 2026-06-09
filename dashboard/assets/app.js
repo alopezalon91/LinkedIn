@@ -283,8 +283,8 @@ function renderPostCard(post) {
     <div class="post-card-body">
       ${post.status === 'draft' ? `
         <div style="padding:16px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:12px;">
-          <h3 style="margin-top:0; color:var(--text-primary); font-size:16px;">${draftData ? draftData.title : 'Sin título'}</h3>
-          <p style="color:var(--text-secondary); font-size:14px; line-height:1.5;">${draftData ? draftData.summary : 'Sin resumen'}</p>
+          <h3 style="margin-top:0; color:var(--text-primary); font-size:16px;">${draftData && draftData.title ? draftData.title : 'Borrador en proceso o incompleto'}</h3>
+          <p style="color:var(--text-secondary); font-size:14px; line-height:1.5;">${draftData && draftData.summary ? draftData.summary : 'Se produjo un error al generar este contenido. Puedes intentar regenerarlo.'}</p>
         </div>
       ` : `
         <div class="post-content-preview" id="preview-${post.id}">${previewText}</div>
@@ -706,9 +706,10 @@ const PostActions = {
           const isclosing = s.slide_type === 'closing' || index === slideArr.length - 1;
           container.innerHTML = '';
           
-          const bulletsHtml = (s.bullets || []).map(b => 
-            `<li style="position:relative;padding-left:36px;margin-bottom:28px;font-size:30px;font-weight:700;color:#2B2D2F;line-height:1.35;"><span style="position:absolute;left:0;color:#2B2D2F;">•</span>${b}</li>`
-          ).join('');
+          const bulletsHtml = (s.bullets || []).map(b => {
+            const parsedBold = b.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            return `<li style="position:relative;padding-left:36px;margin-bottom:28px;font-size:30px;font-weight:700;color:#2B2D2F;line-height:1.35;"><span style="position:absolute;left:0;color:#2B2D2F;">•</span>${parsedBold}</li>`;
+          }).join('');
 
           const signatureHtml = isclosing
             ? `<div style="position:absolute;bottom:6%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
@@ -814,7 +815,21 @@ const PostActions = {
     let media = post.media_base64;
     
     try {
-      const decoded = decodeURIComponent(escape(atob(media)));
+      const rawAtob = atob(media);
+      
+      if (rawAtob.startsWith('%PDF')) {
+        const pdfWindow = window.open("");
+        if (pdfWindow) {
+          pdfWindow.document.write(`<iframe width='100%' height='100%' style='border:none;margin:0;padding:0;' src='data:application/pdf;base64,${media}'></iframe>`);
+          pdfWindow.document.body.style.margin = "0";
+          pdfWindow.document.title = "Carrusel PDF";
+        } else {
+          Toast.show('Por favor, permite los popups para ver el PDF.', 'warning');
+        }
+        return;
+      }
+
+      const decoded = decodeURIComponent(escape(rawAtob));
       if (decoded.startsWith('CAROUSEL:')) {
         media = await PostActions.generateCarouselImages(post, media);
       }
@@ -1593,20 +1608,23 @@ const Pages = {
       applyFilters();
       checkEmpty();
 
-      // Filter button events
+      // Filter button events and explicit styling
       document.querySelectorAll('.view-tab').forEach(btn => {
+        // Explicitly set styling based on current view
+        if (btn.dataset.view === State.currentView) {
+          btn.classList.add('active');
+          btn.style.borderBottom = '2px solid var(--accent-blue)';
+          btn.style.color = 'var(--text-primary)';
+        } else {
+          btn.classList.remove('active');
+          btn.style.borderBottom = '2px solid transparent';
+          btn.style.color = 'var(--text-secondary)';
+        }
+
         // Clear old listeners by cloning
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         newBtn.addEventListener('click', () => {
-          document.querySelectorAll('.view-tab').forEach(b => {
-            b.classList.remove('active');
-            b.style.borderBottom = '2px solid transparent';
-            b.style.color = 'var(--text-secondary)';
-          });
-          newBtn.classList.add('active');
-          newBtn.style.borderBottom = '2px solid var(--accent-blue)';
-          newBtn.style.color = 'var(--text-primary)';
           State.currentView = newBtn.dataset.view;
           Pages.queue(); // reload view
         });

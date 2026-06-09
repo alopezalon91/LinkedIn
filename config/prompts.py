@@ -256,19 +256,23 @@ Devuelve UNICAMENTE un JSON válido con la siguiente estructura:
 # ---------------------------------------------------------------------------
 
 EXTRACTOR_PROMPT = """\
-Actúa como un analista legal y fiscal experto. Lee el siguiente texto completo de un documento legal o noticia y extrae ÚNICAMENTE la información crítica y relevante que afecte directamente a pymes, autónomos o ciudadanos a nivel económico.
+Actúa como un analista legal y fiscal experto. Lee el siguiente texto completo de un documento legal o noticia y extrae ÚNICAMENTE la información crítica estructurándola estrictamente en la siguiente Ficha de Datos Técnicos.
 
 DOCUMENTO:
 {texto}
 
 REGLAS DE EXTRACCIÓN:
-1. Extrae solo HECHOS, DATOS, FECHAS y CIFRAS reales (ej. "La sanción es de 3.000€", "Entra en vigor el 1 de enero").
-2. Descarta toda la paja burocrática, exposiciones de motivos irrelevantes, listas de nombramientos, o contexto político vacío.
-3. Formatea la salida como una lista de viñetas muy concretas y directas.
-4. NUNCA INVENTES DATOS. Si el documento no da un dato específico, no lo asumas.
+1. Cero literatura: Usa frases directas, técnicas y concretas.
+2. No inventes datos. Si falta algo, omítelo.
+3. Debes devolver la información EXACTAMENTE en este formato de Ficha Técnica (respeta las etiquetas en mayúsculas):
 
-Salida esperada:
-- Hecho 1
-- Hecho 2
-...
+[DATOS_NOTICIA_REAL]
+- ÓRGANO JURÍDICO / FUENTE: [Nombre de la entidad]
+- CRITERIO CORREGIDO O HECHO PRINCIPAL: [Describe la doctrina previa o el status quo que cambia]
+- NUEVA DOCTRINA O NOVEDAD FIJADA: [Explica el cambio legal o la novedad de negocio]
+- CASO CONCRETO DE REFERENCIA: [Si el texto menciona un ejemplo, extráelo aquí. Si no, omítelo]
+- REQUISITOS OPERATIVOS / ACCIONES EXIGIDAS:
+  1. [Requisito o paso 1]
+  2. [Requisito o paso 2...]
+- IMPACTO FINANCIERO: [Consecuencias económicas directas, sanciones, flujo de caja, etc.]
 """

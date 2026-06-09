@@ -362,15 +362,18 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
         systemInstruction: { parts: [{ text: systemPrompt }] },
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: responseMimeType === "application/json" ? 2500 : 2048,
-        }
+          maxOutputTokens: responseMimeType === "application/json" ? 4096 : 2048,
+        },
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ]
       };
 
       if (responseMimeType === "application/json") {
         payload.generationConfig.responseMimeType = "application/json";
-        if (responseSchema) {
-          payload.generationConfig.responseSchema = responseSchema;
-        }
       }
 
       const res = await fetch(url, {
@@ -386,6 +389,7 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
       } else {
         const errText = await res.text();
         console.warn(`Gemini API call failed (status ${res.status}): ${errText}. Trying Groq fallback...`);
+        // Fall through to Groq on any Gemini error (quota, rate limit, etc.)
       }
     } catch (err) {
       console.warn(`Gemini call failed with exception: ${err.message}. Trying Groq fallback...`);
@@ -397,40 +401,92 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
   if (groqKey) {
     console.log("Calling Groq API fallback...");
     try {
+      // Groq llama-3.3-70b-versatile: ~6000 TPM free tier
+      // Keep only the essential parts if prompt is too long
+      const MAX_GROQ_CHARS = 8000;
+      let groqPrompt = prompt;
+      if (prompt.length > MAX_GROQ_CHARS) {
+        // Try to preserve the BRANDING_RULES section which has instructions
+        const rulesIndex = prompt.indexOf("=== [BRANDING_RULES]");
+        if (rulesIndex !== -1) {
+          const contentPart = prompt.substring(0, rulesIndex);
+          const rulesPart = prompt.substring(rulesIndex);
+          const allowedContent = MAX_GROQ_CHARS - rulesPart.length;
+          groqPrompt = contentPart.substring(0, Math.max(allowedContent, 2000))
+            + "\n\n[TEXTO TRUNCADO]\n\n" + rulesPart;
+        } else {
+          groqPrompt = prompt.substring(0, MAX_GROQ_CHARS) + "\n\n[TEXTO TRUNCADO]";
+        }
+      }
+
       const url = "https://api.groq.com/openai/v1/chat/completions";
       const payload = {
         model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
+          { role: "user", content: groqPrompt }
         ],
         temperature: 0.7,
-        max_tokens: responseMimeType === "application/json" ? 2000 : 1000
+        max_tokens: responseMimeType === "application/json" ? 3000 : 1500
       };
 
       if (responseMimeType === "application/json") {
         payload.response_format = { type: "json_object" };
       }
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${groqKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+      let currentModel = "llama-3.3-70b-versatile";
+      
+      let retries = 0;
+      const maxRetries = 2;
+      while (retries <= maxRetries) {
+        payload.model = currentModel;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
 
-      if (res.ok) {
-        const result = await res.json();
-        const text = result.choices?.[0]?.message?.content;
-        if (text) return text;
-      } else {
-        const errText = await res.text();
-        console.error(`Groq API call failed (status ${res.status}): ${errText}`);
+        if (res.ok) {
+          const result = await res.json();
+          const text = result.choices?.[0]?.message?.content;
+          if (text) return text;
+          break;
+        } else if (res.status === 429) {
+          const errText = await res.text();
+          
+          if (currentModel === "llama-3.3-70b-versatile") {
+            console.warn(`[Groq] Rate limit hit on 70b model. Falling back to 8b model...`);
+            currentModel = "llama-3.1-8b-instant";
+            retries++;
+            continue; // Retry immediately with 8b
+          }
+          
+          let waitTime = 10; // Default 10 seconds
+          // Attempt to extract "try again in X.XXs"
+          const waitMatch = errText.match(/try again in ([\d\.]+)s/);
+          if (waitMatch && waitMatch[1]) {
+            waitTime = Math.ceil(parseFloat(waitMatch[1])) + 1; // Add 1s padding
+          }
+
+          if (retries < maxRetries) {
+            console.warn(`[Groq] Rate limit hit. Waiting ${waitTime}s...`);
+            await new Promise(r => setTimeout(r, waitTime * 1000));
+            retries++;
+          } else {
+            throw new Error(`Groq API Error: ${res.status} - ${errText}`);
+          }
+        } else {
+          const errText = await res.text();
+          console.error(`Groq API call failed (status ${res.status}): ${errText}`);
+          throw new Error(`Groq API Error: ${res.status} - ${errText}`);
+        }
       }
     } catch (err) {
       console.error(`Groq call failed with exception: ${err.message}`);
+      throw err;
     }
   }
 
@@ -446,11 +502,25 @@ export async function regeneratePost(db, env, id, instructions) {
     throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
   }
 
-  const systemInstruction = `Eres Alberto López. Gestor fiscal y contable. Escribes en primera persona. NUNCA en tercera persona. Tu tono debe ser DISRUPTIVO, crítico, contraintuitivo y directo. Actúas como un experto advirtiendo de un peligro ("Hacienda acaba de activar la guillotina..."). Eres el azote de la burocracia asfixiante y el lenguaje confuso.
-PROHIBIDO usar fórmulas de auto-referencia como "Destaco que...", "Quiero señalar...", "Me pregunto...". TUTEO OBLIGATORIO: Dirígete al lector siempre de "tú" ("tienes", "tu empresa"), NUNCA de "usted" ("tome medidas"). Ve directo al dato sin hablar de tu propia acción de comunicar.
-CRÍTICO: Usa párrafos cortos (1 a 3 líneas máximo) y deja SIEMPRE una línea en blanco (doble salto de línea: \\n\\n) entre cada párrafo o punto de lista. Usa listas numeradas (1️⃣, 2️⃣, 3️⃣) para los pasos. PROHIBIDO poner un icono al inicio de cada frase. Usa como máximo 2 o 3 iconos temáticos en todo el texto.
-REGLA ANTI-HUMO: CERO RELLENO. Si una frase no aporta un dato nuevo, un plazo o un importe, ELIMÍNALA. No digas obviedades como "Esto supone un cambio". CERO REDUNDANCIA. Prohibido repetir la misma palabra clave o frase en el texto. El post TIENE QUE DAR EL DATO EXACTO, no generalidades.
-NO incluyas ninguna llamada a la acción comercial o promocional (como 'escríbeme', 'te ayudamos'). El post debe ser puramente informativo y de valor.`;
+  const systemInstruction = `[ROLE]
+Actúa como un Copywriter de Élite para LinkedIn y un Asesor Fiscal ultra-disruptivo. Tu nombre es Alberto López, especialista en eCommerce y Real Estate. Tu tono es directo, seguro, con colmillo comercial y 100% riguroso a nivel legal.
+
+[CORE INSTRUCTIONS - STRICT COMPLIANCE]
+1. ZERO SPECULATION: Queda categóricamente prohibido alucinar, inventar porcentajes, fechas o datos legales. Si la noticia no detalla un dato, no lo menciones.
+2. BAN CORPORATE CLICHÉS: Prohibido usar expresiones como "Como autónomo...", "Como asesor...", "En el artículo de hoy...", "¿Sabías que...?", "Es fundamental...", o "Es importante que conozcas...". Habla de forma directa y ejecutiva.
+3. NO REPETITIONS: Cada párrafo debe aportar información nueva. Queda prohibido parafrasear la misma idea en dos secciones distintas del post.
+4. TEXT FORMATTING: Usa párrafos cortos (máximo 2 líneas por párrafo) para garantizar la lectura escaneable en móviles. No utilices negritas Unicode especiales (tipo 𝗧𝗲𝘅𝘁𝗼). Usa mayúsculas puntuales para enfatizar términos técnicos clave. Usa guiones simples (-) para las listas, nunca emojis de números.
+
+[OUTPUT STRUCTURE - MANDATORY TEMPLATE]
+Genera el post ajustándote estrictamente a este esqueleto:
+
+- GANCHO (Máx. 2 líneas): Desmonta un mito fiscal, expón un dolor de cabeza financiero real o plantea un enfoque contraintuitivo para el negocio. No saludes. Ve al grano.
+- CONTEXTO LEGAL (Máx. 2 líneas): Explica la novedad técnica (jurisprudencia, sentencia o BOE) de forma directa y ejecutiva.
+- TRANSICIÓN DE CONTROL (Máx. 2 líneas): Conecta el marco legal con la estrategia pura de negocio, sin justificar tu rol.
+- PUNTOS CIEGOS / HOJA DE RUTA (Lista de 3 puntos clave): Cada punto debe estructurarse con un [CONCEPTO EN MAYÚSCULAS]: seguido de una acción operativa o riesgo real de máximo 2 líneas. Evita listas teóricas u obvias.
+- CONCLUSIÓN DE AUTORIDAD (Máx. 2 líneas): Una frase contundente que recuerde que la optimización fiscal requiere estrategia, no improvisación.
+- CTA DE INTERACCIÓN NATURAL: Haz una pregunta técnica o de experiencia real para abrir debate en la sección de comentarios.
+- HASHTAGS: Añade exactamente 4 hashtags indexados al final.`;
 
   const prompt = `=== POST ORIGINAL ===
 ${post.content_edited || post.content}
@@ -498,20 +568,30 @@ Por favor, reescribe el post completo siguiendo las instrucciones de Alberto y r
 export async function generatePostFromDraft(db, env, id) {
   const post = await getPost(db, id);
   if (!post) throw new Error(`Post not found: ${id}`);
-  if (post.status !== 'draft') {
-    throw new Error(`Only posts with status 'draft' can be generated, got '${post.status}'`);
-  }
+  // Allow regeneration from any status — we'll read the original draft JSON
+  // from content_raw (if available) or fall back to content
 
-  const groqKey = await getGroqKey(db, env);
-  if (!env.GEMINI_API_KEY && !groqKey) {
-    throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
-  }
 
   let draftData;
+  // Try to parse content as JSON (works if status is still 'draft')
   try {
     draftData = JSON.parse(post.content);
   } catch (err) {
-    throw new Error('Draft content is not valid JSON');
+    // Post was already generated.
+    // We saved the original draft JSON in the source_url hash fragment.
+    if (post.source_url && post.source_url.includes('#DRAFT_B64=')) {
+      try {
+        const b64 = post.source_url.split('#DRAFT_B64=')[1];
+        draftData = JSON.parse(decodeURIComponent(escape(atob(b64))));
+      } catch (e) { /* ignore */ }
+    }
+    // Fallback: check content_edited just in case it's still there from the buggy version
+    if (!draftData && post.content_edited && post.content_edited.startsWith('DRAFT_JSON:')) {
+      try { draftData = JSON.parse(post.content_edited.replace('DRAFT_JSON:', '')); } catch (e) { /* ignore */ }
+    }
+    if (!draftData) {
+      throw new Error('No se encontró el borrador original. Solo se puede rehacer si el post fue generado desde este panel recientemente.');
+    }
   }
 
   let prompt = draftData.prompt;
@@ -519,30 +599,46 @@ export async function generatePostFromDraft(db, env, id) {
     throw new Error('Draft JSON is missing the prompt string');
   }
 
-  // Groq's llama-3.1-8b-instant has a 6000 TPM limit on free tier.
-  if (prompt.length > 9000) {
-    const rulesIndex = prompt.indexOf("=== [BRANDING_RULES]");
-    if (rulesIndex !== -1) {
-      const contentPart = prompt.substring(0, rulesIndex);
-      const rulesPart = prompt.substring(rulesIndex);
-      // Truncate content to 5000 chars to leave room for rules
-      const truncatedContent = contentPart.length > 5000 
-          ? contentPart.substring(0, 5000) + "\n\n[TEXTO TRUNCADO POR LÍMITE DE TAMAÑO]\n\n"
-          : contentPart;
-      prompt = truncatedContent + rulesPart;
-    } else {
-      prompt = prompt.substring(0, 9000) + "\n\n[TEXTO TRUNCADO POR LÍMITE DE TAMAÑO]";
-    }
+  // Only truncate if very long (Gemini handles ~30k tokens, Groq ~6k)
+  // Groq truncation happens in callAIWithFallback
+  if (prompt.length > 20000) {
+    prompt = prompt.substring(0, 20000) + "\n\n[TEXTO TRUNCADO POR LÍMITE DE TAMAÑO]";
   }
 
-  const systemInstruction = `Eres Alberto López. Gestor fiscal y contable. Escribes en primera persona. NUNCA en tercera persona. Tu tono debe ser DISRUPTIVO, crítico, contraintuitivo y directo. Actúas como un experto advirtiendo de un peligro ("Hacienda acaba de activar la guillotina..."). Eres el azote de la burocracia asfixiante y el lenguaje confuso.
-PROHIBIDO usar fórmulas de auto-referencia como 'Destaco que...' o 'Me pregunto...'. TUTEO OBLIGATORIO: Dirígete al lector siempre de 'tú', NUNCA de 'usted'. Ve directo al dato sin meta-lenguaje.
+  const systemInstruction = `Actúa como un Copywriter de Élite para LinkedIn y un Asesor Fiscal ultra-disruptivo. Tu nombre es Alberto López, especialista en eCommerce y Real Estate. Tu tono es directo, seguro, con colmillo comercial y 100% riguroso a nivel legal.
+
+[CORE INSTRUCTIONS - STRICT COMPLIANCE]
+1. ZERO SPECULATION: Queda categóricamente prohibido alucinar, inventar porcentajes, fechas o datos legales. Si la noticia no detalla un dato, no lo menciones.
+2. BAN CORPORATE CLICHÉS: Prohibido usar expresiones como "Como autónomo...", "Como asesor...", "En el artículo de hoy...", "¿Sabías que...?", "Es fundamental...", o "Es importante que conozcas...". Habla de forma directa y ejecutiva.
+3. NO REPETITIONS: Cada párrafo debe aportar información nueva. Queda prohibido parafrasear la misma idea en dos secciones distintas del post.
+4. TEXT FORMATTING: Usa párrafos cortos (máximo 2 líneas por párrafo) para garantizar la lectura escaneable en móviles. No utilices negritas Unicode especiales (tipo 𝗧𝗲𝘅𝘁𝗼). Usa mayúsculas puntuales para enfatizar términos técnicos clave. Usa guiones simples (-) para las listas, nunca emojis de números.
+
+[OUTPUT STRUCTURE - MANDATORY TEMPLATE]
+Genera el post ajustándote estrictamente a este esqueleto:
+
+- GANCHO (Máx. 2 líneas): Desmonta un mito fiscal, expón un dolor de cabeza financiero real o plantea un enfoque contraintuitivo para el negocio. No saludes. Ve al grano.
+- CONTEXTO LEGAL (Máx. 2 líneas): Explica la novedad técnica (jurisprudencia, sentencia o BOE) de forma directa y ejecutiva.
+- TRANSICIÓN DE CONTROL (Máx. 2 líneas): Conecta el marco legal con la estrategia pura de negocio, sin justificar tu rol.
+- PUNTOS CIEGOS / HOJA DE RUTA (Lista de 3 puntos clave): Cada punto debe estructurarse con un [CONCEPTO EN MAYÚSCULAS]: seguido de una acción operativa o riesgo real de máximo 2 líneas. Evita listas teóricas u obvias.
+- CONCLUSIÓN DE AUTORIDAD (Máx. 2 líneas): Una frase contundente que recuerde que la optimización fiscal requiere estrategia, no improvisación.
+- CTA DE INTERACCIÓN NATURAL: Haz una pregunta técnica o de experiencia real para abrir debate en la sección de comentarios.
+- HASHTAGS: Añade exactamente 4 hashtags indexados al final.
+
 IMPORTANTE: Responde SIEMPRE con un objeto JSON válido con esta estructura exacta:
 {
   "post": "El texto del post... NO pongas firma [AL] al final del texto del post.",
   "first_comment": "Comentario...",
-  "carousel": [ { "slide_type": "cover", "pre_title": "...", "title": "...", "subtitle": "...", "bullets": [] } ]
+  "carousel": [ { "slide_type": "cover", "pre_title": "ALERTA LEGAL", "title": "...", "subtitle": "...", "bullets": [] } ]
 }`;
+
+  // Para Llama 3.3 70B en Groq, forzamos la identidad al final del prompt del usuario para evitar amnesia
+  prompt += `\n\n=== RECORDATORIO CRÍTICO DE IDENTIDAD ANTES DE GENERAR ===
+1. Eres ALBERTO LÓPEZ, Copywriter de Élite y Fiscalista Disruptor. Escribe en PRIMERA PERSONA ("yo", "nuestro").
+2. Tono DISRUPTIVO, con autoridad y lenguaje natural premium. Cero obviedades.
+3. ESTRUCTURA: Gancho al dolor, Contexto, Hoja de Ruta (lista limpia), Cierre de Autoridad. (Máx 1500 caracteres).
+4. CERO RELLENO: No uses frases genéricas como "Esto es muy importante". Ve directo al dato y a las consecuencias.
+5. Usa los datos exactos del Fact-Check (fecha, sentencia) si los hay.
+6. FORMATO: Es OBLIGATORIO que devuelvas un objeto JSON válido con las claves "post", "first_comment" y "carousel".`;
 
   let generatedText = await callAIWithFallback(db, env, systemInstruction, prompt, "application/json");
 
@@ -583,10 +679,19 @@ IMPORTANTE: Responde SIEMPRE con un objeto JSON válido con esta estructura exac
     }
   }
 
+  // Preserve original draft JSON in source_url fragment so we can always re-generate later
+  let newSourceUrl = post.source_url;
+  if (post.status === 'draft' && post.content) {
+    const b64 = btoa(unescape(encodeURIComponent(post.content)));
+    newSourceUrl = (post.source_url || '') + '#DRAFT_B64=' + b64;
+  }
+
   // Update post in D1
   const updatedPost = await updatePost(db, id, {
     status: 'pending',
     content: postText,
+    content_edited: null, // Clear out the buggy DRAFT_JSON: if it was there
+    source_url: newSourceUrl,
     first_comment: firstComment,
     ...(carouselBase64 ? { media_base64: carouselBase64 } : {}),
   });
@@ -624,8 +729,14 @@ CONTENIDO OBLIGATORIO Y RIGOR: El carrusel NO puede ser un resumen vago ni conte
   3. Cuáles son las consecuencias reales (multas en euros, sanciones, paralizaciones).
 FECHAS ABSOLUTAS: Si la noticia menciona un día relativo (ej: "este lunes"), tradúcelo SIEMPRE a una fecha absoluta (ej: "este lunes 8 de junio"). Nunca dejes fechas relativas.
 BULLETS: Cada diapositiva interior debe tener entre 3 y 5 bullets. Cada bullet debe ser denso en información, concreto y útil — datos, importes, plazos o acciones exactas. PROHIBIDO bullets genéricos o motivacionales.
+ESTRUCTURA DEL CARRUSEL: Evita la redundancia entre diapositivas. Si tienes 4 diapositivas interiores, usa una progresión lógica (ej. D1: El contexto, D2: A quién afecta, D3: Los riesgos reales, D4: Qué hacer hoy/Soluciones). NO repitas las mismas ideas con distintas palabras en diapositivas consecutivas.
 TÍTULOS: El campo "title" debe ser corto, directo e impactante. Máximo 7 palabras. Sin rodeos. La fuerza del título viene de la precisión, no de la longitud.
-DIAPOSITIVA DE CIERRE: el title DEBE ser una pregunta MUY CORTA Y DIRECTA (MÁXIMO 5 A 7 PALABRAS) que divida al lector, que le obligue a posicionarse. Las frases largas no funcionan, ve al grano. El subtitle es SIEMPRE exactamente: "COMENTA TU CASO 👇"
+DIAPOSITIVA DE CIERRE: el title DEBE ser una pregunta MUY CORTA Y DIRECTA (MÁXIMO 5 A 7 PALABRAS) que divida al lector, que le obligue a posicionarse. Las frases largas no funcionan, ve al grano. El subtitle DEBE ser una llamada a la acción original y desafiante aplicando este diccionario de marca:
+  * En vez de "Comparte tus dudas", usa "Cuéntame cómo lo estás aplicando".
+  * En vez de "¿Te afecta esta situación?", usa "¿Cómo estás lidiando con el bloqueo?".
+  * En vez de "Déjanos tu comentario", usa "Te leo abajo" o "Abrimos debate".
+  * En vez de "Escribe tu experiencia", usa "Cuéntame el caso real".
+PROHIBIDO usar emojis señalando abajo.
 {
   "carousel": [
     {
@@ -667,9 +778,9 @@ DIAPOSITIVA DE CIERRE: el title DEBE ser una pregunta MUY CORTA Y DIRECTA (MÁXI
     },
     {
       "slide_type": "closing",
-      "pre_title": "DEBATE",
-      "title": "¿[Pregunta MUY CORTA Y DIRECTA (max 7 palabras) que divide al lector]?",
-      "subtitle": "COMENTA TU CASO 👇",
+      "pre_title": "TU TURNO (o llamada similar)",
+      "title": "¿[Pregunta MUY ESPECÍFICA sobre las implicaciones de esta noticia para su negocio]?",
+      "subtitle": "Llamada a la acción específica (ej. Cuéntame si te ha pasado, Revisa tus estatutos hoy)",
       "bullets": []
     }
   ]

@@ -232,12 +232,14 @@ def create_carousel_pdf(slides: list[dict]) -> str:
             # Bullets
             if bullets:
                 b_style = ParagraphStyle(
-                    name='BulletInner', fontName=FONT_BOLD, fontSize=32,
+                    name='BulletInner', fontName=FONT_MAIN, fontSize=32,
                     leading=45, textColor=TEXT_MAIN, alignment=TA_LEFT
                 )
                 
+                import re
                 for b in bullets:
                     bullet_text = f"•  {b}"
+                    bullet_text = re.sub(r'\*\*(.*?)\*\*', rf'<font name="{FONT_BOLD}">\1</font>', bullet_text)
                     p_b = Paragraph(bullet_text, b_style)
                     w, h = p_b.wrapOn(c, DRAW_WIDTH - 20, HEIGHT)
                     p_b.drawOn(c, MARGIN + 20, y_cursor - h)
