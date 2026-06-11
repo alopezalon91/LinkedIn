@@ -7,6 +7,79 @@
 
 import { generateUUID, nowISO, levenshteinRatio } from '../utils.js';
 
+function getSectorFocusInstruction(sector) {
+  const s = (sector || '').toLowerCase();
+  if (s === 'fiscal' || s === 'fiscalidad') {
+    return `ADAPTACIÓN AL SECTOR: FISCAL. El post y carrusel deben enfocarse en la optimización fiscal, la deducibilidad de gastos, la planificación contable y el ahorro legítimo de impuestos.`;
+  } else if (s === 'laboral') {
+    return `ADAPTACIÓN AL SECTOR: LABORAL. El post y carrusel deben enfocarse en el cumplimiento normativo laboral, el control de costes de personal, la gestión de plantillas y la prevención de sanciones de la Inspección de Trabajo. Queda TERMINANTEMENTE PROHIBIDO hablar de "optimización fiscal", "deducción de IVA", "IRPF" u otros conceptos fiscales no laborales.`;
+  } else if (s === 'ayudas' || s === 'subvenciones') {
+    return `ADAPTACIÓN AL SECTOR: AYUDAS Y SUBVENCIONES. El post y carrusel deben enfocarse en la elegibilidad, la optimización financiera para captar fondos públicos y la justificación de subvenciones. Queda TERMINANTEMENTE PROHIBIDO hablar de "optimización fiscal" o "deducción de IVA".`;
+  } else {
+    return `ADAPTACIÓN AL SECTOR: CUMPLIMIENTO Y OPERACIONES. El post y carrusel deben enfocarse en la mitigación de riesgos operativos, el cumplimiento normativo (compliance) y la eficiencia de procesos empresariales. Queda TERMINANTEMENTE PROHIBIDO hablar de "optimización fiscal" o de impuestos de forma genérica.`;
+  }
+}
+
+function cleanGeneratedPostText(text) {
+  if (!text) return '';
+  let clean = text.replace(/\r\n/g, '\n');
+  const patternsToStrip = [
+    /^\s*-\s*GANCHO\s*(\(Máx\.\s*\d+\s*líneas?\))?\s*:\s*/gim,
+    /^\s*GANCHO\s*(\(Máx\.\s*\d+\s*líneas?\))?\s*:\s*/gim,
+    /^\s*-\s*CONTEXTO LEGAL\s*(\(Máx\.\s*\d+\s*líneas?\))?\s*:\s*/gim,
+    /^\s*CONTEXTO LEGAL\s*(\(Máx\.\s*\d+\s*líneas?\))?\s*:\s*/gim,
+    /^\s*-\s*TRANSICIÓN DE CONTROL\s*(\(Máx\.\s*\d+\s*líneas?\))?\s*:\s*/gim,
+    /^\s*TRANSICIÓN DE CONTROL\s*(\(Máx\.\s*\d+\s*líneas?\))?\s*:\s*/gim,
+    /^\s*-\s*PUNTOS CIEGOS\s*\/?\s*HOJA DE RUTA\s*(\(Lista de \d+ puntos clave\))?\s*:\s*/gim,
+    /^\s*PUNTOS CIEGOS\s*\/?\s*HOJA DE RUTA\s*(\(Lista de \d+ puntos clave\))?\s*:\s*/gim,
+    /^\s*-\s*PUNTOS CIEGOS\s*:\s*/gim,
+    /^\s*PUNTOS CIEGOS\s*:\s*/gim,
+    /^\s*-\s*HOJA DE RUTA\s*:\s*/gim,
+    /^\s*HOJA DE RUTA\s*:\s*/gim,
+    /^\s*-\s*CONCLUSIÓN DE AUTORIDAD\s*(\(Máx\.\s*\d+\s*líneas?\))?\s*:\s*/gim,
+    /^\s*CONCLUSIÓN DE AUTORIDAD\s*(\(Máx\.\s*\d+\s*líneas?\))?\s*:\s*/gim,
+    /^\s*-\s*CTA DE INTERACCIÓN NATURAL\s*:\s*/gim,
+    /^\s*CTA DE INTERACCIÓN NATURAL\s*:\s*/gim,
+    /^\s*-\s*CTA\s*:\s*/gim,
+    /^\s*CTA\s*:\s*/gim,
+    /^\s*-\s*HASHTAGS\s*:\s*/gim,
+    /^\s*HASHTAGS\s*:\s*/gim,
+  ];
+
+  let lines = clean.split('\n');
+  lines = lines.map(line => {
+    let trimmed = line.trim();
+    const exactHeaderPatterns = [
+      /^-\s*PUNTOS CIEGOS\s*\/?\s*HOJA DE RUTA\s*:\s*$/i,
+      /^(PUNTOS CIEGOS\s*\/?\s*HOJA DE RUTA|HOJA DE RUTA|PUNTOS CIEGOS)\s*:\s*$/i,
+      /^-\s*(GANCHO|CONTEXTO LEGAL|TRANSICIÓN DE CONTROL|CONCLUSIÓN DE AUTORIDAD|CTA DE INTERACCIÓN NATURAL|HASHTAGS)\s*:\s*$/i,
+      /^(GANCHO|CONTEXTO LEGAL|TRANSICIÓN DE CONTROL|CONCLUSIÓN DE AUTORIDAD|CTA DE INTERACCIÓN NATURAL|HASHTAGS)\s*:\s*$/i,
+    ];
+    for (const pattern of exactHeaderPatterns) {
+      if (pattern.test(trimmed)) {
+        return null;
+      }
+    }
+    let newLine = line;
+    for (const pattern of patternsToStrip) {
+      if (pattern.test(trimmed)) {
+        const leadingWhitespace = line.substring(0, line.indexOf(trimmed));
+        const rest = trimmed.replace(pattern, '');
+        newLine = leadingWhitespace + rest;
+        break;
+      }
+    }
+    return newLine;
+  });
+
+  return lines
+    .filter(l => l !== null)
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+
 // ─── List ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -503,28 +576,28 @@ export async function regeneratePost(db, env, id, instructions) {
     throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
   }
 
-  const systemInstruction = `[ROLE]
-Actúa como un Copywriter de Élite para LinkedIn y un Asesor Fiscal ultra-disruptivo. Tu nombre es Alberto López, especialista en eCommerce y Real Estate. Tu tono es directo, seguro, con colmillo comercial y 100% riguroso a nivel legal.
+  const sectorFocus = getSectorFocusInstruction(post.sector);
+  const systemInstruction = `Actúa como un Copywriter de Élite para LinkedIn y un Asesor de Negocios y Estrategia Corporativa ultra-disruptivo. Tu nombre es Alberto López, especialista en eCommerce y Real Estate. Tu tono es directo, seguro, con colmillo comercial y 100% riguroso a nivel legal.
 
 [CORE INSTRUCTIONS - STRICT COMPLIANCE]
 1. ZERO SPECULATION: Queda categóricamente prohibido alucinar, inventar porcentajes, fechas o datos legales. Si la noticia no detalla un dato, no lo menciones.
 2. BAN CORPORATE CLICHÉS: Prohibido usar expresiones como "Como autónomo...", "Como asesor...", "En el artículo de hoy...", "¿Sabías que...?", "Es fundamental...", o "Es importante que conozcas...". Habla de forma directa y ejecutiva.
 3. NO REPETITIONS: Cada párrafo debe aportar información nueva. Queda prohibido parafrasear la misma idea en dos secciones distintas del post.
-4. TEXT FORMATTING: Usa párrafos cortos (máximo 2 líneas por párrafo) para garantizar la lectura escaneable en móviles. No utilices negritas Unicode especiales (tipo 𝗧𝗲𝘅𝘁𝗼). Usa mayúsculas puntuales para enfatizar términos técnicos clave. Usa guiones simples (-) para las listas, nunca emojis de números.
-5. PROHIBICIÓN ABSOLUTA DE ETIQUETAS DE PLANTILLA: Queda terminantemente PROHIBIDO escribir las etiquetas de sección (como "GANCHO:", "CONTEXTO LEGAL:", "TRANSICIÓN DE CONTROL:", "PUNTOS CIEGOS:", "PUNTOS CIEGOS / HOJA DE RUTA:", "CONCLUSIÓN DE AUTORIDAD:", "CTA DE INTERACCIÓN NATURAL:") en el texto final del post. El post debe consistir únicamente en el texto limpio y los párrafos que fluyen de forma natural, separados por líneas en blanco.
+4. TEXT FORMATTING: Usa párrafos cortos (máximo 2 líneas por párrafo) para garantizar la lectura escaneable en móviles. No utilices negritas Unicode especiales. Usa mayúsculas puntuales para enfatizar términos técnicos clave. Usa guiones simples (-) para las listas, nunca emojis de números.
+5. PROHIBICIÓN ABSOLUTA DE ETIQUETAS DE PLANTILLA: Queda terminantemente PROHIBIDO escribir etiquetas o encabezados de sección (como "GANCHO:", "CONTEXTO LEGAL:", "TRANSICIÓN DE CONTROL:", "PUNTOS CIEGOS:", "PUNTOS CIEGOS / HOJA DE RUTA:", "CONCLUSIÓN DE AUTORIDAD:", "CTA DE INTERACCIÓN NATURAL:", "CTA:") en el texto final del post. El post debe fluir de forma totalmente limpia, consistiendo únicamente en el texto libre de estas etiquetas, estructurado en párrafos naturales separados por líneas en blanco.
 6. CONCRECIÓN DE LOS PUNTOS CLAVE: Los 3 puntos clave de la lista de la hoja de ruta NO pueden ser teóricos, genéricos ni obvios (como "estudia la directiva", "desarrolla un plan", "evalúa políticas"). Deben ser acciones de estructuración fiscal, mercantil, laboral o contable concretas, con implicaciones prácticas reales que tengan "colmillo de estratega".
-7. ADAPTACIÓN AL CONTEXTO: Adapta la conclusión de autoridad al tema específico del post. Si la noticia no es de temática puramente fiscal (ej. es sobre transparencia salarial, convenios colectivos, protección de datos), la conclusión no debe referirse a la "optimización fiscal", sino a la "estrategia de cumplimiento" o "planificación operativa".
+7. ${sectorFocus}
 
 [OUTPUT STRUCTURE - MANDATORY TEMPLATE]
-Genera el post ajustándote estrictamente a este esqueleto (pero recuerda NUNCA incluir los nombres/etiquetas de las secciones en tu texto):
+El post de LinkedIn debe estar estructurado en 6 bloques/párrafos limpios, separados únicamente por una línea en blanco, sin ningún tipo de etiqueta, título o encabezado:
 
-- GANCHO (Máx. 2 líneas): Desmonta un mito fiscal, expón un dolor de cabeza financiero real o plantea un enfoque contraintuitivo para el negocio. No saludes. Ve al grano.
-- CONTEXTO LEGAL (Máx. 2 líneas): Explica la novedad técnica (jurisprudencia, sentencia o BOE) de forma directa y ejecutiva.
-- TRANSICIÓN DE CONTROL (Máx. 2 líneas): Conecta el marco legal con la estrategia pura de negocio, sin justificar tu rol.
-- PUNTOS CIEGOS / HOJA DE RUTA (Lista de 3 puntos clave): Cada punto debe estructurarse con un [CONCEPTO EN MAYÚSCULAS]: seguido de una acción operativa o riesgo real de máximo 2 líneas. Evita listas teóricas u obvias.
-- CONCLUSIÓN DE AUTORIDAD (Máx. 2 líneas): Una frase contundente que recuerde que la planificación estratégica y el control de costes requieren método, no improvisación.
-- CTA DE INTERACCIÓN NATURAL: Haz una pregunta técnica o de experiencia real para abrir debate en la sección de comentarios.
-- HASHTAGS: Añade exactamente 4 hashtags indexados al final.`;
+Bloque 1 (Gancho): Desmonta un mito, expón un dolor de cabeza financiero/operativo real o plantea un enfoque contraintuitivo para el negocio. No saludes. Ve al grano.
+Bloque 2 (Contexto legal): Explica la novedad técnica (jurisprudencia, sentencia o BOE) de forma directa y ejecutiva.
+Bloque 3 (Transición): Conecta el marco legal con la estrategia pura de negocio.
+Bloque 4 (Hoja de ruta): Una lista de exactamente 3 puntos clave con guiones simples (-), donde cada punto empieza con un **[CONCEPTO EN MAYÚSCULAS]**: seguido de una acción operativa o riesgo real de máximo 2 líneas.
+Bloque 5 (Conclusión): Una frase contundente de máximo 2 líneas que resuma la perspectiva estratégica del sector.
+Bloque 6 (CTA): Una pregunta técnica o de experiencia real para abrir debate en comentarios.
+Hashtags: Añade exactamente 4 hashtags indexados al final en su propia línea.`;
 
   const prompt = `=== POST ORIGINAL ===
 ${post.content_edited || post.content}
@@ -535,7 +608,7 @@ ${instructions}
 Por favor, reescribe el post completo siguiendo las instrucciones de Alberto y respetando el formato original. Devuelve únicamente el texto del post reescrito y la nueva encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.`;
 
   const rewrittenText = await callAIWithFallback(db, env, systemInstruction, prompt, "text/plain");
-  const cleanRewrittenText = rewrittenText.trim();
+  const cleanRewrittenText = cleanGeneratedPostText(rewrittenText.trim());
 
   // Update the post content in D1
   const updatedPost = await updatePost(db, id, {
@@ -594,7 +667,13 @@ export async function generatePostFromDraft(db, env, id) {
       try { draftData = JSON.parse(post.content_edited.replace('DRAFT_JSON:', '')); } catch (e) { /* ignore */ }
     }
     if (!draftData) {
-      throw new Error('No se encontró el borrador original. Solo se puede rehacer si el post fue generado desde este panel recientemente.');
+      console.log(`No original draft JSON found for post ${id}. Reconstructing mock draft from current content.`);
+      draftData = {
+        title: post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia',
+        summary: post.content,
+        prompt: `Genera un contenido dual (Post de LinkedIn + Carrusel Resumido) a partir del siguiente artículo:\n\nTitular: ${post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia'}\nResumen/Texto completo: ${post.content}`,
+        original_text: post.content
+      };
     }
   }
 
@@ -603,33 +682,44 @@ export async function generatePostFromDraft(db, env, id) {
     throw new Error('Draft JSON is missing the prompt string');
   }
 
+  // Clean the draft's prompt from old connection rules if present, matching correct sector focus
+  const oldActualidadConnection = `=== REGLA DE CONEXIÓN TRANSVERSAL (CONEXIÓN FISCAL) ===
+Analiza la noticia general recibida y responde a la pregunta interna: ¿Cómo afecta este evento de forma indirecta a las finanzas, costes, obligaciones o impuestos de un ciudadano, autónomo o empresa en España?
+- Si la noticia habla de IA o tecnología -> Conéctalo con la deducción por I+D+i, digitalización obligatoria o gastos deducibles de software.
+- Si la noticia habla de inflación o huelgas -> Conéctalo con el aumento de costes deducibles, optimización de márgenes o planificación del cierre contable.
+- Si la noticia habla de vivienda o tipos de interés -> Conéctalo con las deducciones por alquiler, inversiones inmobiliarias, el IBI o el impuesto sobre el patrimonio.
+Traduce la actualidad del mundo en una lección de estrategia fiscal práctica.`;
+
+  const sectorFocus = getSectorFocusInstruction(post.sector);
+  prompt = prompt.replace(oldActualidadConnection, sectorFocus);
+
   // Only truncate if very long (Gemini handles ~30k tokens, Groq ~6k)
   // Groq truncation happens in callAIWithFallback
   if (prompt.length > 20000) {
     prompt = prompt.substring(0, 20000) + "\n\n[TEXTO TRUNCADO POR LÍMITE DE TAMAÑO]";
   }
 
-  const systemInstruction = `Actúa como un Copywriter de Élite para LinkedIn y un Asesor Fiscal ultra-disruptivo. Tu nombre es Alberto López, especialista en eCommerce y Real Estate. Tu tono es directo, seguro, con colmillo comercial y 100% riguroso a nivel legal.
+  const systemInstruction = `Actúa como un Copywriter de Élite para LinkedIn y un Asesor de Negocios y Estrategia Corporativa ultra-disruptivo. Tu nombre es Alberto López, especialista en eCommerce y Real Estate. Tu tono es directo, seguro, con colmillo comercial y 100% riguroso a nivel legal.
 
 [CORE INSTRUCTIONS - STRICT COMPLIANCE]
 1. ZERO SPECULATION: Queda categóricamente prohibido alucinar, inventar porcentajes, fechas o datos legales. Si la noticia no detalla un dato, no lo menciones.
 2. BAN CORPORATE CLICHÉS: Prohibido usar expresiones como "Como autónomo...", "Como asesor...", "En el artículo de hoy...", "¿Sabías que...?", "Es fundamental...", o "Es importante que conozcas...". Habla de forma directa y ejecutiva.
 3. NO REPETITIONS: Cada párrafo debe aportar información nueva. Queda prohibido parafrasear la misma idea en dos secciones distintas del post.
-4. TEXT FORMATTING: Usa párrafos cortos (máximo 2 líneas por párrafo) para garantizar la lectura escaneable en móviles. No utilices negritas Unicode especiales (tipo 𝗧𝗲𝘅𝘁𝗼). Usa mayúsculas puntuales para enfatizar términos técnicos clave. Usa guiones simples (-) para las listas, nunca emojis de números.
-5. PROHIBICIÓN ABSOLUTA DE ETIQUETAS DE PLANTILLA: Queda terminantemente PROHIBIDO escribir las etiquetas de sección (como "GANCHO:", "CONTEXTO LEGAL:", "TRANSICIÓN DE CONTROL:", "PUNTOS CIEGOS:", "PUNTOS CIEGOS / HOJA DE RUTA:", "CONCLUSIÓN DE AUTORIDAD:", "CTA DE INTERACCIÓN NATURAL:") en el texto final del post. El post debe consistir únicamente en el texto limpio y los párrafos que fluyen de forma natural, separados por líneas en blanco.
+4. TEXT FORMATTING: Usa párrafos cortos (máximo 2 líneas por párrafo) para garantizar la lectura escaneable en móviles. No utilices negritas Unicode especiales. Usa mayúsculas puntuales para enfatizar términos técnicos clave. Usa guiones simples (-) para las listas, nunca emojis de números.
+5. PROHIBICIÓN ABSOLUTA DE ETIQUETAS DE PLANTILLA: Queda terminantemente PROHIBIDO escribir etiquetas o encabezados de sección (como "GANCHO:", "CONTEXTO LEGAL:", "TRANSICIÓN DE CONTROL:", "PUNTOS CIEGOS:", "PUNTOS CIEGOS / HOJA DE RUTA:", "CONCLUSIÓN DE AUTORIDAD:", "CTA DE INTERACCIÓN NATURAL:", "CTA:") en el texto final del post. El post debe fluir de forma totalmente limpia, consistiendo únicamente en el texto libre de estas etiquetas, estructurado en párrafos naturales separados por líneas en blanco.
 6. CONCRECIÓN DE LOS PUNTOS CLAVE: Los 3 puntos clave de la lista de la hoja de ruta NO pueden ser teóricos, genéricos ni obvios (como "estudia la directiva", "desarrolla un plan", "evalúa políticas"). Deben ser acciones de estructuración fiscal, mercantil, laboral o contable concretas, con implicaciones prácticas reales que tengan "colmillo de estratega".
-7. ADAPTACIÓN AL CONTEXTO: Adapta la conclusión de autoridad al tema específico del post. Si la noticia no es de temática puramente fiscal (ej. es sobre transparencia salarial, convenios colectivos, protección de datos), la conclusión no debe referirse a la "optimización fiscal", sino a la "estrategia de cumplimiento" o "planificación operativa".
+7. ${sectorFocus}
 
 [OUTPUT STRUCTURE - MANDATORY TEMPLATE]
-Genera el post ajustándote estrictamente a este esqueleto (pero recuerda NUNCA incluir los nombres/etiquetas de las secciones en tu texto):
+El post de LinkedIn debe estar estructurado en 6 bloques/párrafos limpios, separados únicamente por una línea en blanco, sin ningún tipo de etiqueta, título o encabezado:
 
-- GANCHO (Máx. 2 líneas): Desmonta un mito fiscal, expón un dolor de cabeza financiero real o plantea un enfoque contraintuitivo para el negocio. No saludes. Ve al grano.
-- CONTEXTO LEGAL (Máx. 2 líneas): Explica la novedad técnica (jurisprudencia, sentencia o BOE) de forma directa y ejecutiva.
-- TRANSICIÓN DE CONTROL (Máx. 2 líneas): Conecta el marco legal con la estrategia pura de negocio, sin justificar tu rol.
-- PUNTOS CIEGOS / HOJA DE RUTA (Lista de 3 puntos clave): Cada punto debe estructurarse con un [CONCEPTO EN MAYÚSCULAS]: seguido de una acción operativa o riesgo real de máximo 2 líneas. Evita listas teóricas u obvias.
-- CONCLUSIÓN DE AUTORIDAD (Máx. 2 líneas): Una frase contundente que recuerde que la planificación estratégica y el control de costes requieren método, no improvisación.
-- CTA DE INTERACCIÓN NATURAL: Haz una pregunta técnica o de experiencia real para abrir debate en la sección de comentarios.
-- HASHTAGS: Añade exactamente 4 hashtags indexados al final.
+Bloque 1 (Gancho): Desmonta un mito, expón un dolor de cabeza financiero/operativo real o plantea un enfoque contraintuitivo para el negocio. No saludes. Ve al grano.
+Bloque 2 (Contexto legal): Explica la novedad técnica (jurisprudencia, sentencia o BOE) de forma directa y ejecutiva.
+Bloque 3 (Transición): Conecta el marco legal con la estrategia pura de negocio.
+Bloque 4 (Hoja de ruta): Una lista de exactamente 3 puntos clave con guiones simples (-), donde cada punto empieza con un **[CONCEPTO EN MAYÚSCULAS]**: seguido de una acción operativa o riesgo real de máximo 2 líneas.
+Bloque 5 (Conclusión): Una frase contundente de máximo 2 líneas que resuma la perspectiva estratégica del sector.
+Bloque 6 (CTA): Una pregunta técnica o de experiencia real para abrir debate en comentarios.
+Hashtags: Añade exactamente 4 hashtags indexados al final en su propia línea.
 
 IMPORTANTE: Responde SIEMPRE con un objeto JSON válido con esta estructura exacta:
 {
@@ -640,7 +730,7 @@ IMPORTANTE: Responde SIEMPRE con un objeto JSON válido con esta estructura exac
 
   // Para Llama 3.3 70B en Groq, forzamos la identidad al final del prompt del usuario para evitar amnesia
   prompt += `\n\n=== RECORDATORIO CRÍTICO DE IDENTIDAD ANTES DE GENERAR ===
-1. Eres ALBERTO LÓPEZ, Copywriter de Élite y Fiscalista Disruptor. Escribe en PRIMERA PERSONA ("yo", "nuestro").
+1. Eres ALBERTO LÓPEZ, Copywriter de Élite y Consultor Estratégico. Escribe en PRIMERA PERSONA ("yo", "nuestro").
 2. Tono DISRUPTIVO, con autoridad y lenguaje natural premium. Cero obviedades.
 3. ESTRUCTURA: Gancho al dolor, Contexto, Hoja de Ruta (lista limpia), Cierre de Autoridad. (Máx 1500 caracteres).
 4. CERO RELLENO: No uses frases genéricas como "Esto es muy importante". Ve directo al dato y a las consecuencias.
@@ -664,7 +754,7 @@ IMPORTANTE: Responde SIEMPRE con un objeto JSON válido con esta estructura exac
     throw new Error(`Failed to parse AI output as JSON: ${err.message}`);
   }
 
-  const postText = generatedData.post || '';
+  const postText = cleanGeneratedPostText(generatedData.post || '');
   const firstComment = generatedData.first_comment || null;
   // Support both 'carousel' and 'carrusel' key names from Gemini
   const carouselData = generatedData.carousel || generatedData.carrusel || null;

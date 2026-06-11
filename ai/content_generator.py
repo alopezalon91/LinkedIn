@@ -25,7 +25,7 @@ import google.generativeai as genai
 import groq
 from groq import Groq
 
-from config.prompts import NORMATIVA_PROMPT, ACTUALIDAD_PROMPT, SYSTEM_CONTEXT
+from config.prompts import NORMATIVA_PROMPT, ACTUALIDAD_PROMPT, SYSTEM_CONTEXT, get_sector_focus_instruction
 from config.sectors import get_hashtags_for_sector
 from ai.pdf_generator import create_carousel_pdf
 
@@ -443,6 +443,7 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
         sector=sector,
         sector_hashtags=sector_hashtags,
         hoy=hoy_str,
+        sector_focus=get_sector_focus_instruction(sector),
     )
     if rejection_instructions:
         prompt += "\n" + rejection_instructions
@@ -532,6 +533,7 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
         sector=sector,
         sector_hashtags=sector_hashtags,
         hoy=hoy_str,
+        sector_focus=get_sector_focus_instruction(sector),
     )
     if rejection_instructions:
         prompt += "\n" + rejection_instructions
