@@ -295,34 +295,30 @@ async function uploadImageToLinkedIn(access_token, authorUrn, base64Data) {
 // ─── Document Upload ──────────────────────────────────────────────────────────
 
 async function uploadDocumentToLinkedIn(access_token, authorUrn, base64Data) {
-  // 1. Register Upload
-  const registerRes = await fetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+  // 1. Initialize Upload
+  const registerRes = await fetch('https://api.linkedin.com/rest/documents?action=initializeUpload', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${access_token}`,
       'Content-Type': 'application/json',
-      'X-Restli-Protocol-Version': '2.0.0'
+      'LinkedIn-Version': LINKEDIN_VERSION,
+      'X-RestLi-Protocol-Version': '2.0.0'
     },
     body: JSON.stringify({
-      registerUploadRequest: {
-        recipes: ['urn:li:digitalmediaRecipe:feedshare-document'],
-        owner: authorUrn,
-        serviceRelationships: [{
-          relationshipType: 'OWNER',
-          identifier: 'urn:li:userGeneratedContent'
-        }]
+      initializeUploadRequest: {
+        owner: authorUrn
       }
     })
   });
 
   if (!registerRes.ok) {
     const err = await registerRes.text();
-    throw new Error(`Failed to register document upload: ${err}`);
+    throw new Error(`Failed to initialize document upload: ${err}`);
   }
 
   const registerData = await registerRes.json();
-  const uploadUrl = registerData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
-  const assetUrn = registerData.value.asset;
+  const uploadUrl = registerData.value.uploadUrl;
+  const documentUrn = registerData.value.document;
 
   // 2. Decode Base64 to ArrayBuffer
   const binaryString = atob(base64Data);
@@ -346,7 +342,33 @@ async function uploadDocumentToLinkedIn(access_token, authorUrn, base64Data) {
     throw new Error(`Failed to upload document binary: ${err}`);
   }
 
-  return assetUrn;
+  // 4. Poll document status until AVAILABLE
+  let attempts = 0;
+  const maxAttempts = 15;
+  while (attempts < maxAttempts) {
+    attempts++;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const statusRes = await fetch(`https://api.linkedin.com/rest/documents/${encodeURIComponent(documentUrn)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${access_token}`,
+        'LinkedIn-Version': LINKEDIN_VERSION,
+        'X-RestLi-Protocol-Version': '2.0.0'
+      }
+    });
+
+    if (statusRes.ok) {
+      const statusData = await statusRes.json();
+      if (statusData.status === 'AVAILABLE') {
+        return documentUrn;
+      } else if (statusData.status === 'FAILED') {
+        throw new Error(`Document processing failed on LinkedIn side.`);
+      }
+    }
+  }
+
+  throw new Error(`Timeout waiting for document processing on LinkedIn.`);
 }
 
 // ─── Rate limit info ──────────────────────────────────────────────────────────

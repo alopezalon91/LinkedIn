@@ -81,8 +81,11 @@ Si la noticia es CLICKBAIT o FALSA, tu reporte DEBE empezar EXACTAMENTE con: "�
 
     try:
         verify_response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": verify_prompt}],
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "Eres un asistente de investigación de noticias en España."},
+                {"role": "user", "content": verify_prompt}
+            ],
             temperature=0.2,
             max_tokens=600
         )

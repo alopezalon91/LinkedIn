@@ -546,9 +546,15 @@ const PostActions = {
       try {
         const post = State.posts.find(p => p.id === postId);
         let newMedia = null;
-        if (post && post.media_base64 && post.media_base64.length < 50000) {
-          const decoded = decodeURIComponent(escape(atob(post.media_base64)));
-          if (decoded.startsWith('CAROUSEL:')) {
+        if (post && post.media_base64) {
+          let isCarousel = false;
+          try {
+            const raw = atob(post.media_base64);
+            if (raw.startsWith('CAROUSEL:')) {
+              isCarousel = true;
+            }
+          } catch (e) {}
+          if (isCarousel) {
             Toast.show('Renderizando imágenes...', 'info');
             newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
           }
@@ -630,10 +636,15 @@ const PostActions = {
       
       const post = State.posts.find(p => p.id === postId);
       let newMedia = null;
-      if (post && post.media_base64 && post.media_base64.length < 50000) {
-        // Might be JSON carousel
-        const decoded = decodeURIComponent(escape(atob(post.media_base64)));
-        if (decoded.startsWith('CAROUSEL:')) {
+      if (post && post.media_base64) {
+        let isCarousel = false;
+        try {
+          const raw = atob(post.media_base64);
+          if (raw.startsWith('CAROUSEL:')) {
+            isCarousel = true;
+          }
+        } catch (e) {}
+        if (isCarousel) {
           Toast.show('Renderizando imágenes del carrusel...', 'info');
           newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
         }
@@ -787,7 +798,7 @@ const PostActions = {
             backgroundColor: bgColor
           });
           
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
           images.push(dataUrl);
           
           await renderSlide(index + 1);
@@ -872,9 +883,15 @@ const PostActions = {
       
       const post = State.posts.find(p => p.id === postId);
       let newMedia = null;
-      if (post && post.media_base64 && post.media_base64.length < 50000) {
-        const decoded = decodeURIComponent(escape(atob(post.media_base64)));
-        if (decoded.startsWith('CAROUSEL:')) {
+      if (post && post.media_base64) {
+        let isCarousel = false;
+        try {
+          const raw = atob(post.media_base64);
+          if (raw.startsWith('CAROUSEL:')) {
+            isCarousel = true;
+          }
+        } catch (e) {}
+        if (isCarousel) {
           Toast.show('Renderizando carrusel...', 'info');
           newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
         }
@@ -966,9 +983,15 @@ const PostActions = {
       
       const post = State.posts.find(p => p.id === postId);
       let newMedia = null;
-      if (post && post.media_base64 && post.media_base64.length < 50000) {
-        const decoded = decodeURIComponent(escape(atob(post.media_base64)));
-        if (decoded.startsWith('CAROUSEL:')) {
+      if (post && post.media_base64) {
+        let isCarousel = false;
+        try {
+          const raw = atob(post.media_base64);
+          if (raw.startsWith('CAROUSEL:')) {
+            isCarousel = true;
+          }
+        } catch (e) {}
+        if (isCarousel) {
           Toast.show('Renderizando imágenes...', 'info');
           newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
         }

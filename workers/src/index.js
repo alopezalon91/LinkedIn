@@ -123,14 +123,10 @@ async function route(request, env, ctx, url, path, method) {
 
   if (url.pathname === '/api/test-gemini') {
     try {
-      const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
-      const res = await fetch(testUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: "Hola" }] }] })
-      });
+      const testUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${env.GEMINI_API_KEY}`;
+      const res = await fetch(testUrl);
       const text = await res.text();
-      return new Response(JSON.stringify({ status: res.status, body: text }), { headers: { 'Content-Type': 'application/json' } });
+      return new Response(text, { headers: { 'Content-Type': 'application/json' } });
     } catch (err) {
       return new Response(err.message, { status: 500 });
     }
@@ -367,7 +363,7 @@ async function handleUpdatePost(db, request, postId) {
     return _handleReject(db, postId);
   }
   if ((updates.action === 'schedule' || updates.status === 'scheduled') && updates.scheduled_at) {
-    return _handleSchedule(db, postId, updates.scheduled_at);
+    return _handleSchedule(db, postId, updates.scheduled_at, updates.media_base64 ?? null);
   }
 
   try {
