@@ -288,11 +288,7 @@ export async function rejectPost(db, id) {
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
 
-/**
- * Mark a post as scheduled and store the target publish timestamp.
- * @param {string} scheduledAt – ISO 8601 timestamp string
- */
-export async function schedulePost(db, id, scheduledAt) {
+export async function schedulePost(db, id, scheduledAt, mediaBase64 = null) {
   if (!scheduledAt) throw new Error('scheduledAt timestamp is required');
 
   const ts = new Date(scheduledAt);
@@ -301,11 +297,16 @@ export async function schedulePost(db, id, scheduledAt) {
 
   const post = await getPost(db, id);
   if (!post) throw new Error(`Post not found: ${id}`);
-  if (!['pending', 'reviewed', 'approved'].includes(post.status)) {
+  if (!['pending', 'reviewed', 'approved', 'scheduled'].includes(post.status)) {
     throw new Error(`Cannot schedule a post with status '${post.status}'`);
   }
 
-  return updatePost(db, id, { status: 'scheduled', scheduled_at: scheduledAt });
+  const updates = { status: 'scheduled', scheduled_at: scheduledAt };
+  if (mediaBase64) {
+    updates.media_base64 = mediaBase64;
+  }
+
+  return updatePost(db, id, updates);
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
