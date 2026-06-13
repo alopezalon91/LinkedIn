@@ -707,7 +707,7 @@ const PostActions = {
         const renderSlide = async (index) => {
           if (index >= slideArr.length) {
             document.body.removeChild(container);
-            const finalPayload = { type: 'multi-image', images };
+            const finalPayload = { type: 'multi-image', images, original_json: decoded };
             resolve(btoa(unescape(encodeURIComponent(JSON.stringify(finalPayload)))));
             return;
           }
@@ -1357,13 +1357,21 @@ const PostActions = {
     if (!container || !post.media_base64) return;
     
     try {
-      const decoded = decodeURIComponent(escape(atob(post.media_base64)));
-      if (!decoded.startsWith('CAROUSEL:')) {
-        container.style.display = 'none';
-        return;
+      let decoded = '';
+      try {
+        decoded = decodeURIComponent(escape(atob(post.media_base64)));
+      } catch (e) {
+        decoded = atob(post.media_base64);
       }
       
-      const data = JSON.parse(decoded.replace('CAROUSEL:', ''));
+      let data = {};
+      try {
+        data = JSON.parse(decoded.replace('CAROUSEL:', ''));
+        if (data && data.type === 'multi-image' && data.original_json) {
+           data = JSON.parse(data.original_json.replace('CAROUSEL:', ''));
+        }
+      } catch(e) {}
+      
       const slideArr = Array.isArray(data) ? data : (data.carousel || data.slides || []);
       if (!slideArr || slideArr.length === 0) {
         container.style.display = 'none';
@@ -1453,7 +1461,10 @@ const PostActions = {
     
     try {
       const decoded = decodeURIComponent(escape(atob(post.media_base64)));
-      const data = JSON.parse(decoded.replace('CAROUSEL:', ''));
+      let data = JSON.parse(decoded.replace('CAROUSEL:', ''));
+      if (data && data.type === 'multi-image' && data.original_json) {
+         data = JSON.parse(data.original_json.replace('CAROUSEL:', ''));
+      }
       const slideArr = Array.isArray(data) ? data : (data.carousel || data.slides || []);
       
       const newSlides = [];
