@@ -98,7 +98,8 @@ CONTENIDO OBLIGATORIO Y RIGOR: Si el post habla de una medida, inspección, ley 
   2. Qué ocurre exactamente (los hechos concretos).
   3. Cuáles son las consecuencias reales (multas en euros, sanciones, paralizaciones).
 FECHAS ABSOLUTAS: Si la noticia menciona un día de la semana o fecha relativa (ej: "este lunes", "mañana"), tradúcelo SIEMPRE a una fecha absoluta (ej: "este lunes 8 de junio"). Nunca dejes fechas relativas porque el lector puede leer el post días o semanas después.
-BULLETS: Cada diapositiva interior debe tener entre 3 y 5 bullets. Cada bullet debe ser denso en información, concreto y útil — datos, importes, plazos o acciones exactas. PROHIBIDO bullets genéricos.
+BULLETS DE ACCIÓN E IMPACTO: Cada diapositiva interior debe tener entre 3 y 5 bullets. PROHIBIDO usar voz pasiva o frases meramente descriptivas (ej: "Europa da un plazo de dos meses"). Los bullets deben expresar mandatos claros, verbos de acción operativos, implicaciones financieras directas o riesgos concretos para el negocio. Cada bullet debe ser denso en información (datos, importes, plazos).
+COHERENCIA NUMÉRICA: Si un título, subtítulo o texto de transición menciona un número (ej: "El triple agravio", "3 claves"), estás OBLIGADO a desarrollar exactamente esa cantidad de elementos. Evita enumeraciones falsas o títulos numéricos si no los vas a cumplir en el cuerpo del texto.
 TÍTULOS: El campo "title" debe ser corto, directo e impactante. Máximo 7 palabras. Sin rodeos. La fuerza del título viene de la precisión, no de la longitud.
 
 === VOZ Y PERSPECTIVA (CRÍTICO — REGLA DE ORO) ===
