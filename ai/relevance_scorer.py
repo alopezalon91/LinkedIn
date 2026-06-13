@@ -116,7 +116,7 @@ def batch_prefilter(articles: list[dict], batch_size: int = 50) -> list[dict]:
             "Eres un filtro rápido. A continuación tienes una lista de titulares de noticias con un ID.\n"
             "Devuelve ÚNICAMENTE un array JSON (con la clave 'ids' que contenga una lista de strings) con los IDs de las noticias que estén estrictamente relacionadas con economía, "
             "impuestos, empresas, autónomos, tecnología aplicable a negocios o deducciones.\n"
-            "OBLIGATORIO: DESCARTA y EXCLUYE sistemáticamente cualquier noticia sobre política partidista, elecciones, nombramientos, debates parlamentarios o conflictos políticos que no tengan un impacto puramente económico, fiscal o empresarial directo. Ante la duda sobre si es ruido político, EXCLÚYELA.\n\n"
+            "OBLIGATORIO Y ABSOLUTO: DESCARTA y EXCLUYE sistemáticamente cualquier noticia que mencione nombres de políticos (ej: Pedro Sánchez, Zapatero, Ayuso, Feijóo), partidos políticos, escándalos de corrupción, tramas institucionales o delitos fiscales de figuras públicas/famosos. Aunque la noticia hable de 'delito fiscal' o 'Hacienda', si involucra a políticos o expresidentes, debe ser PUNTUADA CON CERO Y EXCLUIDA de inmediato.\n\n"
         )
         for article in batch:
             prompt += f"- ID: {article['id']} | Titular: {article['title']}\n"

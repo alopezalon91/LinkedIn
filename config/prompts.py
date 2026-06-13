@@ -257,7 +257,7 @@ Sector principal: {{sector}}
 
 RELEVANCE_PROMPT = """\
 Analiza si esta noticia o normativa es sumamente crítica y viralizable para autónomos y pymes en España.
-Ignora y PUNTÚA CON CERO (0) noticias sobre política partidista, peleas entre políticos, nombramientos, elecciones o cualquier ruido político que no modifique leyes empresariales o impuestos. Ignora también leyes de honores o militares.
+Ignora y PUNTÚA CON CERO (0) noticias sobre política partidista, nombramientos, elecciones o escándalos de corrupción/delitos fiscales de políticos, expresidentes y cargos públicos. Si aparece el nombre de un político (ej: Zapatero, Ayuso, Sánchez), un partido o trama política, el SCORE DEBE SER CERO ABSOLUTO por muy "fiscal" o "económico" que parezca el delito. Ignora también leyes de honores o militares.
 
 Tipo: {tipo}
 Título: {titulo}
