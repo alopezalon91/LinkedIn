@@ -452,6 +452,7 @@ def generate_normativa_post(boe_entry: dict, score_data: dict) -> dict:
         "title": boe_entry.get("titulo", ""),
         "summary": extracted_facts[:500] + "..." if extracted_facts else original_text[:500] + "...",
         "prompt": prompt,
+        "system_instruction": SYSTEM_CONTEXT,
         "original_text": extracted_facts,
     }
 
@@ -546,6 +547,7 @@ def generate_actualidad_post(article: dict, score_data: dict) -> dict:
         "title": article.get("title", ""),
         "summary": extracted_facts[:500] + "..." if extracted_facts else original_text[:500] + "...",
         "prompt": prompt,
+        "system_instruction": SYSTEM_CONTEXT,
         "original_text": extracted_facts,
     }
 
