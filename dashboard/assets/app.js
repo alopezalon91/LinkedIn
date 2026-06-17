@@ -456,16 +456,24 @@ const PostActions = {
       
       const videoFlow = JSON.parse(post.video_flow_json);
       
-      let sandwichText = `=== PROMPTS BASE DE ESTILO (IDENTIDAD VISUAL) ===
-- Tipo de vídeo: Reel vertical (9:16) ejecutivo de alta gama para LinkedIn/Instagram.
-- Estética visual: Fondos oscuros clínicos (azul medianoche, negro grafito). Fuentes Sans-serif profesionales y limpias. Sin animaciones infantiles, transiciones sobrias de 1.5 segundos.
-- Identidad del Avatar / Voz: Voz en off masculina corporativa, tono maduro, pausado, con autoridad de asesor fiscal senior (clínico e implacable). Si se genera avatar, aspecto de consultor financiero/legal de élite.
+      let sandwichText = `=== PROMPTS BASE DE IDENTIDAD DE MARCA (MODERNO Y ACCESIBLE) ===
+
+[CONFIGURACIÓN GLOBAL DEL PROYECTO]
+- Formato: Reel vertical (9:16) enfocado a fundadores y profesionales del sector digital.
+- Estética Visual: Fondo oscuro premium (negro grafito texturizado o azul medianoche mate) con acentos en colores eléctricos minimalistas (blanco puro y verde neón/teal ##00F5D4). Transiciones limpias y rápidas de 1.5 segundos. Estilo tecnológico de alta gama, sin decoraciones infantiles.
+
+[DEFINICIÓN DE AVATAR FIJO]
+- Referencia de Identidad: 'DIGITAL_GROWTH_AVATAR_002'.
+- Descripción Visual: Hombre joven de unos 28 a 32 años, con rasgos definidos y mirada analítica, inteligente y muy accesible. Lleva el cabello corto, moderno y bien peinado (estilo fade texturizado ligero), barba de pocos días muy cuidada. Viste de manera impecable pero actual: un blazer de corte moderno azul marino oscuro sobre una camiseta de cuello redondo blanca premium (estilo smart-casual ejecutivo de Silicon Valley). Expresión de confianza nativa digital. No debe cambiar su fisionomía ni vestimenta entre escenas.
+
+[DEFINICIÓN DE VOZ FIJA]
+- Tono de Voz: Masculino, joven-adulto, con energía contenida, ritmo ágil pero pausado, seguro de sí mismo y analítico. Un tono directo que suena a consultor estratégico que factura millones, no a locutor de radio tradicional. Velocidad de reproducción establecida en 1.0x (dinámica).
 
 === DESGLOSE DINÁMICO DE ESCENAS ===\n`;
 
       videoFlow.scenes.forEach(scene => {
         sandwichText += `Escena ${scene.scene_number} (Duración: ${scene.duration_seconds} seg):\n`;
-        sandwichText += `- Texto en pantalla: ${scene.on_screen_text}\n`;
+        sandwichText += `- Texto en pantalla (Mayúsculas, máximo 5 palabras, tipografía geométrica limpia): ${scene.on_screen_text}\n`;
         sandwichText += `- Voz en off: ${scene.voice_over_script}\n`;
         sandwichText += `- Prompt Visual sugerido: ${scene.visual_prompt}\n\n`;
       });
