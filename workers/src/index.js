@@ -378,7 +378,7 @@ async function handlePostAction(db, env, ctx, request, postId, action) {
   const body = await parseJSON(request);
 
   switch (action) {
-    case 'approve':  return _handleApprove(db, postId, body.content_edited ?? null, body.media_base64 ?? null);
+    case 'approve':  return _handleApprove(db, env, ctx, postId, body.content_edited ?? null, body.media_base64 ?? null);
     case 'reject':   return _handleReject(db, postId);
     case 'review':   return _handleReview(db, postId, body.content_edited ?? null);
     case 'schedule': return _handleSchedule(db, postId, body.scheduled_at, body.media_base64 ?? null);
@@ -403,9 +403,27 @@ async function _handleGenericUpdate(db, postId, data) {
   }
 }
 
-async function _handleApprove(db, postId, editedContent, mediaBase64) {
+async function _handleApprove(db, env, ctx, postId, editedContent, mediaBase64) {
   try {
     const { post, editRatio } = await approvePost(db, postId, editedContent, mediaBase64);
+    
+    // Trigger video automation webhook if JSON exists
+    if (post.video_flow_json && env.VIDEO_AUTOMATION_WEBHOOK) {
+      const videoData = JSON.parse(post.video_flow_json);
+      if (ctx && ctx.waitUntil) {
+        ctx.waitUntil(
+          fetch(env.VIDEO_AUTOMATION_WEBHOOK, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              postId: postId,
+              video_data: videoData
+            })
+          }).catch(err => console.error("Error enviando flujo a automatización de vídeo tras aprobar:", err))
+        );
+      }
+    }
+    
     return jsonResponse({ post, edit_ratio: editRatio });
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);

@@ -1094,23 +1094,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido con la estructura del vídeo (config
     video_flow_json: JSON.stringify(videoFlowData)
   });
 
-  // 4. Trigger Webhook asynchronously
-  if (videoFlowData && env.VIDEO_AUTOMATION_WEBHOOK) {
-    if (ctx && ctx.waitUntil) {
-      ctx.waitUntil(
-        fetch(env.VIDEO_AUTOMATION_WEBHOOK, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            postId: id,
-            video_data: videoFlowData
-          })
-        }).catch(err => console.error("Error enviando flujo a automatización de vídeo tras regenerar:", err))
-      );
-    } else {
-      console.warn("ctx.waitUntil no está disponible para el webhook de vídeo.");
-    }
-  }
+  // The webhook is now triggered in handleApprove when the post is approved.
 
   return updatedPost;
 }

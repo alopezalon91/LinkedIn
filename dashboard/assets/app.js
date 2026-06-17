@@ -390,21 +390,21 @@ function renderPostCard(post) {
         </button>
         ${State.currentView === 'scheduled'
           ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Copiar guión para Google Flow">🎬 Material para Reels</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
+             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Ver JSON del script de vídeo">🎬 Script de Vídeo Generado</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
           : State.currentView === 'reviewed'
           ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Copiar guión para Google Flow">🎬 Material para Reels</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
+             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Ver JSON del script de vídeo">🎬 Script de Vídeo Generado</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
           : State.currentView === 'published'
           ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes publicadas">📸 Ver Carrusel</button>
-             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Copiar guión para Google Flow">🎬 Material para Reels</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
+             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Ver JSON del script de vídeo">🎬 Script de Vídeo Generado</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
              ${post.linkedin_post_id ? `<a href="https://www.linkedin.com/feed/update/${post.linkedin_post_id}" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;">🔗 Ver en LinkedIn</a>` : ''}`
           : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
              <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Copiar guión para Google Flow">🎬 Material para Reels</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
+             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Ver JSON del script de vídeo">🎬 Script de Vídeo Generado</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
         }
@@ -456,38 +456,8 @@ const PostActions = {
       
       const videoFlow = JSON.parse(post.video_flow_json);
       
-      let sandwichText = `=== PROMPTS BASE DE IDENTIDAD DE MARCA (MODERNO Y ACCESIBLE) ===
-
-[CONFIGURACIÓN GLOBAL DEL PROYECTO]
-- Formato: Reel vertical (9:16) enfocado a fundadores y profesionales del sector digital.
-- Estética Visual: Fondo oscuro premium (negro grafito texturizado o azul medianoche mate) con acentos en colores eléctricos minimalistas (blanco puro y verde neón/teal ##00F5D4). Transiciones limpias y rápidas de 1.5 segundos. Estilo tecnológico de alta gama, sin decoraciones infantiles.
-
-[DEFINICIÓN DE AVATAR FIJO]
-- Referencia de Identidad: 'DIGITAL_GROWTH_AVATAR_002'.
-- Descripción Visual: Hombre joven de unos 28 a 32 años, con rasgos definidos y mirada analítica, inteligente y muy accesible. Lleva el cabello corto, moderno y bien peinado (estilo fade texturizado ligero), barba de pocos días muy cuidada. Viste de manera impecable pero actual: un blazer de corte moderno azul marino oscuro sobre una camiseta de cuello redondo blanca premium (estilo smart-casual ejecutivo de Silicon Valley). Expresión de confianza nativa digital. No debe cambiar su fisionomía ni vestimenta entre escenas.
-
-[DEFINICIÓN DE VOZ FIJA]
-- Tono de Voz: Masculino, joven-adulto, con energía contenida, ritmo ágil pero pausado, seguro de sí mismo y analítico. Un tono directo que suena a consultor estratégico que factura millones, no a locutor de radio tradicional. Velocidad de reproducción establecida en 1.0x (dinámica).
-
-=== DESGLOSE DINÁMICO DE ESCENAS ===\n`;
-
-      videoFlow.scenes.forEach(scene => {
-        sandwichText += `Escena ${scene.scene_number} (Duración: ${scene.duration_seconds} seg):\n`;
-        sandwichText += `- Texto en pantalla (Mayúsculas, máximo 5 palabras, tipografía geométrica limpia): ${scene.on_screen_text}\n`;
-        sandwichText += `- Voz en off: ${scene.voice_over_script}\n`;
-        sandwichText += `- Prompt Visual sugerido: ${scene.visual_prompt}\n\n`;
-      });
-      
-      sandwichText += `=======================================`;
-
-      navigator.clipboard.writeText(sandwichText)
-        .then(() => {
-          Toast.show('✅ Prompt Global copiado al portapapeles. Listo para pegar en Google Flow.', 'success');
-        })
-        .catch(() => {
-          alert("No se pudo copiar al portapapeles. Mira la consola.");
-          console.log(sandwichText);
-        });
+      console.log("JSON de vídeo (Automático):", videoFlow);
+      Toast.show('✅ JSON de vídeo mostrado en consola para depuración', 'success');
         
     } catch (e) {
       console.error(e);
