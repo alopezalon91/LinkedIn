@@ -995,8 +995,6 @@ export async function getExistingSourceIds(db, sourceIds) {
  */
 export async function regenerateVideo(db, env, ctx, id, newPostText) {
   // 1. Get the post
-  const { getPost, updatePost } = await import('./posts.js'); // Assuming self-reference or they are defined in same file
-  // Wait, getPost and updatePost are defined in the same file! So just call them.
   const post = await getPost(db, id);
   if (!post) {
     throw new Error('Post not found');
@@ -1063,8 +1061,7 @@ Genera un nuevo Guión de Vídeo dinámico para acompañar perfectamente a este 
 Devuelve ÚNICAMENTE un objeto JSON válido con la estructura del vídeo (config y scenes).
 `;
 
-  const { getGroqKey, callAIWithFallback } = await import('./posts.js'); // just use them directly since they are in same file
-  
+
   const groqKey = await getGroqKey(db, env);
   if (!env.GEMINI_API_KEY && !groqKey) {
     throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
