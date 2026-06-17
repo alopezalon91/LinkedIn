@@ -455,66 +455,32 @@ const PostActions = {
       }
       
       const videoFlow = JSON.parse(post.video_flow_json);
-      let scenesHtml = videoFlow.scenes.map(scene => `
-        <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 4px solid var(--accent-purple);">
-          <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-            <strong style="color:var(--accent-purple);">Escena ${scene.scene_number}</strong>
-            <span style="color:var(--text-muted); font-size:12px;">⏳ ${scene.duration_seconds}s</span>
-          </div>
-          <div style="margin-bottom: 6px;">
-            <strong style="color:var(--text-secondary); font-size:11px; text-transform:uppercase;">Texto en pantalla (Max 5 palabras):</strong>
-            <div style="font-family: monospace; font-size: 14px; color: var(--text-primary); font-weight:bold;">${scene.on_screen_text}</div>
-          </div>
-          <div style="margin-bottom: 6px;">
-            <strong style="color:var(--text-secondary); font-size:11px; text-transform:uppercase;">Guión Voz en Off (Frío/Ejecutivo):</strong>
-            <div style="font-size: 13px; color: var(--text-primary);">${scene.voice_over_script}</div>
-          </div>
-          <div>
-            <strong style="color:var(--text-secondary); font-size:11px; text-transform:uppercase;">Prompt Visual (Google Flow):</strong>
-            <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; font-size: 12px; color: var(--accent-green); position: relative;">
-              ${scene.visual_prompt}
-            </div>
-          </div>
-        </div>
-      `).join('');
-
-      const masterPrompt = videoFlow.scenes.map(s => s.visual_prompt).join("\\n");
-
-      const html = `
-        <div style="padding: 10px;">
-          <h2 style="margin-top:0; color:var(--text-primary); display:flex; align-items:center; justify-content:space-between;">
-            🎬 Guión para Google Flow
-            <span style="background:var(--accent-purple); font-size:11px; padding:2px 8px; border-radius:12px;">Aspect: ${videoFlow.config.aspect_ratio}</span>
-          </h2>
-          <p style="color:var(--text-secondary); font-size:13px;">
-            <strong>Tono de Voz:</strong> ${videoFlow.config.voice_tone} <br>
-            <strong>Estilo Musical:</strong> ${videoFlow.config.music_style}
-          </p>
-          <div style="margin: 16px 0;">
-            <button class="btn btn-primary" onclick="navigator.clipboard.writeText(\`${masterPrompt}\`); Toast.show('✅ Prompts copiados al portapapeles')" style="width:100%; background:var(--accent-green); color:#000;">
-              📋 Copiar todos los Prompts Visuales
-            </button>
-            <a href="https://labs.google/flow" target="_blank" class="btn btn-outline" style="width:100%; margin-top:8px; display:block; text-align:center;">
-              🔗 Abrir Google Flow
-            </a>
-          </div>
-          <div style="max-height: 400px; overflow-y: auto; padding-right: 8px;">
-            ${scenesHtml}
-          </div>
-        </div>
-      `;
       
-      const modalBody = document.getElementById('modal-body');
-      const modalEl = document.getElementById('carousel-modal');
-      if(modalBody && modalEl) {
-        modalBody.innerHTML = html;
-        modalEl.style.display = 'flex';
-      } else {
-        navigator.clipboard.writeText(JSON.stringify(videoFlow, null, 2))
-          .then(() => Toast.show('✅ JSON de vídeo copiado al portapapeles', 'success'))
-          .catch(() => alert("No se pudo copiar al portapapeles."));
-        console.log("Material para Google Flow / Video IA:", videoFlow);
-      }
+      let sandwichText = `=== PROMPTS BASE DE ESTILO (IDENTIDAD VISUAL) ===
+- Tipo de vídeo: Reel vertical (9:16) ejecutivo de alta gama para LinkedIn/Instagram.
+- Estética visual: Fondos oscuros clínicos (azul medianoche, negro grafito). Fuentes Sans-serif profesionales y limpias. Sin animaciones infantiles, transiciones sobrias de 1.5 segundos.
+- Identidad del Avatar / Voz: Voz en off masculina corporativa, tono maduro, pausado, con autoridad de asesor fiscal senior (clínico e implacable). Si se genera avatar, aspecto de consultor financiero/legal de élite.
+
+=== DESGLOSE DINÁMICO DE ESCENAS ===\n`;
+
+      videoFlow.scenes.forEach(scene => {
+        sandwichText += `Escena ${scene.scene_number} (Duración: ${scene.duration_seconds} seg):\n`;
+        sandwichText += `- Texto en pantalla: ${scene.on_screen_text}\n`;
+        sandwichText += `- Voz en off: ${scene.voice_over_script}\n`;
+        sandwichText += `- Prompt Visual sugerido: ${scene.visual_prompt}\n\n`;
+      });
+      
+      sandwichText += `=======================================`;
+
+      navigator.clipboard.writeText(sandwichText)
+        .then(() => {
+          Toast.show('✅ Prompt Global copiado al portapapeles. Listo para pegar en Google Flow.', 'success');
+        })
+        .catch(() => {
+          alert("No se pudo copiar al portapapeles. Mira la consola.");
+          console.log(sandwichText);
+        });
+        
     } catch (e) {
       console.error(e);
       Toast.show('Error al leer el script de vídeo.', 'error');
