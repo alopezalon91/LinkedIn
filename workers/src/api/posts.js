@@ -989,3 +989,127 @@ export async function getExistingSourceIds(db, sourceIds) {
   
   return foundIds;
 }
+
+/**
+ * Regenerate ONLY the video script, based on an edited post text.
+ */
+export async function regenerateVideo(db, env, ctx, id, newPostText) {
+  // 1. Get the post
+  const { getPost, updatePost } = await import('./posts.js'); // Assuming self-reference or they are defined in same file
+  // Wait, getPost and updatePost are defined in the same file! So just call them.
+  const post = await getPost(db, id);
+  if (!post) {
+    throw new Error('Post not found');
+  }
+
+  // 2. Load context variables
+  let prof = 3, emoj = 2, long = 2;
+  try {
+    const userStyle = await db.prepare(
+      "SELECT profundidad_tecnica, densidad_emojis, longitud_oraciones FROM user_settings WHERE user_id = 'default'"
+    ).first();
+    if (userStyle) {
+      prof = userStyle.profundidad_tecnica ?? 3;
+      emoj = userStyle.densidad_emojis ?? 2;
+      long = userStyle.longitud_oraciones ?? 2;
+    }
+  } catch(e) {}
+  
+  let fewShotPromptSnippet = "";
+  try {
+    const ejemplosFewShot = await db.prepare(
+      "SELECT original_text, updated_text FROM best_posts_examples WHERE user_id = 'default' ORDER BY created_at DESC LIMIT 3"
+    ).all();
+    if (ejemplosFewShot.results && ejemplosFewShot.results.length > 0) {
+      fewShotPromptSnippet = `\n\n[EJEMPLOS DE APRENDIZAJE REALES DE EDICIONES ANTERIORES DEL USUARIO]\nA continuación se muestran ejemplos reales de cómo la IA generó el post de forma errónea, y cómo el humano lo corrigió. Debes usar estos ejemplos para imitar el ESTILO, TONO y ESTRUCTURA preferida del humano.\n`;
+      ejemplosFewShot.results.forEach((ej, index) => {
+        fewShotPromptSnippet += `\nEjemplo #${index + 1}:\n- Así lo generó la IA erróneamente:\n"""\n${ej.original_text}\n"""\n- Así lo corrigió el humano (Sigue este estándar preferido):\n"""\n${ej.updated_text}\n"""\n--------------------------------------------------------------------------------`;
+      });
+    }
+  } catch(e) {}
+
+  const sectorFocus = getSectorFocusInstruction(post.sector);
+  // Need to get Contextual Verb. In this file it's:
+  let verbContext = "";
+  const t = (newPostText || post.content || "").toLowerCase();
+  if (t.match(/fiscal|impuestos|sanciones|tributario|hacienda|aeat/)) {
+    verbContext = `REGLA DE SALIDA PARA EL CIERRE (OBLIGATORIA): Audita el verbo principal del post. ESTRICTAMENTE PROHIBIDO usar plantillas. Enfoca el dolor en "reclamar", "recuperar" o "regalar dinero a Hacienda".`;
+  } else if (t.match(/laboral|jubilación|reta|cotización|autónomos/)) {
+    verbContext = `REGLA DE SALIDA PARA EL CIERRE (OBLIGATORIA): Audita el verbo principal del post. ESTRICTAMENTE PROHIBIDO usar plantillas y usar la palabra "reclamar". Enfoca el dolor en "planificar", "perder al jubilarte" o "diseñar tu retiro".`;
+  }
+  
+  const { SYSTEM_PROMPT, VIDEO_FLOW_SCHEMA } = await import('../utils/prompts.js');
+
+  const dynamicSystemPrompt = `
+${SYSTEM_PROMPT}
+
+[PARAMETRIZACIÓN DINÁMICA DE ESTILO Y CONTEXTO]
+${sectorFocus}
+${verbContext}
+- Nivel de profundidad técnica y legal requerido: ${prof}/5 (A mayor nivel, cita más artículos específicos y tecnicismos).
+- Densidad de emojis permitida en el texto principal: ${emoj}/3 (Si es 0 o 1, sé sumamente minimalista; si es 3, usa los indicados en las reglas).
+- Estilo de longitud de oraciones: ${long}/3 (1: Cortas y tajantes, 2: Mixtas, 3: Párrafos densos y argumentativos).
+${fewShotPromptSnippet}
+
+ESTÁS EN MODO "REGENERAR VÍDEO".
+Tienes que generar SOLO el flujo de vídeo para acompañar al siguiente post editado.
+`;
+
+  const prompt = `=== POST EDITADO ===
+El usuario ha editado su post de LinkedIn y ahora tiene este texto final:
+"${newPostText}"
+
+Genera un nuevo Guión de Vídeo dinámico para acompañar perfectamente a este texto editado.
+Devuelve ÚNICAMENTE un objeto JSON válido con la estructura del vídeo (config y scenes).
+`;
+
+  const { getGroqKey, callAIWithFallback } = await import('./posts.js'); // just use them directly since they are in same file
+  
+  const groqKey = await getGroqKey(db, env);
+  if (!env.GEMINI_API_KEY && !groqKey) {
+    throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
+  }
+
+  let generatedText = await callAIWithFallback(db, env, dynamicSystemPrompt, prompt, "application/json", VIDEO_FLOW_SCHEMA);
+
+  if (generatedText.startsWith("```")) {
+    const parts = generatedText.split("```");
+    if (parts.length >= 3) {
+      generatedText = parts[1].replace(/^json\n/i, "");
+    }
+  }
+  generatedText = generatedText.trim();
+
+  let videoFlowData = null;
+  try {
+    videoFlowData = JSON.parse(generatedText);
+  } catch (e) {
+    console.error("AI did not return valid JSON for video flow:", generatedText);
+    throw new Error("La IA no devolvió un JSON válido para el guion de vídeo.");
+  }
+
+  // 3. Update DB
+  const updatedPost = await updatePost(db, id, {
+    video_flow_json: JSON.stringify(videoFlowData)
+  });
+
+  // 4. Trigger Webhook asynchronously
+  if (videoFlowData && env.VIDEO_AUTOMATION_WEBHOOK) {
+    if (ctx && ctx.waitUntil) {
+      ctx.waitUntil(
+        fetch(env.VIDEO_AUTOMATION_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            postId: id,
+            video_data: videoFlowData
+          })
+        }).catch(err => console.error("Error enviando flujo a automatización de vídeo tras regenerar:", err))
+      );
+    } else {
+      console.warn("ctx.waitUntil no está disponible para el webhook de vídeo.");
+    }
+  }
+
+  return updatedPost;
+}
