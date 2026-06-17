@@ -114,3 +114,32 @@ export const CAROUSEL_SCHEMA = {
   required: ["slides"]
 };
 
+export const VIDEO_FLOW_SCHEMA = {
+  type: "object",
+  properties: {
+    config: {
+      type: "object",
+      properties: {
+        aspect_ratio: { type: "string", enum: ["9:16"] },
+        voice_tone: { type: "string", enum: ["executive_cold_male"] },
+        music_style: { type: "string", enum: ["minimal_ambient_dark"] }
+      },
+      required: ["aspect_ratio", "voice_tone", "music_style"]
+    },
+    scenes: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          scene_number: { type: "number" },
+          duration_seconds: { type: "number" },
+          on_screen_text: { type: "string", description: "Texto visual: frases secas, máximo 5 palabras, mayúsculas." },
+          voice_over_script: { type: "string", description: "Guión de voz aséptico, sin relleno." },
+          visual_prompt: { type: "string", description: "Prompt visual detallando iluminación y estilo para Google Flow." }
+        },
+        required: ["scene_number", "duration_seconds", "on_screen_text", "voice_over_script", "visual_prompt"]
+      }
+    }
+  },
+  required: ["config", "scenes"]
+};

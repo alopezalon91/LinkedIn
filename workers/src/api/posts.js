@@ -6,7 +6,7 @@
  */
 
 import { generateUUID, nowISO, levenshteinRatio } from '../utils.js';
-import { SYSTEM_PROMPT, RESPONSE_SCHEMA, CAROUSEL_SCHEMA } from '../utils/prompts.js';
+import { SYSTEM_PROMPT, RESPONSE_SCHEMA, CAROUSEL_SCHEMA, VIDEO_FLOW_SCHEMA } from '../utils/prompts.js';
 
 function getSectorFocusInstruction(sector) {
   if (sector === 'creadores_contenido') return "Enfoca los ejemplos y el tono en creadores de contenido, youtubers, streamers o influencers.";

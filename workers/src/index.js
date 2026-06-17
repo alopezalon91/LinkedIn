@@ -195,8 +195,8 @@ async function route(request, env, ctx, url, path, method) {
     return handleCheckSources(db, request);
   }
 
-  // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate|generate|regenerate-carousel ────
-  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate|generate|regenerate-carousel)$/);
+  // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate|generate|regenerate-carousel|regenerate-video ────
+  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate|generate|regenerate-carousel|regenerate-video)$/);
   if (subActionMatch && method === 'POST') {
     const [, postId, action] = subActionMatch;
     return handlePostAction(db, env, ctx, request, postId, action);
@@ -385,6 +385,7 @@ async function handlePostAction(db, env, ctx, request, postId, action) {
     case 'regenerate': return _handleRegenerate(db, env, ctx, postId, body.instructions);
     case 'generate': return _handleGenerate(db, env, ctx, postId);
     case 'regenerate-carousel': return _handleRegenerateCarousel(db, env, postId, body.content_edited);
+    case 'regenerate-video': return _handleRegenerateVideo(db, env, ctx, postId, body.content_edited);
     case 'update':   return _handleGenericUpdate(db, postId, body);
     default:         return errorResponse(`Unknown action: ${action}`, 400);
   }
@@ -459,13 +460,26 @@ async function _handleGenerate(db, env, ctx, postId) {
   }
 }
 
-async function _handleRegenerateCarousel(db, env, postId, editedContent) {
+async function _handleRegenerateCarousel(db, env, postId, newPostText) {
   try {
-    if (!editedContent) {
+    if (!newPostText) {
       return errorResponse('content_edited is required for carousel regeneration', 400);
     }
     const { regenerateCarousel } = await import('./api/posts.js');
-    const post = await regenerateCarousel(db, env, postId, editedContent);
+    const post = await regenerateCarousel(db, env, postId, newPostText);
+    return jsonResponse(post);
+  } catch (err) {
+    return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
+  }
+}
+
+async function _handleRegenerateVideo(db, env, ctx, postId, newPostText) {
+  try {
+    if (!newPostText) {
+      return errorResponse('content_edited is required for video regeneration', 400);
+    }
+    const { regenerateVideo } = await import('./api/posts.js');
+    const post = await regenerateVideo(db, env, ctx, postId, newPostText);
     return jsonResponse(post);
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);

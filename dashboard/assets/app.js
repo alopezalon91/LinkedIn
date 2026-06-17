@@ -350,9 +350,12 @@ function renderPostCard(post) {
             <button id="ai-mic-btn-${post.id}" onclick="PostActions.startVoiceRewrite('${post.id}')" style="position:absolute; right:115px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;" title="Dictar instrucciones">🎙️</button>
             <button class="btn btn-primary btn-sm" id="ai-rewrite-btn-${post.id}" onclick="PostActions.regenerateWithIA('${post.id}')" style="flex-shrink:0;">🪄 Rehacer post</button>
           </div>
-          <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
             <button class="btn btn-ghost btn-sm" id="ai-carousel-btn-${post.id}" onclick="PostActions.regenerateCarouselWithIA('${post.id}')" style="border: 1px dashed var(--border-strong); background: transparent; display: flex; align-items: center; gap: 5px;">
               📸 Rehacer carrusel (según el texto editado)
+            </button>
+            <button class="btn btn-ghost btn-sm" id="ai-video-btn-${post.id}" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent; display: flex; align-items: center; gap: 5px;">
+              🎬 Regenerar Vídeo Script
             </button>
           </div>
           <div id="ai-rewrite-status-${post.id}" style="font-size:11px; color:var(--accent-red); margin-top:6px; display:none; align-items:center; gap:5px;">
@@ -387,15 +390,17 @@ function renderPostCard(post) {
         </button>
         ${State.currentView === 'scheduled'
           ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
+             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Copiar guión para Google Flow">🎬 Material para Reels</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
           : State.currentView === 'reviewed'
           ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
+             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Copiar guión para Google Flow">🎬 Material para Reels</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
           : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
              <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Copiar guión para Google Flow">🎬 Material para Reels</button>` : ''}
+             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Copiar guión para Google Flow">🎬 Material para Reels</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
         }
@@ -1563,6 +1568,59 @@ const PostActions = {
       if (carouselBtn) {
         carouselBtn.disabled = false;
         carouselBtn.innerHTML = '📸 Rehacer carrusel (según el texto editado)';
+      }
+      if (statusEl) {
+        statusEl.style.display = 'none';
+      }
+    }
+  },
+
+  async regenerateVideoWithIA(postId) {
+    const editor = document.getElementById(`editor-${postId}`);
+    let content = editor ? editor.value.trim() : '';
+    const post = State.posts.find(p => p.id === postId);
+    if (!content && post) content = post.content_edited || post.content;
+
+    if (!content) {
+      Toast.show('El texto del post no puede estar vacío', 'warning');
+      return;
+    }
+
+    const videoBtn = document.getElementById(`ai-video-btn-${postId}`);
+    const statusEl = document.getElementById(`ai-rewrite-status-${postId}`);
+
+    try {
+      if (videoBtn) {
+        videoBtn.disabled = true;
+        videoBtn.innerHTML = '<div class="loading-spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; margin-right:5px;"></div> Procesando...';
+      }
+      if (statusEl) {
+        statusEl.style.color = 'var(--accent-purple)';
+        statusEl.innerHTML = '<span class="pulse-dot" style="background-color:var(--accent-purple);"></span> Regenerando vídeo con IA...';
+        statusEl.style.display = 'flex';
+      }
+
+      const response = await API.request(`/api/posts/${postId}/regenerate-video`, {
+        method: 'POST',
+        body: JSON.stringify({ content_edited: content })
+      });
+
+      // Update state and UI
+      if (post) {
+        post.video_flow_json = response.video_flow_json;
+      }
+
+      Toast.show('Script de vídeo regenerado con IA exitosamente 🎬', 'success');
+      
+      // Re-render
+      renderQueue();
+
+    } catch (err) {
+      Toast.show(`Error al regenerar vídeo: ${err.message}`, 'error');
+    } finally {
+      if (videoBtn) {
+        videoBtn.disabled = false;
+        videoBtn.innerHTML = '🎬 Regenerar Vídeo Script';
       }
       if (statusEl) {
         statusEl.style.display = 'none';
