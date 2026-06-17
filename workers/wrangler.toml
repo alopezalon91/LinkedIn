@@ -9,7 +9,7 @@ database_id = "32f7db45-89d6-48e3-9069-a1dc61db2b30"
 
 [vars]
 CORS_ORIGIN = "https://linkedin-2cg.pages.dev"
-VIDEO_AUTOMATION_WEBHOOK = ""
+VIDEO_AUTOMATION_WEBHOOK = "https://hook.eu1.make.com/1ecuew0d1nv984ity7u82a5ywys3iaf7"
 
 # Secrets — set each via: wrangler secret put <NAME>
 #
