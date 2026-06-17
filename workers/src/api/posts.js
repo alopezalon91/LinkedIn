@@ -1048,6 +1048,10 @@ ${verbContext}
 - Densidad de emojis permitida en el texto principal: ${emoj}/3 (Si es 0 o 1, sé sumamente minimalista; si es 3, usa los indicados en las reglas).
 - Estilo de longitud de oraciones: ${long}/3 (1: Cortas y tajantes, 2: Mixtas, 3: Párrafos densos y argumentativos).
 ${fewShotPromptSnippet}
+[RESTRICCIONES DE NATURALIDAD DE VÍDEO (OBLIGATORIAS)]
+1. PROHIBICIÓN DE GANCHOS CLICHÉ: Queda terminantemente PROHIBIDO empezar la primera escena con frases como "Hoy te enseño", "En este vídeo verás", o "¿Sabías que...?". Empieza hablando directamente exponiendo un dato de dolor, métrica de pérdidas o contingencia real.
+2. HUMANIZACIÓN DE LA VOZ: Las frases en 'voice_over_script' deben ser cortas, directas y asépticas. No debe sonar a discurso memorizado; debe imitar la respuesta natural e improvisada de un consultor senior en una reunión de negocio.
+3. DINÁMICA VISUAL: En el campo 'visual_prompt', intercala momentos mirando a cámara con planos de apoyo rápidos (B-roll de código, pantallas financieras oscuras, etc) para evitar más de 4-5 segundos de exposición estática del presentador.
 
 ESTÁS EN MODO "REGENERAR VÍDEO".
 Tienes que generar SOLO el flujo de vídeo para acompañar al siguiente post editado.
