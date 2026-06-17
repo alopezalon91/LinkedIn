@@ -14,6 +14,100 @@
 import { generateUUID, nowISO, levenshteinRatio } from '../utils.js';
 import { getPost } from './posts.js';
 
+async function adjustStyleParameters(db, env, originalText, editedText) {
+  try {
+    const userId = 'default';
+    const longitudOriginal = originalText.length;
+    const longitudEditada = editedText.length;
+    const diferenciaAbsoluta = Math.abs(longitudOriginal - longitudEditada);
+    const fueCambioSustancial = diferenciaAbsoluta > (longitudOriginal * 0.15);
+
+    let evaluacion = {
+      profundidad_tecnica: "MANTENER",
+      densidad_emojis: "MANTENER",
+      longitud_oraciones: "MANTENER"
+    };
+
+    if (env.GEMINI_API_KEY) {
+      const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+      const evalPrompt = `
+Analiza la diferencia entre el texto original generado por una IA y el texto final editado por el usuario humano para una publicación de LinkedIn de temática fiscal.
+
+Texto Original de la IA: """
+${originalText}
+"""
+
+Texto Editado por el Humano: """
+${editedText}
+"""
+
+Tu tarea es evaluar la dirección del cambio del usuario en tres métricas exactas:
+1. profundidad_tecnica: ¿El humano añadió más tecnicismos, artículos de ley o lenguaje legal? (Responde: "INCREMENTAR", "DECREMENTAR" o "MANTENER")
+2. densidad_emojis: ¿El humano borró emojis o añadió más? (Responde: "INCREMENTAR", "DECREMENTAR" o "MANTENER")
+3. longitud_oraciones: ¿El humano separó párrafos densos en frases cortas, o combinó frases sueltas en párrafos más robustos y técnicos? (Responde: "INCREMENTAR", "DECREMENTAR" o "MANTENER")
+
+Debes responder ÚNICAMENTE con un objeto JSON válido con esta estructura:
+{
+  "profundidad_tecnica": "INCREMENTAR" | "DECREMENTAR" | "MANTENER",
+  "densidad_emojis": "INCREMENTAR" | "DECREMENTAR" | "MANTENER",
+  "longitud_oraciones": "INCREMENTAR" | "DECREMENTAR" | "MANTENER"
+}
+      `;
+      const aiEvalResponse = await fetch(apiURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: evalPrompt }] }],
+          generationConfig: { responseMimeType: "application/json" }
+        })
+      });
+      if (aiEvalResponse.ok) {
+        const aiEvalResult = await aiEvalResponse.json();
+        evaluacion = JSON.parse(aiEvalResult.candidates[0].content.parts[0].text);
+      }
+    }
+
+    const currentSettings = await db.prepare("SELECT * FROM user_settings WHERE user_id = ?").bind(userId).first() || {
+      profundidad_tecnica: 3, densidad_emojis: 2, longitud_oraciones: 2
+    };
+
+    const calibrarRango = (valor, accion, min, max) => {
+      if (accion === "INCREMENTAR") return Math.min(valor + 1, max);
+      if (accion === "DECREMENTAR") return Math.max(valor - 1, min);
+      return valor;
+    };
+
+    const prof = calibrarRango(currentSettings.profundidad_tecnica, evaluacion.profundidad_tecnica, 1, 5);
+    const emoj = calibrarRango(currentSettings.densidad_emojis, evaluacion.densidad_emojis, 0, 3);
+    const long = calibrarRango(currentSettings.longitud_oraciones, evaluacion.longitud_oraciones, 1, 3);
+
+    await db.prepare(`
+      INSERT INTO user_settings (user_id, profundidad_tecnica, densidad_emojis, longitud_oraciones) 
+      VALUES (?, ?, ?, ?) 
+      ON CONFLICT(user_id) DO UPDATE SET 
+        profundidad_tecnica = excluded.profundidad_tecnica, 
+        densidad_emojis = excluded.densidad_emojis, 
+        longitud_oraciones = excluded.longitud_oraciones
+    `).bind(userId, prof, emoj, long).run();
+
+    if (fueCambioSustancial) {
+      await db.prepare(`
+        INSERT INTO best_posts_examples (id, user_id, original_text, updated_text, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(crypto.randomUUID(), userId, originalText, editedText, nowISO()).run();
+
+      await db.prepare(`
+        DELETE FROM best_posts_examples WHERE user_id = ? AND id NOT IN (
+          SELECT id FROM best_posts_examples WHERE user_id = ? ORDER BY created_at DESC LIMIT 5
+        )
+      `).bind(userId, userId).run();
+    }
+
+  } catch (err) {
+    console.error('[feedback] Failed to adjust style parameters:', err);
+  }
+}
+
 const PHASE_THRESHOLDS = {
   sugerencias:     30,
   autopublicacion: 100,
@@ -33,7 +127,7 @@ const AUTO_PUBLISH_MIN_CONFIDENCE = 0.80;
  *   time_to_decide_seconds?: number
  * }
  */
-export async function recordFeedback(db, data) {
+export async function recordFeedback(db, env, data) {
   const { post_id, decision, edited_content, rejection_reason, edit_reason, time_to_decide_seconds } = data;
 
   if (!post_id)  throw new Error('post_id is required');
@@ -83,6 +177,13 @@ export async function recordFeedback(db, data) {
   _refreshStatsCache(db).catch(err =>
     console.error('[feedback] Stats cache refresh failed:', err.message),
   );
+
+  // If edited, adjust style paramaters dynamically
+  if (decision === 'edited' && edited_content) {
+    adjustStyleParameters(db, env, post.content, edited_content).catch(err => 
+      console.error('[feedback] Style adjustment failed:', err.message)
+    );
+  }
 
   return { id, decision, edit_ratio: editRatio };
 }

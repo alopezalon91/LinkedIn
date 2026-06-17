@@ -6,8 +6,14 @@
  */
 
 import { generateUUID, nowISO, levenshteinRatio } from '../utils.js';
+import { SYSTEM_PROMPT, RESPONSE_SCHEMA, CAROUSEL_SCHEMA } from '../utils/prompts.js';
 
 function getSectorFocusInstruction(sector) {
+  if (sector === 'creadores_contenido') return "Enfoca los ejemplos y el tono en creadores de contenido, youtubers, streamers o influencers.";
+  if (sector === 'ecommerce') return "Enfoca los ejemplos y el tono en dueños de tiendas online, dropshipping o e-commerce.";
+  if (sector === 'agencias') return "Enfoca los ejemplos y el tono en agencias de marketing, desarrollo o diseño.";
+  if (sector === 'tech_startups') return "Enfoca los ejemplos y el tono en startups tecnológicas y emprendedores del sector SaaS.";
+  
   const s = (sector || '').toLowerCase();
   if (s === 'fiscal' || s === 'fiscalidad') {
     return `ADAPTACIÓN AL SECTOR: FISCAL. El post y carrusel deben enfocarse en la optimización fiscal, la deducibilidad de gastos, la planificación contable y el ahorro legítimo de impuestos.`;
@@ -271,7 +277,7 @@ export async function updatePost(db, id, updates) {
 
   const allowed = [
     'status', 'content', 'content_edited', 'first_comment', 'scheduled_at', 'published_at', 'linkedin_post_id',
-    'urgency', 'ai_score', 'confidence_score', 'hashtags', 'media_base64'
+    'urgency', 'ai_score', 'confidence_score', 'hashtags', 'media_base64', 'video_flow_json'
   ];
 
   const setClauses = [];
@@ -436,7 +442,7 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
         systemInstruction: { parts: [{ text: systemPrompt }] },
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: responseMimeType === "application/json" ? 4096 : 2048,
+          maxOutputTokens: responseMimeType === "application/json" ? 8192 : 4096,
         },
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
@@ -448,6 +454,9 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
 
       if (responseMimeType === "application/json") {
         payload.generationConfig.responseMimeType = "application/json";
+        if (responseSchema) {
+          payload.generationConfig.responseSchema = responseSchema;
+        }
       }
 
       const res = await fetch(url, {
@@ -462,11 +471,11 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
         if (text) return text;
       } else {
         const errText = await res.text();
-        console.warn(`Gemini API call failed (status ${res.status}): ${errText}. Trying Groq fallback...`);
+        console.error(`Gemini API call failed (status ${res.status}): ${errText}. Trying Groq fallback...`);
         // Fall through to Groq on any Gemini error (quota, rate limit, etc.)
       }
     } catch (err) {
-      console.warn(`Gemini call failed with exception: ${err.message}. Trying Groq fallback...`);
+      console.error(`Gemini call failed with exception: ${err.message}. Trying Groq fallback...`);
     }
   }
 
@@ -501,7 +510,7 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
           { role: "user", content: groqPrompt }
         ],
         temperature: 0.7,
-        max_tokens: responseMimeType === "application/json" ? 3000 : 1500
+        max_tokens: responseMimeType === "application/json" ? 3500 : 2500
       };
 
       if (responseMimeType === "application/json") {
@@ -567,7 +576,7 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
   throw new Error("Both Gemini and Groq API calls failed or are not configured.");
 }
 
-export async function regeneratePost(db, env, id, instructions) {
+export async function regeneratePost(db, env, ctx, id, instructions) {
   const post = await getPost(db, id);
   if (!post) throw new Error(`Post not found: ${id}`);
 
@@ -631,7 +640,7 @@ Por favor, reescribe el post completo siguiendo las instrucciones de Alberto y r
   return updatedPost;
 }
 
-export async function generatePostFromDraft(db, env, id) {
+export async function generatePostFromDraft(db, env, ctx, id) {
   const post = await getPost(db, id);
   if (!post) throw new Error(`Post not found: ${id}`);
   // Allow regeneration from any status — we'll read the original draft JSON
@@ -657,40 +666,102 @@ export async function generatePostFromDraft(db, env, id) {
     }
     if (!draftData) {
       console.log(`No original draft JSON found for post ${id}. Reconstructing mock draft from current content.`);
+      const formatRules = `Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura exacta:
+{
+  "post": "El texto completo del post para LinkedIn...",
+  "first_comment": "Texto del primer comentario de la publicación (donde solemos dejar un enlace o CTA adicional).",
+  "carousel": [
+    { "slide_type": "cover", "pre_title": "...", "title": "...", "subtitle": "...", "bullets": [] },
+    { "slide_type": "interior", "pre_title": "...", "title": "...", "subtitle": "...", "bullets": ["..."] },
+    { "slide_type": "closing", "pre_title": "DEBATE", "title": "¿PREGUNTA?", "subtitle": "COMENTA TU CASO 👇", "bullets": [] }
+  ]
+}
+
+=== REGLAS DEL COPYWRITING (CRÍTICO) ===
+- REGLA DE EXTENSIÓN ESTRICTA: El campo "post" debe tener obligatoriamente entre 1800 y 2200 caracteres. NUNCA te pases de 2300 caracteres.
+- REGLA ANTI-BUCLE (CRÍTICO): PROHIBIDO repetir frases de cierre como "Si te gustó", "Contáctanos" o "Comparte". Termina con UNA sola pregunta al final.
+- CÓMO ALCANZAR LA LONGITUD: Para llegar a los 2000 caracteres sin repetir texto, DESARROLLA la noticia con esta estructura:
+  1. Gancho inicial y explicación del problema.
+  2. ¿A quién afecta y por qué? (Invéntate 2 ejemplos detallados de pymes o autónomos sufriendo este problema).
+  3. Análisis técnico de la normativa (profundiza como un abogado experto).
+  4. Consecuencias a largo plazo si no se preparan.
+  5. Cierre con UNA sola pregunta.
+- Agrupa las ideas en párrafos densos de 2 a 4 líneas. PROHIBIDO escribir párrafos de una sola frase o de una sola línea. Deja SIEMPRE una línea en blanco entre cada bloque de texto.
+- TONO DISRUPTIVO Y DE ALERTA: Escribe como un experto advirtiendo de un peligro ("La Administración acaba de activar la trampa para...").
+
+=== ESTRUCTURA Y FORMATO DEL POST DE LINKEDIN (CRÍTICO) ===
+1. GANCHO: Título atractivo (máximo 1-2 líneas) con algún icono llamativo. Seguido de un salto de línea doble (\\n\\n).
+2. CUERPO (ALTA DENSIDAD DE VALOR): Explicación detallada. Usa listas numeradas con emojis (1️⃣, 2️⃣, 3️⃣) para detallar la casuística o pasos. Usa como máximo 2 o 3 iconos temáticos (📈, 🏛️, 💶, ⚖️, ⚠️) en todo el post. Todo separado con saltos de línea doble (\\n\\n).
+3. INTERACCIÓN: Termina el post siempre con una pregunta abierta MUY DIRECTA AL DOLOR del lector para generar comentarios y debate. Separada con una línea en blanco.
+4. HASHTAGS: Incluye siempre 4 o 5 hashtags relevantes al final.
+- ESTRUCTURA DE 6 SLIDES EXACTAS: 1 cover, 4 interior, 1 closing.
+- CAROUSEL BULLETS: PROHIBIDO usar emojis numerados gigantes (1️⃣, 2️⃣, 3️⃣) o balas infantiles en el array de bullets del carrusel. Usa viñetas limpias sin emojis en las diapositivas.`;
       draftData = {
         title: post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia',
         summary: post.content,
-        prompt: `Genera un contenido dual (Post de LinkedIn + Carrusel Resumido) a partir del siguiente artículo:\n\nTitular: ${post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia'}\nResumen/Texto completo: ${post.content}`,
+        prompt: `Genera un contenido dual (Post de LinkedIn + Carrusel Resumido) a partir del siguiente artículo:\n\nTitular: ${post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia'}\nResumen/Texto completo: ${post.content}\n\n${formatRules}`,
         original_text: post.content
       };
     }
   }
 
-  let prompt = draftData.prompt;
-  if (!prompt) {
-    throw new Error('Draft JSON is missing the prompt string');
+  // 1. Recuperar los filtros de estilo dinámicos desde Cloudflare D1
+  let prof = 3, emoj = 2, long = 2;
+  try {
+    const userStyle = await db.prepare(
+      "SELECT profundidad_tecnica, densidad_emojis, longitud_oraciones FROM user_settings WHERE user_id = 'default'"
+    ).first();
+    if (userStyle) {
+      prof = userStyle.profundidad_tecnica ?? 3;
+      emoj = userStyle.densidad_emojis ?? 2;
+      long = userStyle.longitud_oraciones ?? 2;
+    }
+  } catch(e) {
+    console.error("Error reading user_settings:", e);
   }
 
-  // Clean the draft's prompt from old connection rules if present, matching correct sector focus
-  const oldActualidadConnection = `=== REGLA DE CONEXIÓN TRANSVERSAL (CONEXIÓN FISCAL) ===
-Analiza la noticia general recibida y responde a la pregunta interna: ¿Cómo afecta este evento de forma indirecta a las finanzas, costes, obligaciones o impuestos de un ciudadano, autónomo o empresa en España?
-- Si la noticia habla de IA o tecnología -> Conéctalo con la deducción por I+D+i, digitalización obligatoria o gastos deducibles de software.
-- Si la noticia habla de inflación o huelgas -> Conéctalo con el aumento de costes deducibles, optimización de márgenes o planificación del cierre contable.
-- Si la noticia habla de vivienda o tipos de interés -> Conéctalo con las deducciones por alquiler, inversiones inmobiliarias, el IBI o el impuesto sobre el patrimonio.
-Traduce la actualidad del mundo en una lección de estrategia fiscal práctica.`;
+  // 1.5 Fetch Few-Shot Examples
+  let fewShotPromptSnippet = "";
+  try {
+    const ejemplosFewShot = await db.prepare(
+      "SELECT original_text, updated_text FROM best_posts_examples WHERE user_id = 'default' ORDER BY created_at DESC LIMIT 3"
+    ).all();
+    if (ejemplosFewShot.results && ejemplosFewShot.results.length > 0) {
+      fewShotPromptSnippet = `\n\n[EJEMPLOS DE APRENDIZAJE REALES DE EDICIONES ANTERIORES DEL USUARIO]\nA continuación se muestran ejemplos reales de cómo la IA generó el post de forma errónea, y cómo el humano lo corrigió. Debes usar estos ejemplos para imitar el ESTILO, TONO y ESTRUCTURA preferida del humano.\n`;
+      ejemplosFewShot.results.forEach((ej, index) => {
+        fewShotPromptSnippet += `\nEjemplo #${index + 1}:\n- Así lo generó la IA erróneamente:\n"""\n${ej.original_text}\n"""\n- Así lo corrigió el humano (Sigue este estándar preferido):\n"""\n${ej.updated_text}\n"""\n--------------------------------------------------------------------------------`;
+      });
+    }
+  } catch(e) {
+    console.error("Error reading best_posts_examples:", e);
+  }
 
+  // 2. Personalizar el prompt del sistema con los parámetros del usuario
   const sectorFocus = getSectorFocusInstruction(post.sector);
-  prompt = prompt.replace(oldActualidadConnection, sectorFocus);
+  const verbContext = getContextualVerbInstruction(post.content);
+  const dynamicSystemPrompt = `
+${SYSTEM_PROMPT}
 
-  // Only truncate if very long (Gemini handles ~30k tokens, Groq ~6k)
-  // Groq truncation happens in callAIWithFallback
+[PARAMETRIZACIÓN DINÁMICA DE ESTILO Y CONTEXTO]
+${sectorFocus}
+${verbContext}
+- Nivel de profundidad técnica y legal requerido: ${prof}/5 (A mayor nivel, cita más artículos específicos y tecnicismos).
+- Densidad de emojis permitida en el texto principal: ${emoj}/3 (Si es 0 o 1, sé sumamente minimalista; si es 3, usa los indicados en las reglas).
+- Estilo de longitud de oraciones: ${long}/3 (1: Cortas y tajantes, 2: Mixtas, 3: Párrafos densos y argumentativos).
+${fewShotPromptSnippet}
+`;
+
+  let prompt = `Aquí tienes la noticia cruda para procesar:
+
+Titular original: ${post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia'}
+Resumen/Texto completo: ${post.content}
+`;
+
   if (prompt.length > 20000) {
     prompt = prompt.substring(0, 20000) + "\n\n[TEXTO TRUNCADO POR LÍMITE DE TAMAÑO]";
   }
 
-  const systemInstruction = draftData.system_instruction || "Actúa como un Copywriter de Élite para LinkedIn. Asegúrate de devolver SIEMPRE un objeto JSON válido.";
-
-  let generatedText = await callAIWithFallback(db, env, systemInstruction, prompt, "application/json");
+  let generatedText = await callAIWithFallback(db, env, dynamicSystemPrompt, prompt, "application/json", RESPONSE_SCHEMA);
 
   if (generatedText.startsWith("```")) {
     const parts = generatedText.split("```");
@@ -707,13 +778,13 @@ Traduce la actualidad del mundo en una lección de estrategia fiscal práctica.`
     throw new Error(`Failed to parse AI output as JSON: ${err.message}`);
   }
 
-  const postText = cleanGeneratedPostText(generatedData.post || '');
-  const firstComment = generatedData.first_comment || null;
-  // Support both 'carousel' and 'carrusel' key names from Gemini
-  const carouselData = generatedData.carousel || generatedData.carrusel || null;
+  let postText = cleanGeneratedPostText(generatedData.post_linkedin || generatedData.post || generatedData.texto || '');
+  const carouselData = generatedData.carrusel || generatedData.carousel || null;
+  const videoFlowData = generatedData.video_flow || null;
 
   if (!postText) {
-    throw new Error('Generated JSON did not contain a "post" field.');
+    console.warn('Generated JSON did not contain a standard "post_linkedin" field. Falling back to raw JSON dump.');
+    postText = "ERROR: La IA no devolvió el campo 'post_linkedin'. Contenido crudo devuelto:\\n\\n" + JSON.stringify(generatedData, null, 2);
   }
 
   // Encode carousel JSON as base64 so it can be stored in media_base64
@@ -744,7 +815,27 @@ Traduce la actualidad del mundo en una lección de estrategia fiscal práctica.`
     source_url: newSourceUrl,
     first_comment: firstComment,
     ...(carouselBase64 ? { media_base64: carouselBase64 } : {}),
+    ...(videoFlowData ? { video_flow_json: JSON.stringify(videoFlowData) } : {})
   });
+
+  // DISPARADOR ASÍNCRONO PARA VÍDEO
+  // Si tenemos webhook de Make/Zapier y hay video_flow, enviamos el payload en background
+  if (videoFlowData && env.VIDEO_AUTOMATION_WEBHOOK) {
+    if (ctx && ctx.waitUntil) {
+      ctx.waitUntil(
+        fetch(env.VIDEO_AUTOMATION_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            postId: id,
+            video_data: videoFlowData
+          })
+        }).catch(err => console.error("Error enviando flujo a automatización de vídeo:", err))
+      );
+    } else {
+      console.warn("ctx.waitUntil no está disponible. No se puede ejecutar el webhook de vídeo de forma segura en background.");
+    }
+  }
 
   return updatedPost;
 }
@@ -759,82 +850,52 @@ export async function regenerateCarousel(db, env, id, newPostText) {
     throw new Error('Post not found');
   }
 
-  // 2. Prepare prompt
-  const systemPrompt = `Eres Alberto López. Gestor fiscal y contable. Generas carruseles de LinkedIn en primera persona. Nunca hablas de ti mismo en tercera persona. Eres un transmisor objetivo de la noticia. No das opiniones personales.`;
-  const prompt = `
-=== FORMATO DE SALIDA (CRÍTICO) ===
-El usuario ha editado su post de LinkedIn y ahora tiene este texto:
+  // Inject few-shot and user preferences
+  let prof = 3, emoj = 2, long = 2;
+  try {
+    const userStyle = await db.prepare(
+      "SELECT profundidad_tecnica, densidad_emojis, longitud_oraciones FROM user_settings WHERE user_id = 'default'"
+    ).first();
+    if (userStyle) {
+      prof = userStyle.profundidad_tecnica ?? 3;
+      emoj = userStyle.densidad_emojis ?? 2;
+      long = userStyle.longitud_oraciones ?? 2;
+    }
+  } catch(e) {}
+  let fewShotPromptSnippet = "";
+  try {
+    const ejemplosFewShot = await db.prepare(
+      "SELECT original_text, updated_text FROM best_posts_examples WHERE user_id = 'default' ORDER BY created_at DESC LIMIT 3"
+    ).all();
+    if (ejemplosFewShot.results && ejemplosFewShot.results.length > 0) {
+      fewShotPromptSnippet = `\n\n[EJEMPLOS DE APRENDIZAJE REALES DE EDICIONES ANTERIORES DEL USUARIO]\nA continuación se muestran ejemplos reales de cómo la IA generó el post de forma errónea, y cómo el humano lo corrigió. Debes usar estos ejemplos para imitar el ESTILO, TONO y ESTRUCTURA preferida del humano.\n`;
+      ejemplosFewShot.results.forEach((ej, index) => {
+        fewShotPromptSnippet += `\nEjemplo #${index + 1}:\n- Así lo generó la IA erróneamente:\n"""\n${ej.original_text}\n"""\n- Así lo corrigió el humano (Sigue este estándar preferido):\n"""\n${ej.updated_text}\n"""\n--------------------------------------------------------------------------------`;
+      });
+    }
+  } catch(e) {}
+
+  const sectorFocus = getSectorFocusInstruction(post.sector);
+  const dynamicSystemPrompt = `
+${SYSTEM_PROMPT}
+
+[PARAMETRIZACIÓN DINÁMICA DE ESTILO Y CONTEXTO]
+${sectorFocus}
+- Nivel de profundidad técnica y legal requerido: ${prof}/5 (A mayor nivel, cita más artículos específicos y tecnicismos).
+- Densidad de emojis permitida en el texto principal: ${emoj}/3 (Si es 0 o 1, sé sumamente minimalista; si es 3, usa los indicados en las reglas).
+- Estilo de longitud de oraciones: ${long}/3 (1: Cortas y tajantes, 2: Mixtas, 3: Párrafos densos y argumentativos).
+${fewShotPromptSnippet}
+
+ESTÁS EN MODO "REGENERAR CARRUSEL".
+Tienes que generar SOLO las diapositivas del carrusel para el siguiente post.
+`;
+
+  const prompt = `=== POST EDITADO ===
+El usuario ha editado su post de LinkedIn y ahora tiene este texto final:
 "${newPostText}"
 
 Genera un nuevo Carrusel de 6 diapositivas para acompañar perfectamente a este texto editado.
-Devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura exacta.
-El campo "slide_type" es OBLIGATORIO: usa "cover" para la portada, "interior" para el contenido, y "closing" para la diapositiva de cierre al final.
-PROHIBIDO ESCRIBIR PUNTOS FINALES (.) AL FINAL DE CADA BULLET.
-PROHIBIDO CORTAR FRASES O TÍTULOS. Tienen que tener sentido completo.
-PROHIBIDO USAR FRACCIONES O NÚMEROS DE DIAPOSITIVA (como "1/4", "2/5", "5/5") en el campo "pre_title". El "pre_title" debe ser siempre una categoría temática corta en mayúsculas (como "EL PROBLEMA", "AFECTADOS", "QUÉ HACER HOY", "ESTRATEGIA", "REGLA CLAVE", "CONSEJO PRÁCTICO"). La numeración del carrusel ya se renderiza de forma automática en otra sección de la diapositiva.
-PROHIBIDO MENCIONAR el nombre "Alberto López" en ningún campo (title, subtitle, pre_title, bullets). Títulos directos sobre el tema: NUNCA "La estrategia de Alberto López" ni "Alberto López recomienda". El nombre ya aparece en la firma visual.
-CONTENIDO OBLIGATORIO Y RIGOR: El carrusel NO puede ser un resumen vago ni contener texto motivacional. Debe ser un documento de utilidad inmediata. Si el post habla de una medida, inspección, ley o sentencia, el carrusel DEBE detallar explícitamente:
-  1. Qué ley, sentencia o normativa exacta lo regula. ES OBLIGATORIO citar el número exacto, identificador y la fecha de la sentencia, ley o consulta vinculante. PROHIBIDO poner frases genéricas de relleno como "se puede consultar en el BOE" si no das el identificador exacto.
-  2. Qué ocurre exactamente (los hechos concretos).
-  3. Cuáles son las consecuencias reales (multas en euros, sanciones, paralizaciones).
-FECHAS ABSOLUTAS: Si la noticia menciona un día relativo (ej: "este lunes"), tradúcelo SIEMPRE a una fecha absoluta (ej: "este lunes 8 de junio"). Nunca dejes fechas relativas.
-BULLETS: Cada diapositiva interior debe tener entre 3 y 5 bullets. Cada bullet debe ser denso en información, concreto y útil — datos, importes, plazos o acciones exactas. PROHIBIDO bullets genéricos o motivacionales.
-ESTRUCTURA DEL CARRUSEL: Evita la redundancia entre diapositivas. Si tienes 4 diapositivas interiores, usa una progresión lógica (ej. D1: El contexto, D2: A quién afecta, D3: Los riesgos reales, D4: Qué hacer hoy/Soluciones). NO repitas las mismas ideas con distintas palabras en diapositivas consecutivas.
-TÍTULOS: El campo "title" debe ser corto, directo e impactante. Máximo 7 palabras. Sin rodeos. La fuerza del título viene de la precisión, no de la longitud.
-DIAPOSITIVA DE CIERRE: el title DEBE ser una pregunta MUY CORTA Y DIRECTA (MÁXIMO 5 A 7 PALABRAS) que divida al lector, que le obligue a posicionarse. Las frases largas no funcionan, ve al grano. El subtitle DEBE ser una llamada a la acción original y desafiante aplicando este diccionario de marca:
-  * En vez de "Comparte tus dudas", usa "Cuéntame cómo lo estás aplicando".
-  * En vez de "¿Te afecta esta situación?", usa "¿Cómo estás lidiando con el bloqueo?".
-  * En vez de "Déjanos tu comentario", usa "Te leo abajo" o "Abrimos debate".
-  * En vez de "Escribe tu experiencia", usa "Cuéntame el caso real".
-PROHIBIDO usar emojis señalando abajo.
-{
-  "carousel": [
-    {
-      "slide_type": "cover",
-      "pre_title": "ACTUALIDAD",
-      "title": "Título editorial de alto impacto",
-      "subtitle": "Promesa de valor o sumario",
-      "bullets": []
-    },
-    {
-      "slide_type": "interior",
-      "pre_title": "EL PROBLEMA",
-      "title": "Título personalizado y descriptivo sobre el problema (ej: Inspección sorpresa, El nuevo recargo, etc.)",
-      "subtitle": "El impacto económico crudo",
-      "bullets": [
-        "De 2 a 3 puntos densos"
-      ]
-    },
-    {
-      "slide_type": "interior",
-      "pre_title": "AFECTADOS",
-      "title": "Título personalizado y descriptivo sobre los afectados (ej: Autónomos societarios, Pymes de más de 8M, etc.)",
-      "subtitle": "Perfil de los afectados",
-      "bullets": []
-    },
-    {
-      "slide_type": "interior",
-      "pre_title": "QUÉ HACER HOY",
-      "title": "Título personalizado y descriptivo sobre la acción a tomar (ej: Revisa tu facturación, Modifica el software, etc.)",
-      "subtitle": "Mitiga el impacto de inmediato",
-      "bullets": []
-    },
-    {
-      "slide_type": "interior",
-      "pre_title": "ESTRATEGIA",
-      "title": "Título personalizado y descriptivo sobre la estrategia (ej: Optimización del IVA, Deducción por I+D+i, etc.)",
-      "subtitle": "La estrategia de Alberto López",
-      "bullets": []
-    },
-    {
-      "slide_type": "closing",
-      "pre_title": "TU TURNO (o llamada similar)",
-      "title": "¿[Pregunta MUY ESPECÍFICA sobre las implicaciones de esta noticia para su negocio]?",
-      "subtitle": "Llamada a la acción específica (ej. Cuéntame si te ha pasado, Revisa tus estatutos hoy)",
-      "bullets": []
-    }
-  ]
-}
+Devuelve ÚNICAMENTE un objeto JSON válido con la estructura de las diapositivas.
 `;
 
   const groqKey = await getGroqKey(db, env);
@@ -842,28 +903,7 @@ PROHIBIDO usar emojis señalando abajo.
     throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
   }
 
-  const responseSchema = {
-    type: "object",
-    properties: {
-      carousel: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            slide_type: { type: "string", enum: ["cover", "interior", "closing"] },
-            pre_title: { type: "string" },
-            title: { type: "string" },
-            subtitle: { type: "string" },
-            bullets: { type: "array", items: { type: "string" } }
-          },
-          required: ["slide_type", "pre_title", "title", "subtitle", "bullets"]
-        }
-      }
-    },
-    required: ["carousel"]
-  };
-
-  let generatedText = await callAIWithFallback(db, env, systemPrompt, prompt, "application/json", responseSchema);
+  let generatedText = await callAIWithFallback(db, env, dynamicSystemPrompt, prompt, "application/json", CAROUSEL_SCHEMA);
 
   // Strip markdown backticks if AI includes them
   if (generatedText.startsWith("```")) {
@@ -883,18 +923,20 @@ PROHIBIDO usar emojis señalando abajo.
     throw new Error(`Failed to parse AI output as JSON: ${err.message}`);
   }
 
-  const carouselData = generatedData.carousel || generatedData.carrusel || null;
-  if (!carouselData) {
-    throw new Error('Generated JSON did not contain a "carousel" field.');
+  const carouselData = generatedData.slides || generatedData;
+
+  // Encode carousel JSON as base64
+  let carouselBase64 = null;
+  try {
+    const carouselStr = 'CAROUSEL:' + JSON.stringify(carouselData);
+    carouselBase64 = btoa(unescape(encodeURIComponent(carouselStr)));
+  } catch (e) {
+    throw new Error('Failed to encode regenerated carousel: ' + e.message);
   }
 
-  let carouselBase64 = null;
-  const carouselStr = 'CAROUSEL:' + JSON.stringify(carouselData);
-  carouselBase64 = btoa(unescape(encodeURIComponent(carouselStr)));
-
+  // Update only the media_base64 field in D1
   const updatedPost = await updatePost(db, id, {
     media_base64: carouselBase64,
-    content_edited: newPostText
   });
 
   return updatedPost;

@@ -3,6 +3,14 @@
 -- Run: wrangler d1 execute mytaxbot_linkedin --file=schema.sql
 -- ============================================================
 
+-- User settings parametric table
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id TEXT PRIMARY KEY,
+    profundidad_tecnica INTEGER DEFAULT 3, -- Escala 1 a 5
+    densidad_emojis INTEGER DEFAULT 1,     -- Escala 0 a 3
+    longitud_oraciones INTEGER DEFAULT 2   -- Escala 1 a 3
+);
+
 -- Posts table
 CREATE TABLE IF NOT EXISTS posts (
   id TEXT PRIMARY KEY,                      -- UUID v4
@@ -24,7 +32,8 @@ CREATE TABLE IF NOT EXISTS posts (
   published_at TEXT,                        -- ISO 8601 timestamp when actually published
   linkedin_post_id TEXT,                    -- ID/URN returned by LinkedIn API after publishing
   created_at TEXT NOT NULL,                 -- ISO 8601 creation timestamp
-  updated_at TEXT NOT NULL                  -- ISO 8601 last-update timestamp
+  updated_at TEXT NOT NULL,                 -- ISO 8601 last-update timestamp
+  video_flow_json TEXT                      -- JSON object from LLM generation
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_status   ON posts(status);

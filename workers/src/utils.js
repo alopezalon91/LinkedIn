@@ -124,9 +124,31 @@ export function corsHeaders(request, origin = '*') {
  */
 export async function parseJSON(request) {
   try {
-    const text = await request.text();
-    return text ? JSON.parse(text) : {};
-  } catch {
+    const contentType = request.headers.get('Content-Type') || '';
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const obj = {};
+      for (const [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          // Convert File to base64
+          const buffer = await value.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          obj[key] = btoa(binary);
+        } else {
+          obj[key] = value;
+        }
+      }
+      return obj;
+    } else {
+      const text = await request.text();
+      return text ? JSON.parse(text) : {};
+    }
+  } catch (err) {
+    console.error('Error parsing request:', err);
     return {};
   }
 }

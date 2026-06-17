@@ -199,7 +199,7 @@ async function route(request, env, ctx, url, path, method) {
   const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate|generate|regenerate-carousel)$/);
   if (subActionMatch && method === 'POST') {
     const [, postId, action] = subActionMatch;
-    return handlePostAction(db, env, request, postId, action);
+    return handlePostAction(db, env, ctx, request, postId, action);
   }
 
   // Single post
@@ -215,12 +215,12 @@ async function route(request, env, ctx, url, path, method) {
   const publishMatch = path.match(/^\/api\/publish\/([^/]+)$/);
   if (publishMatch && method === 'POST') {
     const [, postId] = publishMatch;
-    return handlePublish(db, env, postId);
+    return handlePublish(db, env, postId, request);
   }
 
   // ── Feedback ──────────────────────────────────────────────────────────────
   if (path === '/api/feedback' && method === 'POST') {
-    return handleFeedback(db, request);
+    return handleFeedback(db, env, request);
   }
 
   // ── Stats ─────────────────────────────────────────────────────────────────
@@ -374,7 +374,7 @@ async function handleUpdatePost(db, request, postId) {
   }
 }
 
-async function handlePostAction(db, env, request, postId, action) {
+async function handlePostAction(db, env, ctx, request, postId, action) {
   const body = await parseJSON(request);
 
   switch (action) {
@@ -382,8 +382,8 @@ async function handlePostAction(db, env, request, postId, action) {
     case 'reject':   return _handleReject(db, postId);
     case 'review':   return _handleReview(db, postId, body.content_edited ?? null);
     case 'schedule': return _handleSchedule(db, postId, body.scheduled_at, body.media_base64 ?? null);
-    case 'regenerate': return _handleRegenerate(db, env, postId, body.instructions);
-    case 'generate': return _handleGenerate(db, env, postId);
+    case 'regenerate': return _handleRegenerate(db, env, ctx, postId, body.instructions);
+    case 'generate': return _handleGenerate(db, env, ctx, postId);
     case 'regenerate-carousel': return _handleRegenerateCarousel(db, env, postId, body.content_edited);
     case 'update':   return _handleGenericUpdate(db, postId, body);
     default:         return errorResponse(`Unknown action: ${action}`, 400);
@@ -438,21 +438,21 @@ async function _handleSchedule(db, postId, scheduledAt, mediaBase64) {
   }
 }
 
-async function _handleRegenerate(db, env, postId, instructions) {
+async function _handleRegenerate(db, env, ctx, postId, instructions) {
   try {
     if (!instructions) {
       return errorResponse('instructions are required for post regeneration', 400);
     }
-    const post = await regeneratePost(db, env, postId, instructions);
+    const post = await regeneratePost(db, env, ctx, postId, instructions);
     return jsonResponse(post);
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
   }
 }
 
-async function _handleGenerate(db, env, postId) {
+async function _handleGenerate(db, env, ctx, postId) {
   try {
-    const post = await generatePostFromDraft(db, env, postId);
+    const post = await generatePostFromDraft(db, env, ctx, postId);
     return jsonResponse(post);
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
@@ -474,9 +474,9 @@ async function _handleRegenerateCarousel(db, env, postId, editedContent) {
 
 // ── Publish ───────────────────────────────────────────────────────────────────
 
-async function handlePublish(db, env, postId) {
+async function handlePublish(db, env, postId, request) {
   try {
-    const result = await publishPost(db, env, postId);
+    const result = await publishPost(db, env, postId, request);
     return jsonResponse(result);
   } catch (err) {
     // Surface token/auth issues as 401, rate limits as 429, rest as 500
@@ -490,10 +490,10 @@ async function handlePublish(db, env, postId) {
 
 // ── Feedback ──────────────────────────────────────────────────────────────────
 
-async function handleFeedback(db, request) {
+async function handleFeedback(db, env, request) {
   const data = await parseJSON(request);
   try {
-    const result = await recordFeedback(db, data);
+    const result = await recordFeedback(db, env, data);
     return jsonResponse(result, 201);
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);

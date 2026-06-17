@@ -65,15 +65,32 @@ export async function publishPost(db, env, postId) {
   let mediaUrn = null;
   let multiImageUrns = [];
 
-  if (post.media_base64) {
+  let binaryPdfData = null;
+  if (request && request.headers.get('content-type')?.includes('multipart/form-data')) {
+    const formData = await request.formData();
+    const file = formData.get('pdf');
+    if (file) {
+      binaryPdfData = new Uint8Array(await file.arrayBuffer());
+    }
+  }
+
+  if (binaryPdfData) {
+    try {
+      mediaUrn = await uploadDocumentBinaryToLinkedIn(access_token, linkedin_urn, binaryPdfData);
+    } catch (err) {
+      console.error('[worker] Failed to upload PDF binary from frontend to LinkedIn. Error:', err);
+    }
+  } else if (post.media_base64) {
     let isJsonCarousel = false;
     let isMultiImage = false;
+    let isPdfCarousel = false;
     let decodedStr = '';
     
     try {
       decodedStr = decodeURIComponent(escape(atob(post.media_base64)));
       if (decodedStr.startsWith('CAROUSEL:')) isJsonCarousel = true;
       if (decodedStr.startsWith('{"type":"multi-image"')) isMultiImage = true;
+      if (decodedStr.startsWith('{"type":"pdf_carousel"')) isPdfCarousel = true;
     } catch(e) {}
 
     if (isMultiImage) {
@@ -86,6 +103,13 @@ export async function publishPost(db, env, postId) {
         }
       } catch (err) {
         console.error('[worker] Failed to upload multi-image to LinkedIn. Error:', err);
+      }
+    } else if (isPdfCarousel) {
+      try {
+        const payload = JSON.parse(decodedStr);
+        mediaUrn = await uploadDocumentToLinkedIn(access_token, linkedin_urn, payload.pdf_base64);
+      } catch (err) {
+        console.error('[worker] Failed to upload PDF carousel document to LinkedIn. Error:', err);
       }
     } else if (!isJsonCarousel) {
       try {
@@ -342,6 +366,80 @@ async function uploadDocumentToLinkedIn(access_token, authorUrn, base64Data) {
     throw new Error(`Failed to upload document binary: ${err}`);
   }
 
+  // 4. Poll document status until AVAILABLE
+  await new Promise(resolve => setTimeout(resolve, 1500)); // Delay controlado de 1.5s para sincronizar estado
+  let attempts = 0;
+  const maxAttempts = 15;
+  while (attempts < maxAttempts) {
+    attempts++;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const statusRes = await fetch(`https://api.linkedin.com/rest/documents/${encodeURIComponent(documentUrn)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${access_token}`,
+        'LinkedIn-Version': LINKEDIN_VERSION,
+        'X-RestLi-Protocol-Version': '2.0.0'
+      }
+    });
+
+    if (statusRes.ok) {
+      const statusData = await statusRes.json();
+      if (statusData.status === 'AVAILABLE') {
+        return documentUrn;
+      } else if (statusData.status === 'FAILED') {
+        throw new Error(`Document processing failed on LinkedIn side.`);
+      }
+    }
+  }
+
+  throw new Error(`Timeout waiting for document processing on LinkedIn.`);
+}
+
+async function uploadDocumentBinaryToLinkedIn(access_token, authorUrn, bytesArrayBuffer) {
+  // 1. Initialize Upload
+  const registerRes = await fetch('https://api.linkedin.com/rest/documents?action=initializeUpload', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${access_token}`,
+      'Content-Type': 'application/json',
+      'LinkedIn-Version': LINKEDIN_VERSION,
+      'X-RestLi-Protocol-Version': '2.0.0'
+    },
+    body: JSON.stringify({
+      initializeUploadRequest: {
+        owner: authorUrn
+      }
+    })
+  });
+
+  if (!registerRes.ok) {
+    const err = await registerRes.text();
+    throw new Error(`Failed to initialize document upload: ${err}`);
+  }
+
+  const registerData = await registerRes.json();
+  const uploadUrl = registerData.value.uploadUrl;
+  const documentUrn = registerData.value.document;
+
+  // 2. Upload Binary Data
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${access_token}`,
+      'Content-Type': 'application/pdf'
+    },
+    body: bytesArrayBuffer
+  });
+
+  if (!uploadRes.ok) {
+    const err = await uploadRes.text();
+    throw new Error(`Failed to upload document binary: ${err}`);
+  }
+
+  // 3. Mandatory 1.5s delay
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
   // 4. Poll document status until AVAILABLE
   let attempts = 0;
   const maxAttempts = 15;

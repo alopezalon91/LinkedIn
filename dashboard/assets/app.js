@@ -57,19 +57,41 @@ const State = {
 const API = {
   async request(path, options = {}) {
     const url = `${CONFIG.WORKER_URL}${path}`;
+    const headers = {
+      'Authorization': `Bearer ${CONFIG.DASHBOARD_SECRET}`,
+      ...options.headers,
+    };
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
     const res = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CONFIG.DASHBOARD_SECRET}`,
-        ...options.headers,
-      },
+      headers,
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
       throw new Error(err.error || `HTTP ${res.status}`);
     }
-    return res.json();
+    const data = await res.json();
+    
+    // Sanitize any double-encoded media_base64 strings from a previous bug
+    const sanitizeMedia = (item) => {
+      if (item && item.media_base64 && typeof item.media_base64 === 'string') {
+        if (item.media_base64.startsWith('"') && item.media_base64.endsWith('"')) {
+          item.media_base64 = item.media_base64.slice(1, -1);
+        }
+      }
+    };
+    
+    if (Array.isArray(data)) {
+      data.forEach(sanitizeMedia);
+    } else if (data && data.posts && Array.isArray(data.posts)) {
+      data.posts.forEach(sanitizeMedia);
+    } else if (data) {
+      sanitizeMedia(data);
+    }
+    
+    return data;
   },
 
   getPosts: (params = {}) => {
@@ -84,10 +106,21 @@ const API = {
     body: JSON.stringify(updates),
   }),
 
-  approvePost: (id, editedContent, mediaBase64) => API.request(`/api/posts/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ action: 'approve', content_edited: editedContent || null, media_base64: mediaBase64 || null }),
-  }),
+  approvePost: (id, editedContent, mediaBase64) => {
+    let body;
+    if (mediaBase64 instanceof Blob) {
+      body = new FormData();
+      body.append('action', 'approve');
+      if (editedContent) body.append('content_edited', editedContent);
+      body.append('media_base64', mediaBase64, 'carrusel.pdf');
+    } else {
+      body = JSON.stringify({ action: 'approve', content_edited: editedContent || null, media_base64: mediaBase64 || null });
+    }
+    return API.request(`/api/posts/${id}`, {
+      method: 'PATCH',
+      body,
+    });
+  },
 
   reviewPost: (id, editedContent) => API.request(`/api/posts/${id}`, {
     method: 'PATCH',
@@ -108,7 +141,10 @@ const API = {
     body: JSON.stringify({ action: 'schedule', scheduled_at: scheduledAt, media_base64: mediaBase64 || null }),
   }),
 
-  publishPost: (id) => API.request(`/api/publish/${id}`, { method: 'POST' }),
+  publishPost: (id, formData = null) => API.request(`/api/publish/${id}`, { 
+    method: 'POST',
+    body: formData // If formData is provided, don't stringify it, fetch handles it natively
+  }),
 
   recordFeedback: (data) => API.request('/api/feedback', {
     method: 'POST',
@@ -359,6 +395,7 @@ function renderPostCard(post) {
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
           : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
              <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
+             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Copiar guión para Google Flow">🎬 Material para Reels</button>` : ''}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
         }
@@ -400,6 +437,79 @@ function renderPostCard(post) {
 
 // ── Post Actions ───────────────────────────────────────────
 const PostActions = {
+  showVideoScript(postId) {
+    try {
+      const post = State.posts.find(p => p.id === postId);
+      if (!post || !post.video_flow_json) {
+        Toast.show('No hay material de vídeo para este post.', 'warning');
+        return;
+      }
+      
+      const videoFlow = JSON.parse(post.video_flow_json);
+      let scenesHtml = videoFlow.scenes.map(scene => `
+        <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 4px solid var(--accent-purple);">
+          <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+            <strong style="color:var(--accent-purple);">Escena ${scene.scene_number}</strong>
+            <span style="color:var(--text-muted); font-size:12px;">⏳ ${scene.duration_seconds}s</span>
+          </div>
+          <div style="margin-bottom: 6px;">
+            <strong style="color:var(--text-secondary); font-size:11px; text-transform:uppercase;">Texto en pantalla (Max 5 palabras):</strong>
+            <div style="font-family: monospace; font-size: 14px; color: var(--text-primary); font-weight:bold;">${scene.on_screen_text}</div>
+          </div>
+          <div style="margin-bottom: 6px;">
+            <strong style="color:var(--text-secondary); font-size:11px; text-transform:uppercase;">Guión Voz en Off (Frío/Ejecutivo):</strong>
+            <div style="font-size: 13px; color: var(--text-primary);">${scene.voice_over_script}</div>
+          </div>
+          <div>
+            <strong style="color:var(--text-secondary); font-size:11px; text-transform:uppercase;">Prompt Visual (Google Flow):</strong>
+            <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; font-size: 12px; color: var(--accent-green); position: relative;">
+              ${scene.visual_prompt}
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      const masterPrompt = videoFlow.scenes.map(s => s.visual_prompt).join("\\n");
+
+      const html = `
+        <div style="padding: 10px;">
+          <h2 style="margin-top:0; color:var(--text-primary); display:flex; align-items:center; justify-content:space-between;">
+            🎬 Guión para Google Flow
+            <span style="background:var(--accent-purple); font-size:11px; padding:2px 8px; border-radius:12px;">Aspect: ${videoFlow.config.aspect_ratio}</span>
+          </h2>
+          <p style="color:var(--text-secondary); font-size:13px;">
+            <strong>Tono de Voz:</strong> ${videoFlow.config.voice_tone} <br>
+            <strong>Estilo Musical:</strong> ${videoFlow.config.music_style}
+          </p>
+          <div style="margin: 16px 0;">
+            <button class="btn btn-primary" onclick="navigator.clipboard.writeText(\`${masterPrompt}\`); Toast.show('✅ Prompts copiados al portapapeles')" style="width:100%; background:var(--accent-green); color:#000;">
+              📋 Copiar todos los Prompts Visuales
+            </button>
+            <a href="https://labs.google/flow" target="_blank" class="btn btn-outline" style="width:100%; margin-top:8px; display:block; text-align:center;">
+              🔗 Abrir Google Flow
+            </a>
+          </div>
+          <div style="max-height: 400px; overflow-y: auto; padding-right: 8px;">
+            ${scenesHtml}
+          </div>
+        </div>
+      `;
+      
+      const modalBody = document.getElementById('modal-body');
+      const modalEl = document.getElementById('carousel-modal');
+      if(modalBody && modalEl) {
+        modalBody.innerHTML = html;
+        modalEl.style.display = 'flex';
+      } else {
+        alert("JSON de Video Flow copiado en consola.");
+        console.log(videoFlow);
+      }
+    } catch (e) {
+      console.error(e);
+      Toast.show('Error al leer el script de vídeo.', 'error');
+    }
+  },
+
   showCarousel(postId) {
     try {
       const post = State.posts.find(p => p.id === postId);
@@ -546,11 +656,18 @@ const PostActions = {
       try {
         const post = State.posts.find(p => p.id === postId);
         let newMedia = null;
+        const editedSlidesB64 = PostActions.getEditedSlides(postId, post);
+        if (editedSlidesB64) {
+          post.media_base64 = editedSlidesB64;
+        }
+        
         if (post && post.media_base64) {
           let isCarousel = false;
           try {
             const raw = atob(post.media_base64);
             if (raw.startsWith('CAROUSEL:')) {
+              isCarousel = true;
+            } else if (decodeURIComponent(escape(raw)).startsWith('{"type":"pdf_carousel"')) {
               isCarousel = true;
             }
           } catch (e) {}
@@ -675,11 +792,31 @@ const PostActions = {
   },
 
   async generateCarouselImages(post, mediaBase64) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
         const decoded = decodeURIComponent(escape(atob(mediaBase64)));
-        const data = JSON.parse(decoded.replace('CAROUSEL:', ''));
-        const slideArr = Array.isArray(data) ? data : (data.slides || []);
+        let data = JSON.parse(decoded.replace('CAROUSEL:', ''));
+        let safetyCount = 0;
+        while (typeof data === 'string' && safetyCount < 5) {
+           const innerDecoded = decodeURIComponent(escape(atob(data)));
+           data = JSON.parse(innerDecoded.replace('CAROUSEL:', ''));
+           safetyCount++;
+        }
+        while (data && (data.type === 'pdf_carousel' || data.type === 'multi-image') && data.original_json && safetyCount < 10) {
+          data = JSON.parse(data.original_json.replace('CAROUSEL:', ''));
+          safetyCount++;
+        }
+        let slideArr = Array.isArray(data) ? data : (data.carousel || data.carrusel || data.slides || data.data || Object.values(data).find(Array.isArray) || []);
+        if (slideArr && !Array.isArray(slideArr)) {
+          if (slideArr.slides) slideArr = slideArr.slides;
+          else if (slideArr.carousel) slideArr = slideArr.carousel;
+          else if (slideArr.carrusel) slideArr = slideArr.carrusel;
+          else slideArr = Object.values(slideArr).find(Array.isArray) || [];
+        }
+        
+        if (!slideArr || slideArr.length === 0) {
+          throw new Error('No diapositivas. Data raw: ' + JSON.stringify(data).substring(0, 150));
+        }
         
         // Add fonts if not present
         if (!document.getElementById('carousel-fonts')) {
@@ -689,6 +826,7 @@ const PostActions = {
           fontLink.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Lora:wght@500&display=swap';
           document.head.appendChild(fontLink);
         }
+        await document.fonts.ready;
 
         // Create an offscreen container to render the slides
         const container = document.createElement('div');
@@ -702,72 +840,89 @@ const PostActions = {
         container.style.overflow = 'hidden';
         document.body.appendChild(container);
 
-        const images = [];
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'px',
+          format: [1080, 1080]
+        });
 
         const renderSlide = async (index) => {
           if (index >= slideArr.length) {
             document.body.removeChild(container);
-            const finalPayload = { type: 'multi-image', images, original_json: decoded };
-            resolve(btoa(unescape(encodeURIComponent(JSON.stringify(finalPayload)))));
+            const pdfDataUri = pdf.output('datauristring');
+            const pdfBase64 = pdfDataUri.split(',')[1];
+            const pdfBlob = pdf.output('blob');
+            const finalPayload = JSON.stringify({
+              type: "pdf_carousel",
+              pdf_base64: pdfBase64,
+              original_json: 'CAROUSEL:' + JSON.stringify({ slides: slideArr })
+            });
+            resolve({ payloadBase64: btoa(unescape(encodeURIComponent(finalPayload))), pdfBlob });
             return;
           }
 
-           const s = slideArr[index];
-          const iscover = s.slide_type === 'cover' || index === 0;
-          const isclosing = s.slide_type === 'closing' || index === slideArr.length - 1;
+          const s = slideArr[index];
+          const iscover = s.type === 'cover' || s.slide_type === 'cover' || s.tipo === 'portada' || index === 0;
+          const isclosing = s.type === 'close' || s.type === 'closing' || s.slide_type === 'closing' || s.tipo === 'cierre' || index === slideArr.length - 1;
+          
+          const s_pre_title = s.pre_title || s.pre_titulo || s.pre_title_text || '';
+          const s_title_raw = s.title || s.titulo || s.texto || '';
+          const s_subtitle_raw = s.subtitle || s.subtitulo || '';
+          const s_bullets = s.bullets || s.puntos || s.lista || [];
+
+          const s_title = s.title || s.titulo || s.texto || '';
+          const s_subtitle = s.subtitle || s.subtitulo || '';
+
           container.innerHTML = '';
           
-          const bulletsHtml = (s.bullets || []).map(b => {
+          const bulletsHtml = s_bullets.map(b => {
             const parsedBold = b.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
             return `<li style="position:relative;padding-left:36px;margin-bottom:28px;font-size:30px;font-weight:700;color:#2B2D2F;line-height:1.35;"><span style="position:absolute;left:0;color:#2B2D2F;">•</span>${parsedBold}</li>`;
           }).join('');
 
-          const signatureHtml = isclosing
-            ? `<div style="position:absolute;bottom:6%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
-                 <img src="/assets/img/monogram_solid.svg" style="height:140px;object-fit:contain;margin-bottom:12px;opacity:0.95;">
-                 <div style="font-family:'Lora',serif;font-weight:500;font-size:32px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
+          const signatureHtml = (iscover || isclosing) 
+            ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
+                 <img src="/assets/img/monogram_solid.png" style="height:90px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
+                 <div style="font-family:'Lora',serif;font-weight:500;font-size:26px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
                </div>`
-            : (iscover 
-              ? `<div style="position:absolute;bottom:6%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
-                   <img src="/assets/img/monogram_solid.svg" style="height:140px;object-fit:contain;margin-bottom:12px;opacity:0.95;">
-                   <div style="font-family:'Lora',serif;font-weight:500;font-size:32px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
-                 </div>`
-              : `<div style="position:absolute;bottom:4%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
-                   <img src="/assets/img/monogram_solid.svg" style="height:72px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
-                   <div style="font-family:'Lora',serif;font-weight:500;font-size:24px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
-                 </div>`);
+            : `<div style="position:absolute;bottom:4%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
+                 <img src="/assets/img/monogram_solid.png" style="height:72px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
+                 <div style="font-family:'Lora',serif;font-weight:500;font-size:24px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
+               </div>`;
 
           const bgColor = isclosing ? '#7A8B7B' : '#F9F6F0';
-          const watermarkImg = (iscover || isclosing) ? 'logo_watermark_cover.svg' : 'logo_watermark_interior.svg';
-          const watermarkFilter = isclosing ? 'opacity(0.15)' : 'none';
+          const watermarkImg = (iscover || isclosing) ? 'logo_watermark_cover.png' : 'logo_watermark_interior.png';
+          const watermarkFilter = 'none';
 
           let slideContent = '';
           if (iscover) {
             slideContent = `
               <!-- COVER LAYOUT -->
               <div style="position:absolute;top:0;left:0;right:0;bottom:15%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
-                ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:18px 43px;font-weight:800;font-size:27px;letter-spacing:2px;margin-bottom:43px;">${s.pre_title}</div>` : ''}
-                ${s.title ? `<h1 style="font-size:68px;font-weight:800;color:#2B2D2F;line-height:1.15;margin:0 0 36px 0;">${s.title}</h1>` : ''}
-                ${s.subtitle ? `<p style="font-size:36px;font-weight:500;color:#2B2D2F;line-height:1.4;margin:0;">${s.subtitle}</p>` : ''}
+                ${s_pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:18px 43px;font-weight:800;font-size:27px;letter-spacing:2px;margin-bottom:43px;text-transform:uppercase;">${s_pre_title}</div>` : ''}
+                ${s_title ? `<h1 style="font-size:68px;font-weight:800;color:#2B2D2F;line-height:1.15;margin:0 0 ${s_subtitle ? '36px' : '0'} 0;">${s_title}</h1>` : ''}
+                ${s_subtitle ? `<p style="font-size:36px;font-weight:500;color:#2B2D2F;line-height:1.4;margin:0;">${s_subtitle}</p>` : ''}
               </div>
             `;
           } else if (isclosing) {
             slideContent = `
               <!-- CLOSING LAYOUT - LIGHT GRAY -->
               <div style="position:absolute;top:0;left:0;right:0;bottom:25%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
-                ${s.pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:16px 48px;font-weight:800;font-size:28px;letter-spacing:3px;margin-bottom:64px;flex-shrink:0;text-transform:uppercase;">${s.pre_title}</div>` : ''}
-                ${s.title ? `<h1 style="font-size:58px;font-weight:800;color:#2B2D2F;line-height:1.25;margin:0 0 40px 0;flex-shrink:0;">${s.title}</h1>` : ''}
-                ${s.subtitle ? `<div style="font-size:38px;font-weight:800;color:#2B2D2F;letter-spacing:2px;text-transform:uppercase;">${s.subtitle}</div>` : ''}
+                ${s_pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:16px 48px;font-weight:800;font-size:28px;letter-spacing:3px;margin-bottom:64px;flex-shrink:0;text-transform:uppercase;">${s_pre_title}</div>` : ''}
+                ${s_title ? `<h1 style="font-size:58px;font-weight:800;color:#2B2D2F;line-height:1.25;margin:0 0 ${(s_subtitle || bulletsHtml) ? '40px' : '0'} 0;flex-shrink:0;">${s_title}</h1>` : ''}
+                ${s_subtitle ? `<div style="font-size:38px;font-weight:800;color:#2B2D2F;letter-spacing:2px;text-transform:uppercase;margin-bottom:${bulletsHtml ? '40px' : '0'}">${s_subtitle}</div>` : ''}
+                ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;overflow:hidden;text-align:left;width:100%;max-width:800px;">${bulletsHtml}</ul>` : ''}
               </div>
             `;
           } else {
             slideContent = `
               <!-- INTERIOR LAYOUT -->
-              <div style="position:absolute;top:0;left:0;right:0;bottom:22%;padding:8% 10% 0 10%;display:flex;flex-direction:column;z-index:2;overflow:hidden;">
-                ${s.pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:10px 28px;font-weight:800;font-size:24px;letter-spacing:2px;margin-bottom:32px;">${s.pre_title}</div>` : ''}
-                ${s.title ? `<h2 style="font-size:44px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 22px 0;flex-shrink:0;">${s.title}</h2>` : ''}
-                ${s.subtitle ? `<p style="font-size:28px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 32px 0;flex-shrink:0;">${s.subtitle}</p>` : ''}
-                ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;overflow:hidden;">${bulletsHtml}</ul>` : ''}
+              <div style="position:absolute;top:0;left:0;right:0;bottom:18%;padding:10% 10% 0 10%;display:flex;flex-direction:column;z-index:2;">
+                ${s_pre_title ? `<div style="align-self:flex-start;background:#C2593F;color:#FFF;border-radius:99px;padding:10px 28px;font-weight:800;font-size:24px;letter-spacing:2px;margin-bottom:43px;">${s_pre_title}</div>` : ''}
+                ${s_title ? `<h2 style="font-size:50px;font-weight:800;color:#2B2D2F;line-height:1.2;margin:0 0 28px 0;">${s_title}</h2>` : ''}
+                ${s_subtitle ? `<p style="font-size:32px;font-weight:500;color:#7A8B7B;line-height:1.3;margin:0 0 43px 0;">${s_subtitle}</p>` : ''}
+                ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;">${bulletsHtml}</ul>` : ''}
               </div>
               <!-- Separator Line -->
               <div style="position:absolute;bottom:17%;left:10%;right:10%;height:4px;background:#7A8B7B;z-index:2;"></div>
@@ -798,8 +953,12 @@ const PostActions = {
             backgroundColor: bgColor
           });
           
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-          images.push(dataUrl);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          
+          if (index > 0) {
+            pdf.addPage([1080, 1080], 'portrait');
+          }
+          pdf.addImage(dataUrl, 'JPEG', 0, 0, 1080, 1080);
           
           await renderSlide(index + 1);
         };
@@ -824,28 +983,71 @@ const PostActions = {
     
     Toast.show('Generando imágenes del carrusel...', 'info');
     let media = post.media_base64;
+    const editedSlidesB64 = PostActions.getEditedSlides(postId, post);
+    if (editedSlidesB64) {
+      post.media_base64 = editedSlidesB64;
+      media = editedSlidesB64;
+    }
     
     try {
       const rawAtob = atob(media);
       
       if (rawAtob.startsWith('%PDF')) {
-        const pdfWindow = window.open("");
-        if (pdfWindow) {
-          pdfWindow.document.write(`<iframe width='100%' height='100%' style='border:none;margin:0;padding:0;' src='data:application/pdf;base64,${media}'></iframe>`);
-          pdfWindow.document.body.style.margin = "0";
-          pdfWindow.document.title = "Carrusel PDF";
-        } else {
-          Toast.show('Por favor, permite los popups para ver el PDF.', 'warning');
+        const byteCharacters = atob(media);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], {type: 'application/pdf'});
+        const url = URL.createObjectURL(blob);
+        
+        const modal = document.getElementById('pdf-preview-modal');
+        const iframe = document.getElementById('pdf-preview-iframe');
+        iframe.src = url;
+        modal.classList.add('visible');
         return;
       }
 
       const decoded = decodeURIComponent(escape(rawAtob));
       if (decoded.startsWith('CAROUSEL:')) {
-        media = await PostActions.generateCarouselImages(post, media);
+        const payloadBase64Str = await PostActions.generateCarouselImages(post, media);
+        const payloadDecoded = JSON.parse(decodeURIComponent(escape(atob(payloadBase64Str))));
+        const pdfBase64 = payloadDecoded.pdf_base64;
+        
+        const byteCharacters = atob(pdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], {type: 'application/pdf'});
+        const url = URL.createObjectURL(blob);
+        const modal = document.getElementById('pdf-preview-modal');
+        const iframe = document.getElementById('pdf-preview-iframe');
+        iframe.src = url;
+        modal.classList.add('visible');
+        return;
       }
       
       const newDecoded = decodeURIComponent(escape(atob(media)));
+      if (newDecoded.startsWith('{"type":"pdf_carousel"')) {
+        const payload = JSON.parse(newDecoded);
+        const pdfBase64 = payload.pdf_base64;
+        const byteCharacters = atob(pdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], {type: 'application/pdf'});
+        const url = URL.createObjectURL(blob);
+        const modal = document.getElementById('pdf-preview-modal');
+        const iframe = document.getElementById('pdf-preview-iframe');
+        iframe.src = url;
+        modal.classList.add('visible');
+        return;
+      }
       if (newDecoded.startsWith('{"type":"multi-image"')) {
         const payload = JSON.parse(newDecoded);
         const w = window.open('');
@@ -883,22 +1085,39 @@ const PostActions = {
       
       const post = State.posts.find(p => p.id === postId);
       let newMedia = null;
+      const editedSlidesB64 = PostActions.getEditedSlides(postId, post);
+      if (editedSlidesB64) {
+        post.media_base64 = editedSlidesB64;
+      }
+
+      let pdfBlob = null;
       if (post && post.media_base64) {
         let isCarousel = false;
         try {
           const raw = atob(post.media_base64);
           if (raw.startsWith('CAROUSEL:')) {
             isCarousel = true;
+          } else if (decodeURIComponent(escape(raw)).startsWith('{"type":"pdf_carousel"')) {
+            isCarousel = true;
           }
         } catch (e) {}
         if (isCarousel) {
           Toast.show('Renderizando carrusel...', 'info');
-          newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
+          const result = await PostActions.generateCarouselImages(post, post.media_base64);
+          newMedia = result.payloadBase64;
+          pdfBlob = result.pdfBlob;
         }
       }
 
       await API.approvePost(postId, null, newMedia);
-      await API.publishPost(postId);
+
+      let formData = null;
+      if (pdfBlob) {
+        formData = new FormData();
+        formData.append('pdf', pdfBlob, 'carrusel.pdf');
+      }
+
+      await API.publishPost(postId, formData);
       Toast.show('¡Publicado con éxito en LinkedIn! 🚀', 'success');
       removePostCard(postId);
       loadStats();
@@ -1118,10 +1337,9 @@ const PostActions = {
       let hasCarouselChanged = false;
       
       if (post && post.media_base64 && carouselSec && carouselSec.style.display !== 'none') {
-        const editedSlides = PostActions.getEditedSlides(postId, post);
-        if (editedSlides) {
-          const carouselStr = 'CAROUSEL:' + JSON.stringify(editedSlides);
-          newMediaBase64 = btoa(unescape(encodeURIComponent(carouselStr)));
+        const editedSlidesB64 = PostActions.getEditedSlides(postId, post);
+        if (editedSlidesB64) {
+          newMediaBase64 = editedSlidesB64;
           hasCarouselChanged = newMediaBase64 !== post.media_base64;
         }
       }
@@ -1367,12 +1585,19 @@ const PostActions = {
       let data = {};
       try {
         data = JSON.parse(decoded.replace('CAROUSEL:', ''));
-        if (data && data.type === 'multi-image' && data.original_json) {
+        let safetyCount = 0;
+        while (typeof data === 'string' && safetyCount < 5) {
+           const innerDecoded = decodeURIComponent(escape(atob(data)));
+           data = JSON.parse(innerDecoded.replace('CAROUSEL:', ''));
+           safetyCount++;
+        }
+        while (data && (data.type === 'multi-image' || data.type === 'pdf_carousel') && data.original_json && safetyCount < 10) {
            data = JSON.parse(data.original_json.replace('CAROUSEL:', ''));
+           safetyCount++;
         }
       } catch(e) {}
       
-      const slideArr = Array.isArray(data) ? data : (data.carousel || data.slides || []);
+      const slideArr = Array.isArray(data) ? data : (data.carousel || data.carrusel || data.slides || Object.values(data).find(Array.isArray) || []);
       if (!slideArr || slideArr.length === 0) {
         container.style.display = 'none';
         return;
@@ -1403,13 +1628,15 @@ const PostActions = {
           ? `<div style="font-size:6px;color:#2B2D2F;line-height:1.4;">${s.bullets.slice(0,4).map(b=>`• ${b}`).join('<br>')}</div>` : '';
         const miniSep = (!isCover && !isClosing) ? `<div style="position:absolute;bottom:12%;left:8%;right:8%;height:1px;background:#7A8B7B;opacity:0.5;"></div>` : '';
         const miniSig = (isClosing || isCover)
-          ? `<div style="position:absolute;bottom:6%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
-               <img src="/assets/img/${isClosing ? 'monogram_full_light.svg' : 'monogram_full.svg'}" style="height:35px;object-fit:contain;margin-bottom:4px;opacity:${isClosing ? '0.5' : '0.9'};">
+          ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
+               <img src="/assets/img/monogram_solid.png" style="height:12px;object-fit:contain;margin-bottom:2px;opacity:0.9;">
+               <div style="font-family:'Lora',serif;font-weight:500;font-size:3px;color:#2B2D2F;letter-spacing:0.5px;">Alberto López</div>
              </div>`
           : `<div style="position:absolute;bottom:4%;left:8%;display:flex;flex-direction:column;align-items:center;z-index:10;">
-               <img src="/assets/img/monogram_full.svg" style="height:25px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
+               <img src="/assets/img/monogram_solid.png" style="height:10px;object-fit:contain;margin-bottom:2px;opacity:0.9;">
+               <div style="font-family:'Lora',serif;font-weight:500;font-size:2px;color:#2B2D2F;letter-spacing:0.5px;">Alberto López</div>
              </div>`;
-        const miniNum = (!isCover && !isClosing) ? `<div style="position:absolute;bottom:4%;right:8%;font-size:5px;color:#7A8B7B;font-weight:700;">${idx+1}/${slideArr.length}</div>` : '';
+        const miniNum = (!isCover && !isClosing) ? `<div style="position:absolute;bottom:4%;right:8%;font-size:4px;color:#7A8B7B;font-weight:700;">${idx+1}/${slideArr.length}</div>` : '';
 
         html += `
           <div class="slide-edit-card" style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 6px;">
@@ -1462,16 +1689,23 @@ const PostActions = {
     try {
       const decoded = decodeURIComponent(escape(atob(post.media_base64)));
       let data = JSON.parse(decoded.replace('CAROUSEL:', ''));
-      if (data && data.type === 'multi-image' && data.original_json) {
-         data = JSON.parse(data.original_json.replace('CAROUSEL:', ''));
+      let safetyCount = 0;
+      while (typeof data === 'string' && safetyCount < 5) {
+         const innerDecoded = decodeURIComponent(escape(atob(data)));
+         data = JSON.parse(innerDecoded.replace('CAROUSEL:', ''));
+         safetyCount++;
       }
-      const slideArr = Array.isArray(data) ? data : (data.carousel || data.slides || []);
+      while (data && (data.type === 'multi-image' || data.type === 'pdf_carousel') && data.original_json && safetyCount < 10) {
+         data = JSON.parse(data.original_json.replace('CAROUSEL:', ''));
+         safetyCount++;
+      }
+      const slideArr = Array.isArray(data) ? data : (data.carousel || data.carrusel || data.slides || Object.values(data).find(Array.isArray) || []);
       
       const newSlides = [];
       
       slideArr.forEach((s, idx) => {
-        const isCover = s.slide_type === 'cover' || idx === 0;
-        const isClosing = s.slide_type === 'closing' || idx === slideArr.length - 1;
+        const isCover = s.type === 'cover' || s.slide_type === 'cover' || idx === 0;
+        const isClosing = s.type === 'close' || s.type === 'closing' || s.slide_type === 'closing' || idx === slideArr.length - 1;
         
         const preTitleInput = container.querySelector(`.slide-input-pretitle-${postId}[data-index="${idx}"]`);
         const titleInput = container.querySelector(`.slide-input-title-${postId}[data-index="${idx}"]`);
@@ -1484,6 +1718,7 @@ const PostActions = {
         const bullets = bulletsInput ? bulletsInput.value.split('\n').map(b => b.trim()).filter(Boolean) : [];
         
         newSlides.push({
+          type: isCover ? 'cover' : (isClosing ? 'close' : 'interior'),
           slide_type: isCover ? 'cover' : (isClosing ? 'closing' : 'interior'),
           pre_title,
           title,
@@ -1492,7 +1727,7 @@ const PostActions = {
         });
       });
       
-      return newSlides;
+      return btoa(unescape(encodeURIComponent('CAROUSEL:' + JSON.stringify(newSlides))));
     } catch (e) {
       console.error('Error reading edited slides:', e);
       return null;
