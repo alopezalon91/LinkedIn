@@ -510,8 +510,10 @@ const PostActions = {
         modalBody.innerHTML = html;
         modalEl.style.display = 'flex';
       } else {
-        alert("JSON de Video Flow copiado en consola.");
-        console.log(videoFlow);
+        navigator.clipboard.writeText(JSON.stringify(videoFlow, null, 2))
+          .then(() => Toast.show('✅ JSON de vídeo copiado al portapapeles', 'success'))
+          .catch(() => alert("No se pudo copiar al portapapeles."));
+        console.log("Material para Google Flow / Video IA:", videoFlow);
       }
     } catch (e) {
       console.error(e);
