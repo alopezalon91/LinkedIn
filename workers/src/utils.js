@@ -104,16 +104,21 @@ export function isAuthorized(request, env) {
  * For pre-flight OPTIONS requests, also adds Allow-Headers/Methods.
  *
  * @param {Request} request  – incoming request
- * @param {string}  origin   – allowed origin (from env.CORS_ORIGIN)
+ * @param {string}  allowedOriginString   – allowed origin (from env.CORS_ORIGIN)
  */
-export function corsHeaders(request, origin = '*') {
-  const headers = {
-    'Access-Control-Allow-Origin':  origin,
+export function corsHeaders(request, allowedOriginString = '*') {
+  const allowedOrigins = allowedOriginString.split(',').map(s => s.trim());
+  const origin = request?.headers?.get('Origin');
+  
+  // Si el origin de la petición está en la lista de permitidos, usamos ese, sino usamos el primero (o '*')
+  const finalOrigin = (origin && allowedOrigins.includes(origin)) ? origin : allowedOrigins[0];
+
+  return {
+    'Access-Control-Allow-Origin': finalOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age':       '86400',
   };
-  return headers;
 }
 
 // ─── Request body parsing ─────────────────────────────────────────────────────

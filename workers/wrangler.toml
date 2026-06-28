@@ -8,15 +8,16 @@ database_name = "mytaxbot_linkedin"
 database_id = "32f7db45-89d6-48e3-9069-a1dc61db2b30"
 
 [vars]
-CORS_ORIGIN = "https://linkedin-2cg.pages.dev"
-VIDEO_AUTOMATION_WEBHOOK = "https://hook.eu1.make.com/1ecuew0d1nv984ity7u82a5ywys3iaf7"
+CORS_ORIGIN = "https://panel.alasesoria.es, https://linkedin-2cg.pages.dev"
 
-# Secrets — set each via: wrangler secret put <NAME>
-#
-#   DASHBOARD_SECRET       — Bearer token that the Pages dashboard sends
-#   LINKEDIN_CLIENT_ID     — From LinkedIn Developer App
-#   LINKEDIN_CLIENT_SECRET — From LinkedIn Developer App
-#   LINKEDIN_REDIRECT_URI  — e.g. https://mytaxbot-linkedin.workers.dev/api/auth/callback
+# El webhook ya no se usará, usaremos la API de GitHub Actions
+# VIDEO_AUTOMATION_WEBHOOK = "https://hook.eu1.make.com/1ecuew0d1nv984ity7u82a5ywys3iaf7"
+
+# Secrets necesarios:
+# GITHUB_PAT - Personal Access Token para invocar Actions
+# TELEGRAM_BOT_TOKEN - Para recibir el vídeo final
+# TELEGRAM_CHAT_ID - Tu chat ID de Telegram
 
 [triggers]
 crons = ["0,30 * * * *"]
+
