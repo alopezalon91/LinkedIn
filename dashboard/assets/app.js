@@ -10,7 +10,7 @@
 const CONFIG = {
   // Cloudflare Worker API endpoint
   WORKER_URL: localStorage.getItem('worker_url') || 'https://mytaxbot-linkedin.a-lopezalon91.workers.dev',
-  DASHBOARD_SECRET: localStorage.getItem('dashboard_secret') || 'd5a8fb21e7d97b0a790518d6bc1f9b3e',
+  DASHBOARD_SECRET: localStorage.getItem('dashboard_secret') || '',
   LINKEDIN_NAME: 'Alberto López',
   LINKEDIN_TITLE: 'Gestor contable y fiscal',
 };
@@ -18,9 +18,6 @@ const CONFIG = {
 // Initialize localStorage defaults if not set, for seamless zero-setup on new machines/subdomains
 if (!localStorage.getItem('worker_url')) {
   localStorage.setItem('worker_url', CONFIG.WORKER_URL);
-}
-if (!localStorage.getItem('dashboard_secret')) {
-  localStorage.setItem('dashboard_secret', CONFIG.DASHBOARD_SECRET);
 }
 if (!localStorage.getItem('github_repo')) {
   localStorage.setItem('github_repo', 'alopezalon91/LinkedIn');
@@ -390,21 +387,22 @@ function renderPostCard(post) {
         </button>
         ${State.currentView === 'scheduled'
           ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Ver JSON del script de vídeo">🎬 Script de Vídeo Generado</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
+             ${getVideoButtonHTML(post)}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
           : State.currentView === 'reviewed'
           ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Ver JSON del script de vídeo">🎬 Script de Vídeo Generado</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
+             ${getVideoButtonHTML(post)}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
           : State.currentView === 'published'
           ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes publicadas">📸 Ver Carrusel</button>
-             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Ver JSON del script de vídeo">🎬 Script de Vídeo Generado</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
+             ${getVideoButtonHTML(post)}
              ${post.linkedin_post_id ? `<a href="https://www.linkedin.com/feed/update/${post.linkedin_post_id}" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;">🔗 Ver en LinkedIn</a>` : ''}`
           : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
              <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             ${post.video_flow_json ? `<button class="btn btn-sm" onclick="PostActions.showVideoScript('${post.id}')" style="background-color: var(--accent-purple); color: white;" title="Ver JSON del script de vídeo">🎬 Script de Vídeo Generado</button>` : `<button class="btn btn-sm" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent;">🎬 Generar Vídeo Script</button>`}
+             <button class="btn btn-outline btn-sm" onclick="PostActions.downloadPDF('${post.id}')" title="Descargar PDF del carrusel para LinkedIn">⬇️ Descargar PDF</button>
+             ${getVideoButtonHTML(post)}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
         }
@@ -455,9 +453,31 @@ const PostActions = {
       }
       
       const videoFlow = JSON.parse(post.video_flow_json);
+      const jsonStr = JSON.stringify(videoFlow, null, 2);
       
-      console.log("JSON de vídeo (Automático):", videoFlow);
-      Toast.show('✅ JSON de vídeo mostrado en consola para depuración', 'success');
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+      
+      const container = document.createElement('div');
+      container.style.cssText = 'background:#1a1a1a;color:#00ff00;padding:20px;border-radius:8px;max-width:800px;width:100%;max-height:80vh;overflow-y:auto;font-family:monospace;white-space:pre-wrap;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.5);';
+      container.textContent = jsonStr;
+      
+      const closeBtn = document.createElement('button');
+      closeBtn.innerText = 'Cerrar Visor';
+      closeBtn.className = 'btn btn-primary';
+      closeBtn.style.marginTop = '20px';
+      closeBtn.onclick = () => document.body.removeChild(overlay);
+      
+      const title = document.createElement('h3');
+      title.innerText = 'JSON de Video Flow (Depuración)';
+      title.style.color = '#fff';
+      title.style.marginBottom = '10px';
+      
+      overlay.appendChild(title);
+      overlay.appendChild(container);
+      overlay.appendChild(closeBtn);
+      
+      document.body.appendChild(overlay);
         
     } catch (e) {
       console.error(e);
@@ -473,7 +493,7 @@ const PostActions = {
         return;
       }
       const base64 = post.media_base64;
-      const decoded = decodeURIComponent(escape(atob(base64)));
+      const decoded = new TextDecoder().decode(Uint8Array.from(atob(base64), c => c.charCodeAt(0)));
       if (decoded.startsWith('CAROUSEL:')) {
         const slides = JSON.parse(decoded.slice(9));
         const slideArr = Array.isArray(slides) ? slides : (slides.slides || []);
@@ -504,10 +524,10 @@ const PostActions = {
 
           const signatureHtml = (iscover || isclosing) 
             ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
-                 <img src="/assets/img/${isclosing ? 'monogram_full_light.svg' : 'monogram_full.svg'}" style="height:65px;object-fit:contain;margin-bottom:4px;opacity:${isclosing ? '0.5' : '0.9'};">
+                 <img src="/assets/img/monogram_solid.png" style="height:120px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
                </div>`
             : `<div style="position:absolute;bottom:4%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
-                 <img src="/assets/img/monogram_full.svg" style="height:50px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
+                 <img src="/assets/img/monogram_solid.png" style="height:50px;object-fit:contain;margin-bottom:4px;opacity:0.9;">
                </div>`;
 
           const bgColor = isclosing ? '#2B2D2F' : '#F9F6F0';
@@ -610,7 +630,6 @@ const PostActions = {
 
       try {
         const post = State.posts.find(p => p.id === postId);
-        let newMedia = null;
         const editedSlidesB64 = PostActions.getEditedSlides(postId, post);
         if (editedSlidesB64) {
           post.media_base64 = editedSlidesB64;
@@ -628,14 +647,14 @@ const PostActions = {
           } catch (e) {}
           if (isCarousel) {
             Toast.show('Renderizando imágenes...', 'info');
-            newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
+            await PostActions.generateCarouselImages(post, post.media_base64);
           }
         }
         
         if (editedContent) {
-          await API.approvePost(postId, editedContent, newMedia); // Save edits first
+          await API.approvePost(postId, editedContent, null); // Save edits first
         }
-        await API.schedulePost(postId, isoStr, newMedia);
+        await API.schedulePost(postId, isoStr, null);
         Toast.show('Post programado ✅', 'success');
         modal.classList.remove('visible');
         removePostCard(postId);
@@ -707,7 +726,6 @@ const PostActions = {
       }
       
       const post = State.posts.find(p => p.id === postId);
-      let newMedia = null;
       if (post && post.media_base64) {
         let isCarousel = false;
         try {
@@ -718,11 +736,11 @@ const PostActions = {
         } catch (e) {}
         if (isCarousel) {
           Toast.show('Renderizando imágenes del carrusel...', 'info');
-          newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
+          await PostActions.generateCarouselImages(post, post.media_base64);
         }
       }
 
-      await API.approvePost(postId, null, newMedia);
+      await API.approvePost(postId, null, null);
       
       await API.recordFeedback({
         post_id: postId,
@@ -749,11 +767,11 @@ const PostActions = {
   async generateCarouselImages(post, mediaBase64) {
     return new Promise(async (resolve, reject) => {
       try {
-        const decoded = decodeURIComponent(escape(atob(mediaBase64)));
+        const decoded = new TextDecoder().decode(Uint8Array.from(atob(mediaBase64), c => c.charCodeAt(0)));
         let data = JSON.parse(decoded.replace('CAROUSEL:', ''));
         let safetyCount = 0;
         while (typeof data === 'string' && safetyCount < 5) {
-           const innerDecoded = decodeURIComponent(escape(atob(data)));
+           const innerDecoded = new TextDecoder().decode(Uint8Array.from(atob(data), c => c.charCodeAt(0)));
            data = JSON.parse(innerDecoded.replace('CAROUSEL:', ''));
            safetyCount++;
         }
@@ -805,15 +823,8 @@ const PostActions = {
         const renderSlide = async (index) => {
           if (index >= slideArr.length) {
             document.body.removeChild(container);
-            const pdfDataUri = pdf.output('datauristring');
-            const pdfBase64 = pdfDataUri.split(',')[1];
             const pdfBlob = pdf.output('blob');
-            const finalPayload = JSON.stringify({
-              type: "pdf_carousel",
-              pdf_base64: pdfBase64,
-              original_json: 'CAROUSEL:' + JSON.stringify({ slides: slideArr })
-            });
-            resolve({ payloadBase64: btoa(unescape(encodeURIComponent(finalPayload))), pdfBlob });
+            resolve({ pdfBlob });
             return;
           }
 
@@ -838,7 +849,7 @@ const PostActions = {
 
           const signatureHtml = (iscover || isclosing) 
             ? `<div style="position:absolute;bottom:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:10;display:flex;flex-direction:column;align-items:center;">
-                 <img src="/assets/img/monogram_solid.png" style="height:90px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
+                 <img src="/assets/img/monogram_solid.png" style="height:120px;object-fit:contain;margin-bottom:8px;opacity:0.9;">
                  <div style="font-family:'Lora',serif;font-weight:500;font-size:26px;color:#2B2D2F;letter-spacing:4px;">Alberto López</div>
                </div>`
             : `<div style="position:absolute;bottom:4%;left:10%;display:flex;flex-direction:column;align-items:center;z-index:10;">
@@ -865,9 +876,8 @@ const PostActions = {
               <!-- CLOSING LAYOUT - LIGHT GRAY -->
               <div style="position:absolute;top:0;left:0;right:0;bottom:25%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10%;text-align:center;z-index:2;">
                 ${s_pre_title ? `<div style="background:#C2593F;color:#FFF;border-radius:99px;padding:16px 48px;font-weight:800;font-size:28px;letter-spacing:3px;margin-bottom:64px;flex-shrink:0;text-transform:uppercase;">${s_pre_title}</div>` : ''}
-                ${s_title ? `<h1 style="font-size:58px;font-weight:800;color:#2B2D2F;line-height:1.25;margin:0 0 ${(s_subtitle || bulletsHtml) ? '40px' : '0'} 0;flex-shrink:0;">${s_title}</h1>` : ''}
-                ${s_subtitle ? `<div style="font-size:38px;font-weight:800;color:#2B2D2F;letter-spacing:2px;text-transform:uppercase;margin-bottom:${bulletsHtml ? '40px' : '0'}">${s_subtitle}</div>` : ''}
-                ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0;overflow:hidden;text-align:left;width:100%;max-width:800px;">${bulletsHtml}</ul>` : ''}
+                ${s_title ? `<h1 style="font-size:58px;font-weight:800;color:#2B2D2F;line-height:1.25;margin:0;flex-shrink:0;">${s_title}</h1>` : ''}
+                ${s_subtitle ? `<div style="font-size:38px;font-weight:800;color:#2B2D2F;letter-spacing:2px;text-transform:uppercase;margin-top:40px;">${s_subtitle}</div>` : ''}
               </div>
             `;
           } else {
@@ -930,54 +940,21 @@ const PostActions = {
   },
 
   async previewCarousel(postId) {
-    const post = State.posts.find(p => p.id === postId);
-    if (!post || !post.media_base64) {
-      Toast.show('Este post no tiene carrusel.', 'warning');
-      return;
-    }
-    
-    Toast.show('Generando imágenes del carrusel...', 'info');
-    let media = post.media_base64;
-    const editedSlidesB64 = PostActions.getEditedSlides(postId, post);
-    if (editedSlidesB64) {
-      post.media_base64 = editedSlidesB64;
-      media = editedSlidesB64;
-    }
-    
     try {
+      const post = State.posts.find(p => p.id === postId);
+      if (!post || !post.media_base64) {
+        Toast.show('Este post no tiene carrusel.', 'warning');
+        return;
+      }
+      const media = post.media_base64;
+      
+      Toast.show('Renderizando vista previa...', 'info');
       const rawAtob = atob(media);
-      
-      if (rawAtob.startsWith('%PDF')) {
-        const byteCharacters = atob(media);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], {type: 'application/pdf'});
-        const url = URL.createObjectURL(blob);
-        
-        const modal = document.getElementById('pdf-preview-modal');
-        const iframe = document.getElementById('pdf-preview-iframe');
-        iframe.src = url;
-        modal.classList.add('visible');
-        return;
-      }
-
       const decoded = decodeURIComponent(escape(rawAtob));
+      
       if (decoded.startsWith('CAROUSEL:')) {
-        const payloadBase64Str = await PostActions.generateCarouselImages(post, media);
-        const payloadDecoded = JSON.parse(decodeURIComponent(escape(atob(payloadBase64Str))));
-        const pdfBase64 = payloadDecoded.pdf_base64;
-        
-        const byteCharacters = atob(pdfBase64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], {type: 'application/pdf'});
-        const url = URL.createObjectURL(blob);
+        const { pdfBlob } = await PostActions.generateCarouselImages(post, media);
+        const url = URL.createObjectURL(pdfBlob);
         const modal = document.getElementById('pdf-preview-modal');
         const iframe = document.getElementById('pdf-preview-iframe');
         iframe.src = url;
@@ -985,7 +962,7 @@ const PostActions = {
         return;
       }
       
-      const newDecoded = decodeURIComponent(escape(atob(media)));
+      const newDecoded = new TextDecoder().decode(Uint8Array.from(atob(media), c => c.charCodeAt(0)));
       if (newDecoded.startsWith('{"type":"pdf_carousel"')) {
         const payload = JSON.parse(newDecoded);
         const pdfBase64 = payload.pdf_base64;
@@ -1003,19 +980,61 @@ const PostActions = {
         modal.classList.add('visible');
         return;
       }
-      if (newDecoded.startsWith('{"type":"multi-image"')) {
-        const payload = JSON.parse(newDecoded);
-        const w = window.open('');
-        w.document.write('<h2>Vista Previa del Carrusel (Imágenes a publicar)</h2><div style="display:flex; flex-direction:column; gap:20px; align-items:center; background:#f3f2ef; padding:20px;">');
-        payload.images.forEach((img, i) => {
-          w.document.write('<div style="background:white; padding:10px; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1);"><h3 style="margin-top:0">Diapositiva ' + (i+1) + '</h3><img src="' + img + '" style="max-width:100%; border:1px solid #ccc; border-radius:4px;" /></div>');
-        });
-        w.document.write('</div>');
-      } else {
-        Toast.show('Formato de imagen no reconocido.', 'error');
-      }
+
+      Toast.show('Formato de media no soportado', 'error');
     } catch(err) {
       Toast.show('Error generando vista previa: ' + err.message, 'error');
+    }
+  },
+
+  async downloadPDF(postId) {
+    try {
+      const post = State.posts.find(p => p.id === postId);
+      if (!post || !post.media_base64) {
+        Toast.show('Este post no tiene carrusel.', 'warning');
+        return;
+      }
+      const media = post.media_base64;
+      
+      Toast.show('Generando PDF en alta calidad, espera unos segundos...', 'info');
+      let blobToDownload = null;
+
+      const rawAtob = atob(media);
+      const decoded = decodeURIComponent(escape(rawAtob));
+      if (decoded.startsWith('CAROUSEL:')) {
+        const { pdfBlob } = await PostActions.generateCarouselImages(post, media);
+        blobToDownload = pdfBlob;
+      } else {
+        const newDecoded = new TextDecoder().decode(Uint8Array.from(atob(media), c => c.charCodeAt(0)));
+        if (newDecoded.startsWith('{"type":"pdf_carousel"')) {
+          const payload = JSON.parse(newDecoded);
+          const pdfBase64 = payload.pdf_base64;
+          const byteCharacters = atob(pdfBase64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          blobToDownload = new Blob([byteArray], {type: 'application/pdf'});
+        } else {
+          throw new Error("Formato de media no soportado para descarga");
+        }
+      }
+
+      if (blobToDownload) {
+        const url = URL.createObjectURL(blobToDownload);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Carrusel_LinkedIn_${postId.substring(0,8)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        Toast.show('✅ PDF descargado', 'success');
+      }
+    } catch (e) {
+      Toast.show('Error al descargar PDF: ' + e.message, 'error');
+      console.error(e);
     }
   },
 
@@ -1039,7 +1058,6 @@ const PostActions = {
       }
       
       const post = State.posts.find(p => p.id === postId);
-      let newMedia = null;
       const editedSlidesB64 = PostActions.getEditedSlides(postId, post);
       if (editedSlidesB64) {
         post.media_base64 = editedSlidesB64;
@@ -1059,12 +1077,11 @@ const PostActions = {
         if (isCarousel) {
           Toast.show('Renderizando carrusel...', 'info');
           const result = await PostActions.generateCarouselImages(post, post.media_base64);
-          newMedia = result.payloadBase64;
           pdfBlob = result.pdfBlob;
         }
       }
 
-      await API.approvePost(postId, null, newMedia);
+      await API.approvePost(postId, null, null);
 
       let formData = null;
       if (pdfBlob) {
@@ -1167,11 +1184,11 @@ const PostActions = {
         } catch (e) {}
         if (isCarousel) {
           Toast.show('Renderizando imágenes...', 'info');
-          newMedia = await PostActions.generateCarouselImages(post, post.media_base64);
+          await PostActions.generateCarouselImages(post, post.media_base64);
         }
       }
       
-      await API.approvePost(postId, editedContent, newMedia);
+      await API.approvePost(postId, editedContent, null);
       await API.recordFeedback({
         post_id: postId,
         decision: 'edited',
@@ -1585,7 +1602,7 @@ const PostActions = {
     try {
       let decoded = '';
       try {
-        decoded = decodeURIComponent(escape(atob(post.media_base64)));
+        decoded = new TextDecoder().decode(Uint8Array.from(atob(post.media_base64), c => c.charCodeAt(0)));
       } catch (e) {
         decoded = atob(post.media_base64);
       }
@@ -1595,7 +1612,7 @@ const PostActions = {
         data = JSON.parse(decoded.replace('CAROUSEL:', ''));
         let safetyCount = 0;
         while (typeof data === 'string' && safetyCount < 5) {
-           const innerDecoded = decodeURIComponent(escape(atob(data)));
+           const innerDecoded = new TextDecoder().decode(Uint8Array.from(atob(data), c => c.charCodeAt(0)));
            data = JSON.parse(innerDecoded.replace('CAROUSEL:', ''));
            safetyCount++;
         }
@@ -1695,11 +1712,11 @@ const PostActions = {
     if (!container || container.style.display === 'none') return null;
     
     try {
-      const decoded = decodeURIComponent(escape(atob(post.media_base64)));
+      const decoded = new TextDecoder().decode(Uint8Array.from(atob(post.media_base64), c => c.charCodeAt(0)));
       let data = JSON.parse(decoded.replace('CAROUSEL:', ''));
       let safetyCount = 0;
       while (typeof data === 'string' && safetyCount < 5) {
-         const innerDecoded = decodeURIComponent(escape(atob(data)));
+         const innerDecoded = new TextDecoder().decode(Uint8Array.from(atob(data), c => c.charCodeAt(0)));
          data = JSON.parse(innerDecoded.replace('CAROUSEL:', ''));
          safetyCount++;
       }
@@ -2542,14 +2559,46 @@ function stopEditMicRecording() {
   }
 }
 
+function initSecurity() {
+  if (!CONFIG.DASHBOARD_SECRET) {
+    const modalHtml = `
+      <div class="modal-overlay visible" id="login-modal" style="z-index: 9999; backdrop-filter: blur(10px); background-color: rgba(0,0,0,0.8);">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+          <img src="assets/img/monogram_solid.svg" alt="Logo" style="width: 60px; margin-bottom: 20px;" />
+          <h3 style="margin-bottom: 10px;">Acceso Restringido</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">Introduce la clave maestra para acceder al panel de MyTaxBot.</p>
+          <input type="password" id="login-password" class="form-input" placeholder="Contraseña..." style="width: 100%; margin-bottom: 15px; text-align: center;" />
+          <button class="btn btn-primary" id="login-btn" style="width: 100%;">Desbloquear 🔓</button>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    document.getElementById('login-btn').addEventListener('click', () => {
+      const pwd = document.getElementById('login-password').value.trim();
+      if (pwd) {
+        localStorage.setItem('dashboard_secret', pwd);
+        CONFIG.DASHBOARD_SECRET = pwd;
+        window.location.reload();
+      }
+    });
+
+    document.getElementById('login-password').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('login-btn').click();
+    });
+
+    // Ocultar la barra lateral y el contenido principal para evitar fugas visuales
+    const wrapper = document.querySelector('.app-wrapper');
+    if (wrapper) wrapper.style.display = 'none';
+    
+    throw new Error("Acceso bloqueado: falta contraseña maestra.");
+  }
+}
+
 // ── App Entry Point ────────────────────────────────────────
 const App = {
   init(page) {
-    // Check if configured
-    if (!CONFIG.DASHBOARD_SECRET && page !== 'setup') {
-      const banner = document.getElementById('setup-banner');
-      if (banner) banner.style.display = 'flex';
-    }
+    initSecurity();
     initModal();
     initRejectModal();
     initEditFeedbackModal();
