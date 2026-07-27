@@ -534,8 +534,9 @@ const PostActions = {
         <div>
           ${contentHtml}
         </div>
-        <div style="margin-top: 25px; display: flex; justify-content: flex-end;">
-          <button id="close-video-script-btn-bottom" class="btn btn-primary">Cerrar Script</button>
+        <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button id="close-video-script-btn-bottom" class="btn btn-ghost" style="color:var(--text-muted)">Cerrar Script</button>
+          <button id="play-video-preview-btn" class="btn btn-primary" style="background:var(--accent-purple); border-color:var(--accent-purple);">▶️ Ver Previsualización Animada</button>
         </div>
       `;
       
@@ -545,10 +546,135 @@ const PostActions = {
       const closeFn = () => document.body.removeChild(overlay);
       document.getElementById('close-video-script-btn').onclick = closeFn;
       document.getElementById('close-video-script-btn-bottom').onclick = closeFn;
+      document.getElementById('play-video-preview-btn').onclick = () => {
+        closeFn();
+        PostActions.playVideoPreview(postId);
+      };
       
     } catch (e) {
       console.error(e);
       Toast.show('Error al leer el script de vídeo.', 'error');
+    }
+  },
+
+  playVideoPreview(postId) {
+    try {
+      const post = State.posts.find(p => p.id === postId);
+      if (!post || !post.video_flow_json) return;
+      
+      const videoFlow = JSON.parse(post.video_flow_json);
+      
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(10px);';
+      
+      const playerContainer = document.createElement('div');
+      playerContainer.style.cssText = 'position:relative;width:100%;max-width:400px;aspect-ratio:9/16;background:linear-gradient(135deg, #2a2a35 0%, #1a1a24 100%);border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;';
+      
+      const textLayer = document.createElement('div');
+      textLayer.style.cssText = 'position:absolute;z-index:2;width:90%;text-align:center;color:#fff;font-family:system-ui,sans-serif;font-weight:900;font-size:32px;text-transform:uppercase;text-shadow:3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;word-wrap:break-word;line-height:1.2;opacity:0;transition:opacity 0.2s ease-in-out; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.5));';
+      
+      const debugInfo = document.createElement('div');
+      debugInfo.style.cssText = 'position:absolute;top:15px;left:15px;color:rgba(255,255,255,0.5);font-size:11px;font-family:monospace;z-index:3;';
+      
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '✕ Cerrar';
+      closeBtn.style.cssText = 'position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:8px 16px;border-radius:20px;cursor:pointer;z-index:10001;font-weight:bold;backdrop-filter:blur(5px);transition:all 0.2s;';
+      closeBtn.onmouseover = () => closeBtn.style.background = 'rgba(255,255,255,0.25)';
+      closeBtn.onmouseout = () => closeBtn.style.background = 'rgba(255,255,255,0.15)';
+      
+      let isPlaying = true;
+      
+      const cleanup = () => {
+          isPlaying = false;
+          window.speechSynthesis.cancel();
+          if(document.body.contains(overlay)) document.body.removeChild(overlay);
+      };
+      
+      closeBtn.onclick = cleanup;
+      playerContainer.appendChild(textLayer);
+      playerContainer.appendChild(debugInfo);
+      overlay.appendChild(playerContainer);
+      overlay.appendChild(closeBtn);
+      document.body.appendChild(overlay);
+
+      let scenes = [];
+      if (videoFlow.scenes && Array.isArray(videoFlow.scenes)) {
+          scenes = videoFlow.scenes;
+      } else if (videoFlow.audio_script) {
+          scenes = [{
+              duration_seconds: 15,
+              on_screen_text: "🎬 REEL EN PROCESO",
+              voice_over_script: videoFlow.audio_script
+          }];
+      }
+      
+      if (scenes.length === 0) {
+          textLayer.innerText = "NO HAY ESCENAS";
+          textLayer.style.opacity = 1;
+          return;
+      }
+
+      let currentSceneIdx = 0;
+      
+      const playNextScene = () => {
+          if (!isPlaying) return;
+          if (currentSceneIdx >= scenes.length) {
+              textLayer.innerText = "🎬 FIN";
+              textLayer.style.opacity = 1;
+              debugInfo.innerText = "";
+              return;
+          }
+          
+          const scene = scenes[currentSceneIdx];
+          debugInfo.innerText = `ESCENA ${currentSceneIdx + 1}/${scenes.length}`;
+          
+          textLayer.innerText = scene.on_screen_text || '';
+          textLayer.style.opacity = 1;
+          
+          if (scene.voice_over_script) {
+              const utterance = new SpeechSynthesisUtterance(scene.voice_over_script);
+              utterance.lang = 'es-ES';
+              utterance.rate = 1.1; // Slightly faster for reels
+              
+              utterance.onend = () => {
+                  if (!isPlaying) return;
+                  textLayer.style.opacity = 0;
+                  setTimeout(() => {
+                      currentSceneIdx++;
+                      playNextScene();
+                  }, 300);
+              };
+              
+              utterance.onerror = (e) => {
+                  console.error("TTS Error", e);
+                  if (!isPlaying) return;
+                  setTimeout(() => {
+                      currentSceneIdx++;
+                      playNextScene();
+                  }, (scene.duration_seconds || 4) * 1000);
+              };
+              
+              window.speechSynthesis.speak(utterance);
+          } else {
+              setTimeout(() => {
+                  if (!isPlaying) return;
+                  textLayer.style.opacity = 0;
+                  setTimeout(() => {
+                      currentSceneIdx++;
+                      playNextScene();
+                  }, 300);
+              }, (scene.duration_seconds || 4) * 1000);
+          }
+      };
+      
+      setTimeout(() => {
+          window.speechSynthesis.cancel();
+          playNextScene();
+      }, 600);
+      
+    } catch (e) {
+      console.error(e);
+      Toast.show('Error al previsualizar el vídeo.', 'error');
     }
   },
 
