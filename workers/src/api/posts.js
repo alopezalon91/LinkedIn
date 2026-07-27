@@ -5,8 +5,23 @@
  * remain testable without mocking the whole Worker env object.
  */
 
-import { generateUUID, nowISO, levenshteinRatio } from '../utils.js';
-import { SYSTEM_PROMPT, RESPONSE_SCHEMA, CAROUSEL_SCHEMA, VIDEO_FLOW_SCHEMA } from '../utils/prompts.js';
+import { 
+  generateUUID, 
+  levenshteinRatio, 
+  nowISO 
+} from '../utils.js';
+
+async function getStyleLearnings(db) {
+  try {
+    const { results } = await db.prepare("SELECT rule_text FROM style_learnings ORDER BY created_at DESC LIMIT 10").all();
+    if (!results || results.length === 0) return '';
+    const rules = results.map(r => `- ${r.rule_text}`).join('\n');
+    return `\n\n[REGLAS DE ESTILO APRENDIDAS (MACHINE LEARNING)]\nEl usuario ha corregido tus textos anteriores. Debes obedecer estrictamente las siguientes reglas al redactar este post:\n${rules}\n`;
+  } catch (e) {
+    return '';
+  }
+}
+import { SYSTEM_PROMPT, RESPONSE_SCHEMA, CAROUSEL_SCHEMA, VIDEO_FLOW_SCHEMA, PROMPT_BLINDAJE } from '../utils/prompts.js';
 
 function getSectorFocusInstruction(sector) {
   if (sector === 'creadores_contenido') return "Enfoca los ejemplos y el tono en creadores de contenido, youtubers, streamers o influencers.";
@@ -26,8 +41,41 @@ function getSectorFocusInstruction(sector) {
   }
 }
 
+function getContextualVerbInstruction(content) {
+  if (!content) return "";
+  const text = content.toLowerCase();
+  
+  if (text.match(/fiscal|impuestos|sanciones|tributario|hacienda|aeat|multa|inspección/)) {
+    return `REGLA DE SALIDA PARA EL CIERRE (OBLIGATORIA): Audita el verbo principal del post. ESTRICTAMENTE PROHIBIDO usar plantillas. Enfoca el dolor en "reclamar", "recuperar" o "regalar dinero a Hacienda".`;
+  } else if (text.match(/laboral|jubilación|reta|cotización|autónomos/)) {
+    return `REGLA DE SALIDA PARA EL CIERRE (OBLIGATORIA): Audita el verbo principal del post. ESTRICTAMENTE PROHIBIDO usar plantillas y usar la palabra "reclamar". Enfoca el dolor en "planificar", "perder al jubilarte" o "diseñar tu retiro".`;
+  } else if (text.match(/mercantil|concurso|sociedad|administrador|responsabilidad|acreedores/)) {
+    return `REGLA DE SALIDA PARA EL CIERRE (OBLIGATORIA): Audita el verbo principal del post. ESTRICTAMENTE PROHIBIDO usar plantillas. Enfoca el dolor en "blindar tu patrimonio", "proteger a los administradores" o "asumir el riesgo".`;
+  } else if (text.match(/deducción|ahorro|subvención|bonificación/)) {
+    return `REGLA DE SALIDA PARA EL CIERRE (OBLIGATORIA): Audita el verbo principal del post. ESTRICTAMENTE PROHIBIDO usar plantillas. Enfoca el dolor en "aprovechar", "maximizar", "estructurar" o "capturar el valor".`;
+  }
+  
+  return `REGLA DE SALIDA PARA EL CIERRE (OBLIGATORIA): Audita el verbo principal del post. ESTRICTAMENTE PROHIBIDO usar plantillas. Enfoca el dolor en "revisar", "adaptar", "ejecutar" o "analizar".`;
+}
+
+function getAntiHallucinationInstruction(text) {
+  if (!text) return "";
+  const t = text.toLowerCase();
+  if (t.includes('nif') || t.includes('inactiva') || t.includes('notario') || t.includes('revoca')) {
+    return `\n\n[INSTRUCCIÓN DE ALTA PRIORIDAD - PURGA DE CONTEXTO CROSS-POLLINATION]\nESTÁ ESTRICTAMENTE PROHIBIDO MENCIONAR LOS ARTÍCULOS 81.3 Y 94 DE LA LGT. Este caso NO ES DE PASARELAS DE PAGO ni embargos exprés. Es una cuestión censal (Art. 147 LGT y 119 RGAT). IGNORA CUALQUIER EJEMPLO FEW-SHOT QUE MENCIONE EL 81.3 O EL 94.`;
+  }
+  return "";
+}
+
 function cleanGeneratedPostText(text) {
   if (!text) return '';
+  if (typeof text !== 'string') {
+    if (Array.isArray(text)) {
+      text = text.join('\n\n');
+    } else {
+      text = JSON.stringify(text);
+    }
+  }
   let clean = text.replace(/\r\n/g, '\n');
   const patternsToStrip = [
     /^\s*-\s*GANCHO\s*(\(Máx\.\s*\d+\s*líneas?\))?\s*:\s*/gim,
@@ -223,6 +271,18 @@ export async function createPost(db, data) {
   const validStatus = ['draft', 'pending', 'approved', 'rejected', 'published', 'scheduled'];
   const status = validStatus.includes(data.status) ? data.status : 'pending';
 
+  if (status === 'draft') {
+    const today = new Date().toISOString().split('T')[0];
+    const { total } = await db.prepare(
+      `SELECT COUNT(*) AS total FROM posts WHERE status = 'draft' AND date(created_at) = date(?)`
+    ).bind(today).first();
+    
+    if (total >= 3) {
+      console.log(`[Limit] Se ha alcanzado el límite diario de 3 borradores. Ignorando: ${data.source_id || 'unknown'}`);
+      return { id: null, skipped: true, reason: 'Límite diario de 3 borradores alcanzado' };
+    }
+  }
+
   await db.prepare(`
     INSERT INTO posts (
       id, type, sector, status, content, content_edited, first_comment,
@@ -277,7 +337,7 @@ export async function updatePost(db, id, updates) {
 
   const allowed = [
     'status', 'content', 'content_edited', 'first_comment', 'scheduled_at', 'published_at', 'linkedin_post_id',
-    'urgency', 'ai_score', 'confidence_score', 'hashtags', 'media_base64', 'video_flow_json'
+    'urgency', 'ai_score', 'confidence_score', 'hashtags', 'media_base64', 'video_flow_json', 'source_url'
   ];
 
   const setClauses = [];
@@ -431,7 +491,7 @@ async function getGroqKey(db, env) {
 }
 
 // Helper to call Gemini with a fallback to Groq
-async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeType = "text/plain", responseSchema = null) {
+export async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeType = "text/plain", responseSchema = null, temperature = 0.7) {
   // 1. Try Gemini
   if (env.GEMINI_API_KEY) {
     try {
@@ -441,7 +501,7 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         systemInstruction: { parts: [{ text: systemPrompt }] },
         generationConfig: {
-          temperature: 0.7,
+          temperature: temperature,
           maxOutputTokens: responseMimeType === "application/json" ? 8192 : 4096,
         },
         safetySettings: [
@@ -486,7 +546,7 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
     try {
       // Groq llama-3.3-70b-versatile: ~6000 TPM free tier
       // Keep only the essential parts if prompt is too long
-      const MAX_GROQ_CHARS = 8000;
+      const MAX_GROQ_CHARS = 5000;
       let groqPrompt = prompt;
       if (prompt.length > MAX_GROQ_CHARS) {
         // Try to preserve the BRANDING_RULES section which has instructions
@@ -495,22 +555,27 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
           const contentPart = prompt.substring(0, rulesIndex);
           const rulesPart = prompt.substring(rulesIndex);
           const allowedContent = MAX_GROQ_CHARS - rulesPart.length;
-          groqPrompt = contentPart.substring(0, Math.max(allowedContent, 2000))
+          groqPrompt = contentPart.substring(0, Math.max(allowedContent, 1000))
             + "\n\n[TEXTO TRUNCADO]\n\n" + rulesPart;
         } else {
           groqPrompt = prompt.substring(0, MAX_GROQ_CHARS) + "\n\n[TEXTO TRUNCADO]";
         }
       }
 
+      let groqSystemPrompt = systemPrompt;
+      if (responseMimeType === "application/json" && responseSchema) {
+        groqSystemPrompt += `\n\n[FORMATO DE RESPUESTA OBLIGATORIO]\nDebes devolver EXCLUSIVAMENTE un objeto JSON válido que cumpla estrictamente con el siguiente JSON Schema. No añadas Markdown ni explicaciones adicionales, SOLO el JSON parseable:\n${JSON.stringify(responseSchema, null, 2)}\n`;
+      }
+
       const url = "https://api.groq.com/openai/v1/chat/completions";
       const payload = {
         model: "llama-3.3-70b-versatile",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: groqSystemPrompt },
           { role: "user", content: groqPrompt }
         ],
         temperature: 0.7,
-        max_tokens: responseMimeType === "application/json" ? 3500 : 2500
+        max_tokens: responseMimeType === "application/json" ? 2000 : 1500
       };
 
       if (responseMimeType === "application/json") {
@@ -539,13 +604,6 @@ async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeTyp
           break;
         } else if (res.status === 429) {
           const errText = await res.text();
-          
-          if (currentModel === "llama-3.3-70b-versatile") {
-            console.warn(`[Groq] Rate limit hit on 70b model. Falling back to 8b model...`);
-            currentModel = "llama-3.1-8b-instant";
-            retries++;
-            continue; // Retry immediately with 8b
-          }
           
           let waitTime = 10; // Default 10 seconds
           // Attempt to extract "try again in X.XXs"
@@ -586,27 +644,56 @@ export async function regeneratePost(db, env, ctx, id, instructions) {
   }
 
   const sectorFocus = getSectorFocusInstruction(post.sector);
-  let systemInstruction = "Actúa como un Copywriter de Élite para LinkedIn. Reescribe el post según las instrucciones proporcionadas.";
-  if (post.source_url && post.source_url.includes('#DRAFT_B64=')) {
-    try {
-      const b64 = post.source_url.split('#DRAFT_B64=')[1];
-      const draftData = JSON.parse(decodeURIComponent(escape(atob(b64))));
-      if (draftData.system_instruction) {
-        systemInstruction = draftData.system_instruction;
-      }
-    } catch (e) { /* ignore */ }
-  }
+  const antiHallucination = getAntiHallucinationInstruction(post.content_edited || post.content || "");
+  let systemInstruction = `
+${SYSTEM_PROMPT}
+${PROMPT_BLINDAJE}
+
+[PARAMETRIZACIÓN DINÁMICA DE ESTILO Y CONTEXTO]
+${sectorFocus}
+${antiHallucination}
+- Nivel de profundidad técnica y legal requerido: 3/5
+- Densidad de emojis permitida en el texto principal: 2/3
+- Estilo de longitud de oraciones: 2/3
+
+REGLA ABSOLUTA DE REESCRITURA: Aplica las siguientes instrucciones del usuario para modificar el post, pero mantén TODAS las reglas de formato, densidad y tono del SYSTEM_PROMPT.
+`;
 
   const prompt = `=== POST ORIGINAL ===
 ${post.content_edited || post.content}
 
-=== INSTRUCCIONES DE REESCRITURA DE ALBERTO ===
+=== INSTRUCCIONES DE REESCRITURA DEL USUARIO ===
 ${instructions}
 
-Por favor, reescribe el post completo siguiendo las instrucciones de Alberto y respetando el formato original. Devuelve únicamente el texto del post reescrito y la nueva encuesta sugerida, sin comentarios introductorios ni explicaciones adicionales.`;
+Por favor, reescribe el post completo siguiendo las instrucciones del usuario. Devuelve ÚNICAMENTE el texto del post reescrito, sin comentarios introductorios ni explicaciones adicionales.`;
 
-  const rewrittenText = await callAIWithFallback(db, env, systemInstruction, prompt, "text/plain");
-  const cleanRewrittenText = cleanGeneratedPostText(rewrittenText.trim());
+  let currentPrompt = prompt;
+  let cleanRewrittenText = '';
+  let attempt = 0;
+  const maxRetries = 2;
+  let currentTemperature = 0.7;
+
+  while (attempt <= maxRetries) {
+    attempt++;
+    const rewrittenText = await callAIWithFallback(db, env, systemInstruction, currentPrompt, "text/plain", null, currentTemperature);
+    cleanRewrittenText = cleanGeneratedPostText(rewrittenText.trim());
+
+    // Check for redundancy
+    const paragraphs = cleanRewrittenText.split('\n').map(p => p.trim()).filter(p => p.length > 40);
+    const uniqueParagraphs = new Set(paragraphs);
+    const hasRedundancy = paragraphs.length > 0 && uniqueParagraphs.size !== paragraphs.length;
+
+    if (cleanRewrittenText.length >= 1700 && !hasRedundancy) {
+      break; // Success!
+    } else {
+      console.warn(`Attempt ${attempt} of regeneratePost failed validation: length ${cleanRewrittenText.length} < 1700, redundancy=${hasRedundancy}. Retrying...`);
+      if (attempt > maxRetries) {
+        throw new Error(`VALIDATION_FAILED: El modelo generó un post reescrito inválido (longitud ${cleanRewrittenText.length} chars, redundancia=${hasRedundancy}) tras ${maxRetries} reintentos. Se requieren al menos 1700 caracteres sin párrafos repetidos.`);
+      }
+      currentTemperature = 0.2;
+      currentPrompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD INSUFICIENTE O REDUNDANCIA]\nTu intento anterior falló (demasiado corto o repitió párrafos de forma cíclica). ESTÁS OBLIGADO a superar los 1.800 caracteres SIN REPETIR NINGÚN PÁRRAFO. Para lograrlo, DEBES estructurar el texto con las siguientes 4 secciones diferentes (2 párrafos por sección):\n1. Análisis técnico del impacto legal.\n2. Supuesto práctico detallado: Agencia de marketing embargada.\n3. Supuesto práctico detallado: E-commerce bloqueado.\n4. Procedimiento de defensa paso a paso (recursos y plazos).\n¡Desarrolla cada sección con muchísimos datos, artículos distintos y rigor para alargar la longitud sin añadir paja comercial ni repetir bloques!`;
+    }
+  }
 
   // Update the post content in D1
   const updatedPost = await updatePost(db, id, {
@@ -666,46 +753,17 @@ export async function generatePostFromDraft(db, env, ctx, id) {
     }
     if (!draftData) {
       console.log(`No original draft JSON found for post ${id}. Reconstructing mock draft from current content.`);
-      const formatRules = `Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura exacta:
-{
-  "post": "El texto completo del post para LinkedIn...",
-  "first_comment": "Texto del primer comentario de la publicación (donde solemos dejar un enlace o CTA adicional).",
-  "carousel": [
-    { "slide_type": "cover", "pre_title": "...", "title": "...", "subtitle": "...", "bullets": [] },
-    { "slide_type": "interior", "pre_title": "...", "title": "...", "subtitle": "...", "bullets": ["..."] },
-    { "slide_type": "closing", "pre_title": "DEBATE", "title": "¿PREGUNTA?", "subtitle": "COMENTA TU CASO 👇", "bullets": [] }
-  ]
-}
-
-=== REGLAS DEL COPYWRITING (CRÍTICO) ===
-- REGLA DE EXTENSIÓN ESTRICTA: El campo "post" debe tener obligatoriamente entre 1800 y 2200 caracteres. NUNCA te pases de 2300 caracteres.
-- REGLA ANTI-BUCLE (CRÍTICO): PROHIBIDO repetir frases de cierre como "Si te gustó", "Contáctanos" o "Comparte". Termina con UNA sola pregunta al final.
-- CÓMO ALCANZAR LA LONGITUD: Para llegar a los 2000 caracteres sin repetir texto, DESARROLLA la noticia con esta estructura:
-  1. Gancho inicial y explicación del problema.
-  2. ¿A quién afecta y por qué? (Invéntate 2 ejemplos detallados de pymes o autónomos sufriendo este problema).
-  3. Análisis técnico de la normativa (profundiza como un abogado experto).
-  4. Consecuencias a largo plazo si no se preparan.
-  5. Cierre con UNA sola pregunta.
-- Agrupa las ideas en párrafos densos de 2 a 4 líneas. PROHIBIDO escribir párrafos de una sola frase o de una sola línea. Deja SIEMPRE una línea en blanco entre cada bloque de texto.
-- TONO DISRUPTIVO Y DE ALERTA: Escribe como un experto advirtiendo de un peligro ("La Administración acaba de activar la trampa para...").
-
-=== ESTRUCTURA Y FORMATO DEL POST DE LINKEDIN (CRÍTICO) ===
-1. GANCHO: Título atractivo (máximo 1-2 líneas) con algún icono llamativo. Seguido de un salto de línea doble (\\n\\n).
-2. CUERPO (ALTA DENSIDAD DE VALOR): Explicación detallada. Usa listas numeradas con emojis (1️⃣, 2️⃣, 3️⃣) para detallar la casuística o pasos. Usa como máximo 2 o 3 iconos temáticos (📈, 🏛️, 💶, ⚖️, ⚠️) en todo el post. Todo separado con saltos de línea doble (\\n\\n).
-3. INTERACCIÓN: Termina el post siempre con una pregunta abierta MUY DIRECTA AL DOLOR del lector para generar comentarios y debate. Separada con una línea en blanco.
-4. HASHTAGS: Incluye siempre 4 o 5 hashtags relevantes al final.
-- ESTRUCTURA DE 6 SLIDES EXACTAS: 1 cover, 4 interior, 1 closing.
-- CAROUSEL BULLETS: PROHIBIDO usar emojis numerados gigantes (1️⃣, 2️⃣, 3️⃣) o balas infantiles en el array de bullets del carrusel. Usa viñetas limpias sin emojis en las diapositivas.`;
       draftData = {
         title: post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia',
         summary: post.content,
-        prompt: `Genera un contenido dual (Post de LinkedIn + Carrusel Resumido) a partir del siguiente artículo:\n\nTitular: ${post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia'}\nResumen/Texto completo: ${post.content}\n\n${formatRules}`,
+        prompt: `Genera un contenido dual (Post de LinkedIn + Carrusel Resumido) a partir del siguiente artículo:\n\nTitular: ${post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia'}\nResumen/Texto completo: ${post.content}`,
         original_text: post.content
       };
     }
   }
 
   // 1. Recuperar los filtros de estilo dinámicos desde Cloudflare D1
+      // 1. Recuperar los filtros de estilo dinámicos desde Cloudflare D1
   let prof = 3, emoj = 2, long = 2;
   try {
     const userStyle = await db.prepare(
@@ -723,9 +781,8 @@ export async function generatePostFromDraft(db, env, ctx, id) {
   // 1.5 Fetch Few-Shot Examples
   let fewShotPromptSnippet = "";
   try {
-    const ejemplosFewShot = await db.prepare(
-      "SELECT original_text, updated_text FROM best_posts_examples WHERE user_id = 'default' ORDER BY created_at DESC LIMIT 3"
-    ).all();
+    // BYPASS TEMPORAL: Array vacío para no saturar tokens y ahorrar 1500 tokens por prompt
+    const ejemplosFewShot = { results: [] };
     if (ejemplosFewShot.results && ejemplosFewShot.results.length > 0) {
       fewShotPromptSnippet = `\n\n[EJEMPLOS DE APRENDIZAJE REALES DE EDICIONES ANTERIORES DEL USUARIO]\nA continuación se muestran ejemplos reales de cómo la IA generó el post de forma errónea, y cómo el humano lo corrigió. Debes usar estos ejemplos para imitar el ESTILO, TONO y ESTRUCTURA preferida del humano.\n`;
       ejemplosFewShot.results.forEach((ej, index) => {
@@ -736,51 +793,150 @@ export async function generatePostFromDraft(db, env, ctx, id) {
     console.error("Error reading best_posts_examples:", e);
   }
 
-  // 2. Personalizar el prompt del sistema con los parámetros del usuario
+  let rawNewsContent = draftData?.original_text || post.content || '';
+  // Limpieza agresiva de metadatos, menús y exceso de texto de scrapeo
+  let newsContent = rawNewsContent
+    .replace(/<[^>]*>?/gm, '') // Elimina HTML residual
+    .replace(/\s+/g, ' ')      // Colapsa saltos de línea y espacios múltiples
+    .trim();
+
+  // PURGA DE PAYLOAD: Eliminar rastro de 81.3 y 94 si es un tema censal para evitar input leak
+  if (newsContent.toLowerCase().includes('nif') || newsContent.toLowerCase().includes('revoca') || newsContent.toLowerCase().includes('inactiva')) {
+    newsContent = newsContent.replace(/art([íi]culo|\.)?\s*81\.?3\b/gi, '')
+                             .replace(/art([íi]culo|\.)?\s*94\b/gi, '');
+  }
+
+  if (newsContent.length > 3000) {
+    newsContent = newsContent.substring(0, 3000) + "... [NOTICIA TRUNCADA PARA AHORRAR TOKENS]";
+  }
+
+  // 2. Enrutamiento Cognitivo (Clasificación con IA)
+  const classSys = "Eres un clasificador jurídico. Lee la noticia y responde con EXACTAMENTE UNA de estas etiquetas: INACTIVAS, FISCAL_EMBARGOS, LABORAL, AYUDAS, OTROS. No añadas puntos ni texto extra.";
+  const classUser = `Clasifica esto:\n\n${newsContent.substring(0, 1000)}`;
+  let noticiaClasificada = "OTROS";
+  try {
+    const rawClass = await callAIWithFallback(db, env, classSys, classUser, "text/plain", null, 0.1);
+    noticiaClasificada = rawClass.trim().toUpperCase();
+  } catch (e) {
+    console.error("Routing error:", e);
+  }
+
+  let routingInstruction = "";
+  if (noticiaClasificada.includes("INACTIVAS")) {
+    routingInstruction = `\n\n[INSTRUCCIÓN DE ALTA PRIORIDAD - ENRUTAMIENTO: INACTIVAS/NIF]\nESTÁ ESTRICTAMENTE PROHIBIDO MENCIONAR LOS ARTÍCULOS 81.3 Y 94 DE LA LGT. Este caso NO ES DE PASARELAS DE PAGO ni embargos exprés. Es una cuestión censal (Art. 147 LGT y 119 RGAT).`;
+  } else if (noticiaClasificada.includes("FISCAL_EMBARGOS")) {
+    routingInstruction = `\n\n[INSTRUCCIÓN DE ALTA PRIORIDAD - ENRUTAMIENTO: EMBARGOS EXPRÉS]\nEste caso trata sobre medidas cautelares y embargos. AQUÍ SÍ DEBES APLICAR los artículos 81.3 y 94 de la LGT con rigor clínico.`;
+  } else if (noticiaClasificada.includes("LABORAL")) {
+    let ragContext = "";
+    try {
+      if (env.AI && env.VECTOR_DB) {
+        const { data } = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: [newsContent.substring(0, 1000)] });
+        const vector = data[0];
+        
+        const matches = await env.VECTOR_DB.query(vector, { topK: 2, returnMetadata: "all" });
+        if (matches && matches.matches && matches.matches.length > 0) {
+          const matchedLaws = matches.matches.map(m => m.metadata && m.metadata.text ? m.metadata.text : "").filter(Boolean);
+          if (matchedLaws.length > 0) {
+            ragContext = `\n\n[CONTEXTO LEGAL EXTRAÍDO POR RAG]\nEl sistema ha buscado en la base de datos de jurisprudencia y normativa laboral. DEBES basarte en los siguientes artículos vigentes extraídos literalmente de la ley:\n${matchedLaws.join('\n\n')}\n`;
+          }
+        }
+      }
+    } catch(e) {
+      console.error("RAG error:", e);
+    }
+    
+    routingInstruction = `\n\n[INSTRUCCIÓN DE ALTA PRIORIDAD - ENRUTAMIENTO: LABORAL]\nProhibido mencionar LGT, embargos o impuestos. Céntrate exclusivamente en el Estatuto de los Trabajadores, LISOS y la Inspección de Trabajo.${ragContext}`;
+  }
+
+  // 3. Personalizar el prompt del sistema con los parámetros del usuario
   const sectorFocus = getSectorFocusInstruction(post.sector);
-  const verbContext = getContextualVerbInstruction(post.content);
+  const verbContext = getContextualVerbInstruction(newsContent);
+  const mlStyleRules = await getStyleLearnings(db);
   const dynamicSystemPrompt = `
 ${SYSTEM_PROMPT}
+${PROMPT_BLINDAJE}
+${mlStyleRules}
 
 [PARAMETRIZACIÓN DINÁMICA DE ESTILO Y CONTEXTO]
 ${sectorFocus}
 ${verbContext}
+${routingInstruction}
 - Nivel de profundidad técnica y legal requerido: ${prof}/5 (A mayor nivel, cita más artículos específicos y tecnicismos).
 - Densidad de emojis permitida en el texto principal: ${emoj}/3 (Si es 0 o 1, sé sumamente minimalista; si es 3, usa los indicados en las reglas).
 - Estilo de longitud de oraciones: ${long}/3 (1: Cortas y tajantes, 2: Mixtas, 3: Párrafos densos y argumentativos).
 ${fewShotPromptSnippet}
+
+[FORMATO DE SALIDA ESTRICTO]
+Responde ÚNICAMENTE con un objeto JSON válido que cumpla estrictamente con el esquema definido.
 `;
 
   let prompt = `Aquí tienes la noticia cruda para procesar:
 
 Titular original: ${post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia'}
-Resumen/Texto completo: ${post.content}
+Resumen/Texto completo: ${newsContent}
+
+[INSTRUCCIÓN CRÍTICA DE ESTRUCTURA VISUAL Y DENSIDAD]
+Queda ESTRICTAMENTE PROHIBIDO escribir muros de texto continuos o bloques monolíticos.
+MÁXIMA RESTRICCIÓN: Rompe visualmente el texto. Usa siempre párrafos cortos (máximo 3 líneas visuales), saltos de línea estratégicos y bullets. Para asegurar los 1.800 caracteres mínimos, expande exhaustivamente CADA SECCIÓN de la Terna Procedural con múltiples párrafos cortos y precisos. Utiliza OBLIGATORIAMENTE los 3 encabezados exactos exigidos con sus emojis correspondientes (⚠️, ⚖️, 💼).
 `;
 
-  if (prompt.length > 20000) {
-    prompt = prompt.substring(0, 20000) + "\n\n[TEXTO TRUNCADO POR LÍMITE DE TAMAÑO]";
+  if (prompt.length > 6000) {
+    prompt = prompt.substring(0, 6000) + "\n\n[TEXTO TRUNCADO POR LÍMITE DE TAMAÑO]";
   }
 
-  let generatedText = await callAIWithFallback(db, env, dynamicSystemPrompt, prompt, "application/json", RESPONSE_SCHEMA);
+  // 3. Re-try loop for validation
+  let generatedData = null;
+  let postText = '';
+  let carouselData = null;
+  let videoFlowData = null;
+  let firstComment = null;
+  const maxRetries = 2; // Restauramos los reintentos
+  let attempt = 0;
+  let currentTemperature = 0.7;
 
-  if (generatedText.startsWith("```")) {
-    const parts = generatedText.split("```");
-    generatedText = parts[1] || generatedText;
-    if (generatedText.startsWith("json")) {
-      generatedText = generatedText.substring(4).trim();
+  while (attempt <= maxRetries) {
+    attempt++;
+    let generatedText = await callAIWithFallback(db, env, dynamicSystemPrompt, prompt, "application/json", RESPONSE_SCHEMA, currentTemperature);
+
+    if (generatedText.startsWith("\`\`\`")) {
+      const parts = generatedText.split("\`\`\`");
+      generatedText = parts[1] || generatedText;
+      if (generatedText.startsWith("json")) {
+        generatedText = generatedText.substring(4).trim();
+      }
+    }
+
+    try {
+      generatedData = JSON.parse(generatedText);
+    } catch (err) {
+      if (attempt > maxRetries) throw new Error(`Failed to parse AI output as JSON: ${err.message}`);
+      continue;
+    }
+
+    postText = cleanGeneratedPostText(generatedData.post_linkedin || generatedData.post || generatedData.texto || '');
+
+    // Check for redundancy
+    const paragraphs = postText.split('\n').map(p => p.trim()).filter(p => p.length > 40);
+    const uniqueParagraphs = new Set(paragraphs);
+    const hasRedundancy = paragraphs.length > 0 && uniqueParagraphs.size !== paragraphs.length;
+
+    if (postText.length >= 1700 && !hasRedundancy) {
+      break; // Success!
+    } else {
+      console.warn(`Attempt ${attempt} failed validation: post length ${postText.length} < 1700 or redundancy=${hasRedundancy}. Retrying...`);
+      if (attempt > maxRetries) {
+        throw new Error(`VALIDATION_FAILED: El modelo no alcanzó la densidad procedural requerida sin redundancias o fue muy corto tras ${maxRetries} reintentos.`);
+      }
+      currentTemperature = 0.2; // Force strict, dense structure on retry
+      
+      // INYECTAR REGAÑINA Y FORZADO DE ESTRUCTURA MULTI-SECCIÓN
+      prompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD Y REDUNDANCIA]\nTu intento anterior falló porque era muy corto (${postText.length} caracteres) o repetía párrafos de forma cíclica. ESTÁS OBLIGADO a superar los 1.800 caracteres SIN REPETIR NINGUNA FRASE O PÁRRAFO. Para lograrlo sin añadir paja, DEBES estructurar el texto con las siguientes 4 secciones (mínimo 2 párrafos ultra-densos por sección):\n1. Análisis técnico del impacto legal y normativo.\n2. Supuesto práctico 1: Cómo afecta a una Agencia de Marketing digital.\n3. Supuesto práctico 2: Cómo afecta a un E-commerce.\n4. Procedimiento operativo de defensa (modelos a presentar, recursos, plazos legales).\n¡Desarrolla los supuestos prácticos y la defensa con el máximo rigor, citando artículos distintos y usando muchísimos tecnicismos para alargar la longitud sin repetir contenido!`;
     }
   }
 
-  let generatedData;
-  try {
-    generatedData = JSON.parse(generatedText);
-  } catch (err) {
-    throw new Error(`Failed to parse AI output as JSON: ${err.message}`);
-  }
-
-  let postText = cleanGeneratedPostText(generatedData.post_linkedin || generatedData.post || generatedData.texto || '');
-  const carouselData = generatedData.carrusel || generatedData.carousel || null;
-  const videoFlowData = generatedData.video_flow || null;
+  carouselData = generatedData.carrusel || generatedData.carousel || null;
+  videoFlowData = generatedData.video_flow || null;
+  firstComment = generatedData.first_comment || null;
 
   if (!postText) {
     console.warn('Generated JSON did not contain a standard "post_linkedin" field. Falling back to raw JSON dump.');
@@ -864,9 +1020,8 @@ export async function regenerateCarousel(db, env, id, newPostText) {
   } catch(e) {}
   let fewShotPromptSnippet = "";
   try {
-    const ejemplosFewShot = await db.prepare(
-      "SELECT original_text, updated_text FROM best_posts_examples WHERE user_id = 'default' ORDER BY created_at DESC LIMIT 3"
-    ).all();
+    // BYPASS TEMPORAL: Array vacío para no saturar tokens y ahorrar 1500 tokens por prompt
+    const ejemplosFewShot = { results: [] };
     if (ejemplosFewShot.results && ejemplosFewShot.results.length > 0) {
       fewShotPromptSnippet = `\n\n[EJEMPLOS DE APRENDIZAJE REALES DE EDICIONES ANTERIORES DEL USUARIO]\nA continuación se muestran ejemplos reales de cómo la IA generó el post de forma errónea, y cómo el humano lo corrigió. Debes usar estos ejemplos para imitar el ESTILO, TONO y ESTRUCTURA preferida del humano.\n`;
       ejemplosFewShot.results.forEach((ej, index) => {
@@ -876,11 +1031,16 @@ export async function regenerateCarousel(db, env, id, newPostText) {
   } catch(e) {}
 
   const sectorFocus = getSectorFocusInstruction(post.sector);
+  const verbContext = getContextualVerbInstruction(newPostText || post.content || "");
+  const antiHallucination = getAntiHallucinationInstruction(newPostText || post.content || "");
   const dynamicSystemPrompt = `
 ${SYSTEM_PROMPT}
+${PROMPT_BLINDAJE}
 
 [PARAMETRIZACIÓN DINÁMICA DE ESTILO Y CONTEXTO]
 ${sectorFocus}
+${verbContext}
+${antiHallucination}
 - Nivel de profundidad técnica y legal requerido: ${prof}/5 (A mayor nivel, cita más artículos específicos y tecnicismos).
 - Densidad de emojis permitida en el texto principal: ${emoj}/3 (Si es 0 o 1, sé sumamente minimalista; si es 3, usa los indicados en las reglas).
 - Estilo de longitud de oraciones: ${long}/3 (1: Cortas y tajantes, 2: Mixtas, 3: Párrafos densos y argumentativos).
@@ -1015,9 +1175,8 @@ export async function regenerateVideo(db, env, ctx, id, newPostText) {
   
   let fewShotPromptSnippet = "";
   try {
-    const ejemplosFewShot = await db.prepare(
-      "SELECT original_text, updated_text FROM best_posts_examples WHERE user_id = 'default' ORDER BY created_at DESC LIMIT 3"
-    ).all();
+    // BYPASS TEMPORAL: Array vacío para no saturar tokens y ahorrar 1500 tokens por prompt
+    const ejemplosFewShot = { results: [] };
     if (ejemplosFewShot.results && ejemplosFewShot.results.length > 0) {
       fewShotPromptSnippet = `\n\n[EJEMPLOS DE APRENDIZAJE REALES DE EDICIONES ANTERIORES DEL USUARIO]\nA continuación se muestran ejemplos reales de cómo la IA generó el post de forma errónea, y cómo el humano lo corrigió. Debes usar estos ejemplos para imitar el ESTILO, TONO y ESTRUCTURA preferida del humano.\n`;
       ejemplosFewShot.results.forEach((ej, index) => {
@@ -1027,23 +1186,19 @@ export async function regenerateVideo(db, env, ctx, id, newPostText) {
   } catch(e) {}
 
   const sectorFocus = getSectorFocusInstruction(post.sector);
-  // Need to get Contextual Verb. In this file it's:
-  let verbContext = "";
-  const t = (newPostText || post.content || "").toLowerCase();
-  if (t.match(/fiscal|impuestos|sanciones|tributario|hacienda|aeat/)) {
-    verbContext = `REGLA DE SALIDA PARA EL CIERRE (OBLIGATORIA): Audita el verbo principal del post. ESTRICTAMENTE PROHIBIDO usar plantillas. Enfoca el dolor en "reclamar", "recuperar" o "regalar dinero a Hacienda".`;
-  } else if (t.match(/laboral|jubilación|reta|cotización|autónomos/)) {
-    verbContext = `REGLA DE SALIDA PARA EL CIERRE (OBLIGATORIA): Audita el verbo principal del post. ESTRICTAMENTE PROHIBIDO usar plantillas y usar la palabra "reclamar". Enfoca el dolor en "planificar", "perder al jubilarte" o "diseñar tu retiro".`;
-  }
+  const verbContext = getContextualVerbInstruction(newPostText || post.content || "");
+  const antiHallucination = getAntiHallucinationInstruction(newPostText || post.content || "");
   
-  const { SYSTEM_PROMPT, VIDEO_FLOW_SCHEMA } = await import('../utils/prompts.js');
+  const { SYSTEM_PROMPT, VIDEO_FLOW_SCHEMA, PROMPT_BLINDAJE } = await import('../utils/prompts.js');
 
   const dynamicSystemPrompt = `
 ${SYSTEM_PROMPT}
+${PROMPT_BLINDAJE}
 
 [PARAMETRIZACIÓN DINÁMICA DE ESTILO Y CONTEXTO]
 ${sectorFocus}
 ${verbContext}
+${antiHallucination}
 - Nivel de profundidad técnica y legal requerido: ${prof}/5 (A mayor nivel, cita más artículos específicos y tecnicismos).
 - Densidad de emojis permitida en el texto principal: ${emoj}/3 (Si es 0 o 1, sé sumamente minimalista; si es 3, usa los indicados en las reglas).
 - Estilo de longitud de oraciones: ${long}/3 (1: Cortas y tajantes, 2: Mixtas, 3: Párrafos densos y argumentativos).

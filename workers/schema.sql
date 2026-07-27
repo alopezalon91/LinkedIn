@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS posts (
   linkedin_post_id TEXT,                    -- ID/URN returned by LinkedIn API after publishing
   created_at TEXT NOT NULL,                 -- ISO 8601 creation timestamp
   updated_at TEXT NOT NULL,                 -- ISO 8601 last-update timestamp
-  video_flow_json TEXT                      -- JSON object from LLM generation
+  video_flow_json TEXT,                     -- JSON object from LLM generation
+  media_url TEXT                            -- URL of the rendered video uploaded to R2
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_status   ON posts(status);
@@ -80,3 +81,13 @@ CREATE TABLE IF NOT EXISTS stats_cache (
   value TEXT NOT NULL,                      -- JSON-serialised value
   updated_at TEXT NOT NULL
 );
+
+-- Style Learnings (Machine Learning algorithm rules based on user edits)
+CREATE TABLE IF NOT EXISTS style_learnings (
+  id TEXT PRIMARY KEY,                      -- UUID v4
+  post_id TEXT NOT NULL REFERENCES posts(id),
+  rule_text TEXT NOT NULL,                  -- The generated rule, e.g., 'Do not use emojis in paragraphs'
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_style_learnings_created ON style_learnings(created_at DESC);

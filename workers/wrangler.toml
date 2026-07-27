@@ -10,14 +10,17 @@ database_id = "32f7db45-89d6-48e3-9069-a1dc61db2b30"
 [vars]
 CORS_ORIGIN = "https://panel.alasesoria.es, https://linkedin-2cg.pages.dev"
 
-# El webhook ya no se usará, usaremos la API de GitHub Actions
-# VIDEO_AUTOMATION_WEBHOOK = "https://hook.eu1.make.com/1ecuew0d1nv984ity7u82a5ywys3iaf7"
-
 # Secrets necesarios:
-# GITHUB_PAT - Personal Access Token para invocar Actions
-# TELEGRAM_BOT_TOKEN - Para recibir el vídeo final
-# TELEGRAM_CHAT_ID - Tu chat ID de Telegram
+# GITHUB_PAT
+# TELEGRAM_BOT_TOKEN
+# TELEGRAM_CHAT_ID
 
 [triggers]
 crons = ["0,30 * * * *"]
 
+[[vectorize]]
+binding = "VECTOR_DB"
+index_name = "legal-vectors"
+
+[ai]
+binding = "AI"

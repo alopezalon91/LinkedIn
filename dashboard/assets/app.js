@@ -276,7 +276,11 @@ function formatLinkedInText(text) {
 
 function getVideoButtonHTML(post) {
   if (!post || !post.video_flow_json) return '';
-  return `<button class="btn btn-outline btn-sm" onclick="PostActions.showVideoScript('${post.id}')" title="Ver script de vídeo generado"><span style="color:var(--accent-green)">🎬 Script de Vídeo</span></button>`;
+  let html = `<button class="btn btn-outline btn-sm" onclick="PostActions.showVideoScript('${post.id}')" title="Ver script de vídeo generado"><span style="color:var(--accent-green)">🎬 Script de Vídeo</span></button>`;
+  if (post.media_url) {
+    html += ` <a href="${post.media_url}" target="_blank" class="btn btn-primary btn-sm" style="background:var(--accent-purple);border-color:var(--accent-purple);display:inline-flex;align-items:center;padding:0 8px;font-size:12px;" title="Descargar MP4 final">▶️ Ver MP4</a>`;
+  }
+  return html;
 }
 
 function renderPostCard(post) {
@@ -537,6 +541,7 @@ const PostActions = {
         <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
           <button id="close-video-script-btn-bottom" class="btn btn-ghost" style="color:var(--text-muted)">Cerrar Script</button>
           <button id="play-video-preview-btn" class="btn btn-primary" style="background:var(--accent-purple); border-color:var(--accent-purple);">▶️ Ver Previsualización Animada</button>
+          ${!post.media_url ? `<button id="render-final-video-btn" class="btn btn-primary" style="background:var(--accent-blue); border-color:var(--accent-blue);">☁️ Generar MP4 Final</button>` : ''}
         </div>
       `;
       
@@ -550,6 +555,12 @@ const PostActions = {
         closeFn();
         PostActions.playVideoPreview(postId);
       };
+      if (!post.media_url) {
+        document.getElementById('render-final-video-btn').onclick = () => {
+          closeFn();
+          PostActions.renderFinalVideo(postId);
+        };
+      }
       
     } catch (e) {
       console.error(e);
@@ -675,6 +686,26 @@ const PostActions = {
     } catch (e) {
       console.error(e);
       Toast.show('Error al previsualizar el vídeo.', 'error');
+    }
+  },
+
+  async renderFinalVideo(postId) {
+    try {
+      const btn = document.getElementById(`post-card-${postId}`);
+      if (btn) btn.style.opacity = '0.5';
+      
+      Toast.show('⚙️ Mandando petición a la nube (puede tardar 1-2 minutos)...', 'info');
+      
+      const res = await fetch(`/api/posts/${postId}/render-final-video`, { method: 'POST' });
+      if (!res.ok) throw new Error(await res.text());
+      
+      Toast.show('☁️ Renderizado iniciado en GitHub. La web se actualizará cuando termine.', 'success');
+      
+    } catch (err) {
+      console.error(err);
+      Toast.show('Error al solicitar vídeo: ' + err.message, 'error');
+      const btn = document.getElementById(`post-card-${postId}`);
+      if (btn) btn.style.opacity = '1';
     }
   },
 

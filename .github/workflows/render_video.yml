@@ -43,11 +43,20 @@ jobs:
           path: reel_final_linkedin.mp4
           retention-days: 7
 
-      - name: Send Video to Telegram
+      - name: Upload Video and Notify Webhook
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          WORKER_URL: ${{ secrets.WORKER_URL }}
         run: |
-          if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-            curl -F document=@"reel_final_linkedin.mp4" -F caption="🎬 Tu Reel de LinkedIn ya está listo." "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument?chat_id=${TELEGRAM_CHAT_ID}"
+          if [ -n "$WORKER_URL" ]; then
+            echo "Subiendo MP4 a tmpfiles.org..."
+            RESPONSE=$(curl -s -F "file=@reel_final_linkedin.mp4" https://tmpfiles.org/api/v1/upload)
+            URL=$(echo $RESPONSE | jq -r .data.url | sed 's/tmpfiles.org/tmpfiles.org\/dl/')
+            echo "Uploaded to: $URL"
+            POST_ID=$(jq -r .postId video_payload.json)
+            echo "Notificando a Cloudflare Worker: $WORKER_URL/api/videos/complete"
+            curl -s -X POST "${WORKER_URL}/api/videos/complete" \
+                 -H "Content-Type: application/json" \
+                 -d "{\"postId\":\"$POST_ID\", \"mediaUrl\":\"$URL\"}"
+          else
+            echo "WORKER_URL not configured, skipping notification."
           fi

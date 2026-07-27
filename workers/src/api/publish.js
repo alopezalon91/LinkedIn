@@ -203,33 +203,7 @@ export async function publishPost(db, env, postId, request) {
     linkedin_post_id: linkedinPostId ?? 'unknown',
   });
 
-  // 7. Disparar GitHub Actions para renderizar el Reel de Instagram (Faceless)
-  if (post.video_flow_json && env.GITHUB_PAT) {
-    try {
-      const videoData = JSON.parse(post.video_flow_json);
-      const ghPayload = {
-        event_type: "render_video",
-        client_payload: {
-          postId: postId,
-          video_data: videoData
-        }
-      };
-      // Usamos await para asegurar que sale la petición antes de que el Worker muera
-      await fetch("https://api.github.com/repos/alopezalon91/LinkedIn/dispatches", {
-        method: "POST",
-        headers: {
-          "Accept": "application/vnd.github.v3+json",
-          "Authorization": `token ${env.GITHUB_PAT}`,
-          "User-Agent": "Mytaxbot-Worker",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(ghPayload)
-      });
-      console.log(`[worker] Disparado render_video en GitHub Actions para el post ${postId}`);
-    } catch(e) {
-      console.error("[worker] Error disparando GitHub Actions:", e);
-    }
-  }
+  // Se ha eliminado el disparo automático de vídeo final. Ahora se lanza manualmente desde el panel.
 
   return {
     success:         true,

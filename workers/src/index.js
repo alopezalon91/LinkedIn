@@ -46,12 +46,15 @@ import {
 import { publishPost }                              from './api/publish.js';
 import { recordFeedback, getLearningProgress }      from './api/feedback.js';
 import { getSystemStats }                           from './api/stats.js';
+import { learnFromEdits }                           from './api/learning.js';
 import {
   startOAuthFlow,
   handleCallback,
   refreshToken,
   getStoredToken,
 } from './api/linkedin_auth.js';
+import { scrapeBOE } from './scrapers/boe.js';
+import { scrapeNews } from './scrapers/news.js';
 
 // ─── Worker entry point ───────────────────────────────────────────────────────
 
@@ -89,6 +92,13 @@ export default {
     const db = env.DB;
     console.log('[worker] Running scheduled cron trigger at', new Date().toISOString());
     try {
+      // 1. Ejecutar scrapers (Scraping Serverless)
+      console.log('[worker] Ejecutando scrapers...');
+      await scrapeBOE(db);
+      await scrapeNews(db);
+      console.log('[worker] Scrapers finalizados.');
+
+      // 2. Publicar posts programados
       // Find posts where status is 'scheduled' and scheduled_at is in the past (or exactly now)
       const { results } = await db.prepare(`
         SELECT id FROM posts 
@@ -159,6 +169,34 @@ async function route(request, env, ctx, url, path, method) {
     }
   }
 
+  if (url.pathname === '/api/rag/ingest' && method === 'POST') {
+    try {
+      const body = await request.json();
+      const laws = body.laws || []; // array de { id, text, metadata }
+
+      const insertedIds = [];
+      for (const law of laws) {
+        // Generar vector usando Cloudflare Workers AI
+        const { data } = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: [law.text] });
+        const vector = data[0];
+
+        // Insertar en Vectorize
+        await env.VECTOR_DB.upsert([
+          {
+            id: law.id,
+            values: vector,
+            namespace: "laboral", // TODO: hacer dinamico si es necesario
+            metadata: { ...law.metadata, text: law.text }
+          }
+        ]);
+        insertedIds.push(law.id);
+      }
+      return new Response(JSON.stringify({ status: "ok", inserted: insertedIds }), { headers: { 'Content-Type': 'application/json' } });
+    } catch (err) {
+      return new Response(err.message, { status: 500 });
+    }
+  }
+
   // ── Health check (no auth) ────────────────────────────────────────────────
   if (path === '/api/health' && method === 'GET') {
     return handleHealth(db);
@@ -195,8 +233,16 @@ async function route(request, env, ctx, url, path, method) {
     return handleCheckSources(db, request);
   }
 
-  // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate|generate|regenerate-carousel|regenerate-video ────
-  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate|generate|regenerate-carousel|regenerate-video)$/);
+  // ── Videos endpoints ───────────────────────────────────────────────────────
+  if (path === '/api/videos/pending' && method === 'GET') {
+    return handlePendingVideos(db);
+  }
+  if (path === '/api/videos/complete' && method === 'POST') {
+    return handleCompleteVideo(db, request);
+  }
+
+  // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate|generate|regenerate-carousel|regenerate-video|render-final-video ────
+  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate|generate|regenerate-carousel|regenerate-video|render-final-video)$/);
   if (subActionMatch && method === 'POST') {
     const [, postId, action] = subActionMatch;
     return handlePostAction(db, env, ctx, request, postId, action);
@@ -207,7 +253,7 @@ async function route(request, env, ctx, url, path, method) {
   if (singlePostMatch) {
     const [, postId] = singlePostMatch;
     if (method === 'GET')   return handleGetPost(db, postId);
-    if (method === 'PATCH') return handleUpdatePost(db, request, postId);
+    if (method === 'PATCH') return handleUpdatePost(db, env, ctx, request, postId);
     return errorResponse('Method not allowed', 405);
   }
 
@@ -352,12 +398,12 @@ async function handleCheckSources(db, request) {
   }
 }
 
-async function handleUpdatePost(db, request, postId) {
+async function handleUpdatePost(db, env, ctx, request, postId) {
   const updates = await parseJSON(request);
 
   // Route to specialised handlers if action shorthand keys are present
   if (updates.action === 'approve' || 'approved' in updates || updates.status === 'approved') {
-    return _handleApprove(db, postId, updates.content_edited ?? null, updates.media_base64 ?? null);
+    return _handleApprove(db, env, ctx, postId, updates.content_edited ?? null, updates.media_base64 ?? null);
   }
   if (updates.action === 'reject' || updates.status === 'rejected') {
     return _handleReject(db, postId);
@@ -386,6 +432,7 @@ async function handlePostAction(db, env, ctx, request, postId, action) {
     case 'generate': return _handleGenerate(db, env, ctx, postId);
     case 'regenerate-carousel': return _handleRegenerateCarousel(db, env, postId, body.content_edited);
     case 'regenerate-video': return _handleRegenerateVideo(db, env, ctx, postId, body.content_edited);
+    case 'render-final-video': return _handleRenderFinalVideo(db, env, ctx, postId);
     case 'update':   return _handleGenericUpdate(db, postId, body);
     default:         return errorResponse(`Unknown action: ${action}`, 400);
   }
@@ -407,26 +454,48 @@ async function _handleApprove(db, env, ctx, postId, editedContent, mediaBase64) 
   try {
     const { post, editRatio } = await approvePost(db, postId, editedContent, mediaBase64);
     
-    // Trigger video automation webhook if JSON exists
-    if (post.video_flow_json && env.VIDEO_AUTOMATION_WEBHOOK) {
-      const videoData = JSON.parse(post.video_flow_json);
-      if (ctx && ctx.waitUntil) {
-        ctx.waitUntil(
-          fetch(env.VIDEO_AUTOMATION_WEBHOOK, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              postId: postId,
-              video_data: videoData
-            })
-          }).catch(err => console.error("Error enviando flujo a automatización de vídeo tras aprobar:", err))
-        );
-      }
+    // Si hubo edición sustancial, aprender de ella en segundo plano
+    if (editedContent && editRatio > 0 && ctx && ctx.waitUntil) {
+      ctx.waitUntil(learnFromEdits(db, env, postId, post.content, editedContent));
     }
     
     return jsonResponse({ post, edit_ratio: editRatio });
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
+  }
+}
+
+async function _handleRenderFinalVideo(db, env, ctx, postId) {
+  try {
+    const { getPost } = await import('./api/posts.js');
+    const post = await getPost(db, postId);
+    if (!post) return errorResponse("Post not found", 404);
+    
+    if (post.video_flow_json && env.GITHUB_PAT) {
+      const videoData = JSON.parse(post.video_flow_json);
+      const ghPayload = {
+        event_type: "render_video",
+        client_payload: {
+          postId: postId,
+          video_data: videoData
+        }
+      };
+      await fetch("https://api.github.com/repos/alopezalon91/LinkedIn/dispatches", {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github.v3+json",
+          "Authorization": `token ${env.GITHUB_PAT}`,
+          "User-Agent": "Mytaxbot-Worker",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(ghPayload)
+      });
+      return jsonResponse({ success: true, message: "Vídeo final en renderizado en GitHub Actions..." });
+    } else {
+      return errorResponse("No hay json de video o falta el token de GitHub (GITHUB_PAT)", 400);
+    }
+  } catch (err) {
+    return errorResponse(err.message, 500);
   }
 }
 
@@ -582,7 +651,41 @@ async function handleGithubDispatch(request) {
   }
 }
 
-// ── Decisions List handler ───────────────────────────────────────────────────
+// ── Videos handlers ──────────────────────────────────────────────────────────
+
+async function handlePendingVideos(db) {
+  try {
+    const { results } = await db.prepare(`
+      SELECT id, video_flow_json 
+      FROM posts 
+      WHERE status = 'approved' 
+        AND video_flow_json IS NOT NULL 
+        AND media_url IS NULL
+    `).all();
+    return jsonResponse(results || []);
+  } catch (err) {
+    return errorResponse(err.message, 500);
+  }
+}
+
+async function handleCompleteVideo(db, request) {
+  try {
+    const body = await parseJSON(request);
+    if (!body.postId || !body.mediaUrl) {
+      return errorResponse('Missing postId or mediaUrl', 400);
+    }
+    
+    await db.prepare(`
+      UPDATE posts 
+      SET media_url = ?, updated_at = ? 
+      WHERE id = ?
+    `).bind(body.mediaUrl, new Date().toISOString(), body.postId).run();
+    
+    return jsonResponse({ success: true, postId: body.postId });
+  } catch (err) {
+    return errorResponse(err.message, 500);
+  }
+}
 
 async function handleListDecisions(db) {
   try {

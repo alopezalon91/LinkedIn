@@ -80,9 +80,13 @@ def _draw_signature(c, center_x, bottom_y, logo_path, logo_h):
         x_cursor += c.stringWidth(ch, FONT_SIGNATURE, name_size) + tracking
 
 
-def draw_background(c, current_slide, total_slides, is_cover=False):
-    # 1. Fondo solido Alabastro
-    c.setFillColor(BG_COLOR)
+def draw_background(c, current_slide, total_slides, is_cover=False, is_closing=False):
+    # 1. Fondo solido
+    if is_closing:
+        c.setFillColor(ACCENT_SECONDARY) # Sage green
+    else:
+        c.setFillColor(BG_COLOR) # Alabastro
+
     c.rect(0, 0, WIDTH, HEIGHT, fill=True, stroke=False)
 
     # 2. Marca de agua diferenciada: portada 11%, interior 7%
@@ -99,9 +103,8 @@ def draw_background(c, current_slide, total_slides, is_cover=False):
     logo_path = os.path.join(os.path.dirname(__file__), '..', 'assets', logo_filename)
 
     if os.path.exists(logo_path):
-        if is_cover:
-            cover_logo_h = 100
-            _draw_signature(c, WIDTH / 2, 70, logo_path, cover_logo_h)
+        if is_cover or is_closing:
+            _draw_signature(c, WIDTH / 2, 70, logo_path, 120)
         else:
             _draw_signature(c, MARGIN + 60, 55, logo_path, 80)
 
@@ -130,8 +133,9 @@ def create_carousel_pdf(slides: list[dict]) -> str:
     for i, slide in enumerate(slides):
         # slide_type field takes priority; fall back to position (i==0)
         slide_type = slide.get("slide_type", "")
-        is_cover = (slide_type == "cover") if slide_type else (i == 0)
-        draw_background(c, i + 1, total_slides, is_cover)
+        is_closing = slide_type == "closing" or (i == len(slides) - 1)
+        is_cover = (slide_type in ["cover", "closing"]) if slide_type else (i == 0 or i == len(slides) - 1)
+        draw_background(c, i + 1, total_slides, is_cover, is_closing)
         
         pre_title = strip_emojis(slide.get("pre_title", ""))
         title = strip_emojis(slide.get("title", ""))
