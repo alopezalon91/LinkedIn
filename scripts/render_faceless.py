@@ -92,6 +92,29 @@ async def main():
     # Si viene desde Cloudflare, los datos están en data["video_data"]
     video_data = data.get("video_data", data)
     
+    # Adaptador para soportar el formato basado en "scenes" (de RESPONSE_SCHEMA)
+    if "scenes" in video_data and "audio_script" not in video_data:
+        print("🔄 Adaptando formato 'scenes' a 'audio_script'...")
+        audio_parts = []
+        subs = []
+        current_time = 0.0
+        for scene in video_data.get("scenes", []):
+            dur = scene.get("duration_seconds", 5)
+            text = scene.get("on_screen_text", "")
+            voice = scene.get("voice_over_script", "")
+            if voice:
+                audio_parts.append(voice)
+            if text:
+                subs.append({
+                    "start_time": current_time,
+                    "end_time": current_time + dur,
+                    "text": text
+                })
+            current_time += dur
+            
+        video_data["audio_script"] = " ".join(audio_parts)
+        video_data["subtitles"] = subs
+    
     if "audio_script" not in video_data:
         print("❌ Error: No hay audio_script en el JSON")
         return
