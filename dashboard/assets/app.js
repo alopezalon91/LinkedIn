@@ -274,6 +274,11 @@ function formatLinkedInText(text) {
   return (text || '').replace(/\*\*(.*?)\*\*/g, (m, p1) => toBoldUnicode(p1));
 }
 
+function getVideoButtonHTML(post) {
+  if (!post || !post.video_flow_json) return '';
+  return `<button class="btn btn-outline btn-sm" onclick="PostActions.showVideoScript('${post.id}')" title="Ver script de vídeo generado"><span style="color:var(--accent-green)">🎬 Script de Vídeo</span></button>`;
+}
+
 function renderPostCard(post) {
   const card = document.createElement('div');
   card.className = `post-card urgency-${post.urgency}`;
@@ -453,32 +458,94 @@ const PostActions = {
       }
       
       const videoFlow = JSON.parse(post.video_flow_json);
-      const jsonStr = JSON.stringify(videoFlow, null, 2);
       
       const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
       
       const container = document.createElement('div');
-      container.style.cssText = 'background:#1a1a1a;color:#00ff00;padding:20px;border-radius:8px;max-width:800px;width:100%;max-height:80vh;overflow-y:auto;font-family:monospace;white-space:pre-wrap;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.5);';
-      container.textContent = jsonStr;
+      container.style.cssText = 'background:#1a1a1a;color:#fff;padding:30px;border-radius:12px;max-width:700px;width:100%;max-height:85vh;overflow-y:auto;text-align:left;box-shadow:0 10px 40px rgba(0,0,0,0.8); border: 1px solid var(--border-strong);';
       
-      const closeBtn = document.createElement('button');
-      closeBtn.innerText = 'Cerrar Visor';
-      closeBtn.className = 'btn btn-primary';
-      closeBtn.style.marginTop = '20px';
-      closeBtn.onclick = () => document.body.removeChild(overlay);
+      let contentHtml = '';
       
-      const title = document.createElement('h3');
-      title.innerText = 'JSON de Video Flow (Depuración)';
-      title.style.color = '#fff';
-      title.style.marginBottom = '10px';
-      
-      overlay.appendChild(title);
-      overlay.appendChild(container);
-      overlay.appendChild(closeBtn);
-      
-      document.body.appendChild(overlay);
+      // Handle the scenes format
+      if (videoFlow.scenes && Array.isArray(videoFlow.scenes)) {
+        contentHtml += `<div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+          <h4 style="margin-top:0; color: var(--accent-purple);">Configuración</h4>
+          <div style="display:flex; gap: 15px; font-size: 13px; color: var(--text-secondary);">
+            <div><strong>Ratio:</strong> ${videoFlow.config?.aspect_ratio || 'N/A'}</div>
+            <div><strong>Voz:</strong> ${videoFlow.config?.voice_tone || 'N/A'}</div>
+            <div><strong>Música:</strong> ${videoFlow.config?.music_style || 'N/A'}</div>
+          </div>
+        </div>`;
         
+        videoFlow.scenes.forEach(scene => {
+          contentHtml += `
+            <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border);">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                <strong style="color: var(--accent-blue);">Escena ${scene.scene_number}</strong>
+                <span style="color: var(--text-muted); font-size: 12px;">⏱️ ${scene.duration_seconds}s</span>
+              </div>
+              <div style="margin-bottom: 12px;">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Texto en pantalla</div>
+                <div style="font-weight: 600; font-size: 16px; border-left: 3px solid var(--accent-green); padding-left: 10px;">${scene.on_screen_text}</div>
+              </div>
+              <div style="margin-bottom: 12px;">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Locución (Voz en off)</div>
+                <div style="color: var(--text-secondary); font-style: italic; border-left: 3px solid var(--accent-purple); padding-left: 10px;">"${scene.voice_over_script}"</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Visual</div>
+                <div style="color: var(--text-secondary); font-size: 13px;">${scene.visual_prompt}</div>
+              </div>
+            </div>
+          `;
+        });
+      } 
+      // Handle the audio_script format
+      else if (videoFlow.audio_script) {
+        contentHtml += `
+          <div style="margin-bottom: 24px;">
+            <h4 style="margin-top:0; color: var(--accent-purple); margin-bottom: 10px;">Guión de Locución</h4>
+            <div style="color: var(--text-secondary); font-style: italic; border-left: 3px solid var(--accent-purple); padding-left: 12px; font-size: 15px; line-height: 1.6;">
+              "${videoFlow.audio_script}"
+            </div>
+          </div>
+        `;
+        
+        if (videoFlow.background_keywords && videoFlow.background_keywords.length > 0) {
+          contentHtml += `
+            <div style="margin-bottom: 20px;">
+              <h4 style="margin-top:0; color: var(--accent-blue); margin-bottom: 10px;">Palabras Clave (Fondo)</h4>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                ${videoFlow.background_keywords.map(kw => `<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 12px; font-size: 12px;">${kw}</span>`).join('')}
+              </div>
+            </div>
+          `;
+        }
+      } else {
+        contentHtml = `<pre style="white-space: pre-wrap; font-family: monospace; font-size: 13px; color: var(--accent-green);">${JSON.stringify(videoFlow, null, 2)}</pre>`;
+      }
+      
+      container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-strong); padding-bottom: 15px;">
+          <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">🎬 Script de Vídeo</h2>
+          <button id="close-video-script-btn" style="background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer;">&times;</button>
+        </div>
+        <div>
+          ${contentHtml}
+        </div>
+        <div style="margin-top: 25px; display: flex; justify-content: flex-end;">
+          <button id="close-video-script-btn-bottom" class="btn btn-primary">Cerrar Script</button>
+        </div>
+      `;
+      
+      overlay.appendChild(container);
+      document.body.appendChild(overlay);
+      
+      const closeFn = () => document.body.removeChild(overlay);
+      document.getElementById('close-video-script-btn').onclick = closeFn;
+      document.getElementById('close-video-script-btn-bottom').onclick = closeFn;
+      
     } catch (e) {
       console.error(e);
       Toast.show('Error al leer el script de vídeo.', 'error');
