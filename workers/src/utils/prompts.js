@@ -131,31 +131,30 @@ export const CAROUSEL_SCHEMA = {
 export const VIDEO_FLOW_SCHEMA = {
   type: "object",
   properties: {
-    audio_script: { 
-      type: "string", 
-      description: "Texto continuo y completo para la locución de voz en off. Directo, frío, estilo consultor senior. Expone el dolor y la solución técnica." 
+    config: {
+      type: "object",
+      properties: {
+        aspect_ratio: { type: "string", enum: ["9:16"] },
+        voice_tone: { type: "string", enum: ["executive_cold_male"] },
+        music_style: { type: "string", enum: ["minimal_ambient_dark"] },
+        avatar_prompt: { type: "string", description: "Prompt visual muy detallado en inglés para generar un avatar hiperrealista (nunca el usuario original) que presentará la noticia." }
+      },
+      required: ["aspect_ratio", "voice_tone", "music_style", "avatar_prompt"]
     },
-    subtitles: {
+    scenes: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          start_time: { type: "number", description: "Segundo de inicio del subtítulo." },
-          end_time: { type: "number", description: "Segundo de fin del subtítulo." },
-          text: { type: "string", description: "Texto del subtítulo en mayúsculas, corto y contundente." }
+          scene_number: { type: "number" },
+          duration_seconds: { type: "number" },
+          on_screen_text: { type: "string", description: "Texto visual: frases secas, máximo 5 palabras, mayúsculas." },
+          voice_over_script: { type: "string", description: "Guión de voz aséptico, sin relleno." },
+          visual_prompt: { type: "string", description: "Prompt visual detallando iluminación y estilo para Google Flow." }
         },
-        required: ["start_time", "end_time", "text"]
+        required: ["scene_number", "duration_seconds", "on_screen_text", "voice_over_script", "visual_prompt"]
       }
-    },
-    background_keywords: {
-      type: "array",
-      items: { type: "string" },
-      description: "Palabras clave en inglés para buscar B-roll oscuro corporativo (ej. 'dark finance', 'matrix code', 'stripe dashboard'). Máximo 3."
-    },
-    avatar_prompt: {
-      type: "string",
-      description: "Prompt visual muy detallado en inglés para generar un avatar hiperrealista (nunca el usuario original) que presentará la noticia."
     }
   },
-  required: ["audio_script", "subtitles", "background_keywords", "avatar_prompt"]
+  required: ["config", "scenes"]
 };
