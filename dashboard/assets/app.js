@@ -475,11 +475,12 @@ const PostActions = {
       if (videoFlow.scenes && Array.isArray(videoFlow.scenes)) {
         contentHtml += `<div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
           <h4 style="margin-top:0; color: var(--accent-purple);">Configuración</h4>
-          <div style="display:flex; gap: 15px; font-size: 13px; color: var(--text-secondary);">
+          <div style="display:flex; gap: 15px; font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">
             <div><strong>Ratio:</strong> ${videoFlow.config?.aspect_ratio || 'N/A'}</div>
             <div><strong>Voz:</strong> ${videoFlow.config?.voice_tone || 'N/A'}</div>
             <div><strong>Música:</strong> ${videoFlow.config?.music_style || 'N/A'}</div>
           </div>
+          ${videoFlow.config?.avatar_prompt ? `<div style="font-size: 13px; color: var(--text-secondary);"><strong>Avatar:</strong> <em>"${videoFlow.config.avatar_prompt}"</em></div>` : ''}
         </div>`;
         
         videoFlow.scenes.forEach(scene => {
@@ -522,6 +523,16 @@ const PostActions = {
               <h4 style="margin-top:0; color: var(--accent-blue); margin-bottom: 10px;">Palabras Clave (Fondo)</h4>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 ${videoFlow.background_keywords.map(kw => `<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 12px; font-size: 12px;">${kw}</span>`).join('')}
+              </div>
+            </div>
+          `;
+        }
+        if (videoFlow.avatar_prompt) {
+          contentHtml += `
+            <div style="margin-bottom: 20px;">
+              <h4 style="margin-top:0; color: var(--accent-green); margin-bottom: 10px;">Avatar Hiperrealista</h4>
+              <div style="color: var(--text-secondary); font-size: 13px; font-style: italic;">
+                "${videoFlow.avatar_prompt}"
               </div>
             </div>
           `;

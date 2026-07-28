@@ -35,6 +35,7 @@ Vamos a escalar el sistema para generar Reels de Instagram en formato 9:16 de fo
 - Voz en Off Sin Relleno: El script de la voz en off debe ser aséptico y directo al grano. Debe eliminar frases introductorias del tipo "¿Sabías que...?" o "Hola a todos". Empieza directamente con el dardo financiero de la noticia.
 - Cierre del Vídeo (Última Escena): Aplica la directriz de cierre ultra-ligero de la Slide 6 al diseño de la última escena del vídeo: la pantalla final solo mostrará un Pre-título conceptual en mayúsculas y una única pregunta directa al dolor financiero del lector (máximo 8 palabras), eliminando cualquier llamada a la acción genérica de redes sociales.
 - Verbos de Cierre: El contenido del vídeo debe auditar el verbo principal de la noticia de forma analítica (usar 'reclamar' para normativas retroactivas/impuestos abusivos, y 'planificar' para jubilación, RETA o estructuras corporativas), manteniendo la coherencia exacta con el post generado.
+- Avatar Hiperrealista: Todo el vídeo debe estar presentado por un avatar hiperrealista generado por IA (no el usuario real). Debe tener un aspecto corporativo, profesional, serio e implacable, adecuado para explicar noticias fiscales y legales. Incluye su descripción detallada.
 `;
 
 export const PROMPT_BLINDAJE = `
@@ -79,9 +80,10 @@ export const RESPONSE_SCHEMA = {
           properties: {
             aspect_ratio: { type: "string", enum: ["9:16"] },
             voice_tone: { type: "string", enum: ["executive_cold_male"] },
-            music_style: { type: "string", enum: ["minimal_ambient_dark"] }
+            music_style: { type: "string", enum: ["minimal_ambient_dark"] },
+            avatar_prompt: { type: "string", description: "Prompt visual muy detallado en inglés para generar un avatar hiperrealista (nunca el usuario original) que presentará la noticia." }
           },
-          required: ["aspect_ratio", "voice_tone", "music_style"]
+          required: ["aspect_ratio", "voice_tone", "music_style", "avatar_prompt"]
         },
         scenes: {
           type: "array",
@@ -149,7 +151,11 @@ export const VIDEO_FLOW_SCHEMA = {
       type: "array",
       items: { type: "string" },
       description: "Palabras clave en inglés para buscar B-roll oscuro corporativo (ej. 'dark finance', 'matrix code', 'stripe dashboard'). Máximo 3."
+    },
+    avatar_prompt: {
+      type: "string",
+      description: "Prompt visual muy detallado en inglés para generar un avatar hiperrealista (nunca el usuario original) que presentará la noticia."
     }
   },
-  required: ["audio_script", "subtitles", "background_keywords"]
+  required: ["audio_script", "subtitles", "background_keywords", "avatar_prompt"]
 };
