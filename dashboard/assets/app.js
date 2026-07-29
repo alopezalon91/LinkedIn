@@ -590,7 +590,25 @@ const PostActions = {
       overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(10px);';
       
       const playerContainer = document.createElement('div');
-      playerContainer.style.cssText = 'position:relative;width:100%;max-width:400px;aspect-ratio:9/16;background:linear-gradient(135deg, #2a2a35 0%, #1a1a24 100%);border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;';
+      let bgStyle = 'background:linear-gradient(135deg, #2a2a35 0%, #1a1a24 100%);';
+      
+      let avatarPrompt = null;
+      if (videoFlow.config && videoFlow.config.avatar_prompt) {
+          avatarPrompt = videoFlow.config.avatar_prompt;
+      }
+      
+      if (avatarPrompt) {
+          const encodedPrompt = encodeURIComponent(avatarPrompt + ", high detail, 8k, photorealistic, professional lighting, corporate, dslr");
+          const avatarUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1080&height=1920&nologo=true`;
+          bgStyle = `background: url('${avatarUrl}') center/cover no-repeat;`;
+      }
+      
+      playerContainer.style.cssText = `position:relative;width:100%;max-width:400px;aspect-ratio:9/16;${bgStyle}border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;`;
+      
+      // We add a dark overlay so text is readable over the avatar
+      const darkOverlay = document.createElement('div');
+      darkOverlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.6);z-index:1;';
+      playerContainer.appendChild(darkOverlay);
       
       const textLayer = document.createElement('div');
       textLayer.style.cssText = 'position:absolute;z-index:2;width:90%;text-align:center;color:#fff;font-family:system-ui,sans-serif;font-weight:900;font-size:32px;text-transform:uppercase;text-shadow:3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;word-wrap:break-word;line-height:1.2;opacity:0;transition:opacity 0.2s ease-in-out; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.5));';
