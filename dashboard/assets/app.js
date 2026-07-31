@@ -1202,10 +1202,19 @@ const PostActions = {
       const media = post.media_base64;
       
       Toast.show('Renderizando vista previa...', 'info');
-      const rawAtob = atob(media);
-      const decoded = decodeURIComponent(escape(rawAtob));
       
-      if (decoded.startsWith('CAROUSEL:')) {
+      let decodedStr = '';
+      try {
+        decodedStr = new TextDecoder().decode(Uint8Array.from(atob(media), c => c.charCodeAt(0)));
+      } catch (e) {
+        try {
+          decodedStr = decodeURIComponent(escape(atob(media)));
+        } catch (e2) {
+          decodedStr = atob(media);
+        }
+      }
+      
+      if (decodedStr.startsWith('CAROUSEL:')) {
         const { pdfBlob } = await PostActions.generateCarouselImages(post, media);
         const url = URL.createObjectURL(pdfBlob);
         const modal = document.getElementById('pdf-preview-modal');
@@ -1215,9 +1224,8 @@ const PostActions = {
         return;
       }
       
-      const newDecoded = new TextDecoder().decode(Uint8Array.from(atob(media), c => c.charCodeAt(0)));
-      if (newDecoded.startsWith('{"type":"pdf_carousel"')) {
-        const payload = JSON.parse(newDecoded);
+      if (decodedStr.startsWith('{"type":"pdf_carousel"')) {
+        const payload = JSON.parse(decodedStr);
         const pdfBase64 = payload.pdf_base64;
         const byteCharacters = atob(pdfBase64);
         const byteNumbers = new Array(byteCharacters.length);
