@@ -781,8 +781,7 @@ export async function generatePostFromDraft(db, env, ctx, id) {
   // 1.5 Fetch Few-Shot Examples
   let fewShotPromptSnippet = "";
   try {
-    // BYPASS TEMPORAL: Array vacío para no saturar tokens y ahorrar 1500 tokens por prompt
-    const ejemplosFewShot = { results: [] };
+    const ejemplosFewShot = await db.prepare("SELECT original_text, updated_text FROM best_posts_examples WHERE user_id = 'default' ORDER BY created_at DESC LIMIT 3").all();
     if (ejemplosFewShot.results && ejemplosFewShot.results.length > 0) {
       fewShotPromptSnippet = `\n\n[EJEMPLOS DE APRENDIZAJE REALES DE EDICIONES ANTERIORES DEL USUARIO]\nA continuación se muestran ejemplos reales de cómo la IA generó el post de forma errónea, y cómo el humano lo corrigió. Debes usar estos ejemplos para imitar el ESTILO, TONO y ESTRUCTURA preferida del humano.\n`;
       ejemplosFewShot.results.forEach((ej, index) => {
