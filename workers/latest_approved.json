@@ -1,0 +1,30 @@
+[
+  {
+    "results": [
+      {
+        "id": "43418c12-7003-4c59-b095-cb1810820050",
+        "status": "approved",
+        "content": "La sentencia del Tribunal Supremo sobre sanciones a autónomos y sociedades interpuestas marca un hito en la interpretación de las normas tributarias. Según el artículo 191 de la LGT, la Agencia Tributaria puede imponer sanciones por infracciones muy graves, pero ahora debe demostrar que la empresa se utilizó para ocultar la identidad del verdadero titular.\n\nLa mecánica fiscal del problema se centra en la interposición de sociedades sin medios personales ni materiales, lo que puede considerarse como una infracción muy grave según el artículo 191 de la LGT. Sin embargo, la base legal y jurisprudencia explícita establecen que la Agencia Tributaria debe motivar de forma autónoma la culpabilidad antes de imponer sanciones. La solución operativa real pasa por dotar de sustancia económica real a la mercantil, acreditar la aportación de valor del socio y transparencia en la estructura societaria.\n\nEl caso concreto de referencia se refiere a una inspección de IRPF de los ejercicios 2014 a 2017, en el que la Agencia Tributaria imputó las rentas al socio persona física y sancionó la conducta como infracción muy grave. La sentencia del Tribunal Supremo establece que la Agencia Tributaria debe acreditar que la empresa se utilizó para ocultar la identidad del verdadero titular antes de aplicar la sanción máxima.\n\nLa regularización de operaciones vinculadas y las sociedades interpuestas sin sustancia económica son aspectos clave en este contexto. La Agencia Tributaria debe demostrar que la empresa se utilizó para ocultar la identidad del verdadero titular, lo que implica acreditar el uso de testaferros o socios aparentes, estructuras diseñadas para dificultar la identificación del beneficiario real o operativas que obstaculicen de forma efectiva la actuación comprobadora de la Administración.\n\n¿Puede su empresa evitar sanciones más altas si demuestra que tiene actividad real y no se utiliza para ocultar su identidad?",
+        "content_edited": "Hacienda ya no puede sancionar por el mero hecho de que un profesional facture a través de una sociedad.\n\nEl Tribunal Supremo acaba de desarmar la inercia del automatismo inspector: corregir la valoración de una mercantil interpuesta no implica, jamás, una sanción penal o administrativa automática.\n\nLa regularización fiscal va por un lado; la culpabilidad, por otro.\n\nLA MECÁNICA DEL CONFLICTO\nEs el escenario habitual: Inspección en IRPF, reatribución de rentas de la sociedad al socio persona física e inyección sistemática de infracciones muy graves por \"simulación\". La AEAT asumía hasta ahora que la falta de medios materiales en la mercantil arrastraba de forma matemática el dolo o la negligencia.\n\nEL BLINDAJE DEL ARTÍCULO 191 LGT\nEl Alto Tribunal ha dicho basta. Para sostener una sanción del Art. 191 de la Ley General Tributaria, la Inspección asume una carga probatoria autónoma y reforzada.\n\nNo basta con discrepancias en precios de transferencia ni con regularizar operaciones vinculadas. Si la Administración quiere aplicar la sanción máxima, debe probar fehacientemente ocultación, trama de testaferros o maniobras destinadas a obstruir a la Inspección.\n\nOPERATIVA DE DEFENSA EN INSPECCIÓN\nSi administras o asesoras estructuras societarias profesionales, el protocolo de protección exige tres acciones inmediatas:\n\nAcreditar la aportación de valor del socio: Documentar la sustancia económica real de la mercantil con contratos de servicios y precios de mercado justificables.\n\nTransparencia en la arquitectura de facturación: Trazabilidad absoluta de los flujos de capital entre socio y entidad.\n\nExigir el desglose de culpabilidad en alegaciones: Impugnar de inmediato cualquier propuesta de sanción que responda a modelos de plantilla o presunciones de dolo no probadas.\n\n¿Tu estructura societaria tiene documentada la sustancia económica de sus operaciones vinculadas o asumirías hoy la sanción en una inspección de IRPF?\n\n#EstrategiaFiscal #IRPF #SociedadesInterpuestas #InspeccionTributaria #DerechoTributario"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "MAD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.2849
+      },
+      "duration": 0.2849,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 14180352,
+      "rows_read": 5,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

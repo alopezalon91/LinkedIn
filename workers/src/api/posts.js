@@ -21,7 +21,7 @@ async function getStyleLearnings(db) {
     return '';
   }
 }
-import { SYSTEM_PROMPT, RESPONSE_SCHEMA, CAROUSEL_SCHEMA, VIDEO_FLOW_SCHEMA, PROMPT_BLINDAJE } from '../utils/prompts.js';
+import { SYSTEM_PROMPT, RESPONSE_SCHEMA, CAROUSEL_SCHEMA, PROMPT_BLINDAJE } from '../utils/prompts.js';
 
 function getSectorFocusInstruction(sector) {
   if (sector === 'creadores_contenido') return "Enfoca los ejemplos y el tono en creadores de contenido, youtubers, streamers o influencers.";
@@ -337,7 +337,7 @@ export async function updatePost(db, id, updates) {
 
   const allowed = [
     'status', 'content', 'content_edited', 'first_comment', 'scheduled_at', 'published_at', 'linkedin_post_id',
-    'urgency', 'ai_score', 'confidence_score', 'hashtags', 'media_base64', 'video_flow_json', 'source_url'
+    'urgency', 'ai_score', 'confidence_score', 'hashtags', 'media_base64', 'source_url'
   ];
 
   const setClauses = [];
@@ -490,148 +490,53 @@ async function getGroqKey(db, env) {
   }
 }
 
-// Helper to call Gemini with a fallback to Groq
+// Helper to call Gemini exclusively (no fallbacks)
 export async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeType = "text/plain", responseSchema = null, temperature = 0.7) {
-  // 1. Try Gemini
-  if (env.GEMINI_API_KEY) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`;
-      
-      const payload = {
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: {
-          temperature: temperature,
-          maxOutputTokens: responseMimeType === "application/json" ? 8192 : 4096,
-        },
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
-      };
+  if (!env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY no está configurada.');
+  }
 
-      if (responseMimeType === "application/json") {
-        payload.generationConfig.responseMimeType = "application/json";
-        if (responseSchema) {
-          payload.generationConfig.responseSchema = responseSchema;
-        }
-      }
+  // Usamos gemini-3.6-flash que es el modelo estable más reciente y gratuito en 2026
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+  
+  const payload = {
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    generationConfig: {
+      temperature: temperature,
+      maxOutputTokens: responseMimeType === "application/json" ? 8192 : 4096,
+    },
+    safetySettings: [
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+    ]
+  };
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return text;
-      } else {
-        const errText = await res.text();
-        console.error(`Gemini API call failed (status ${res.status}): ${errText}. Trying Groq fallback...`);
-        // Fall through to Groq on any Gemini error (quota, rate limit, etc.)
-      }
-    } catch (err) {
-      console.error(`Gemini call failed with exception: ${err.message}. Trying Groq fallback...`);
+  if (responseMimeType === "application/json") {
+    payload.generationConfig.responseMimeType = "application/json";
+    if (responseSchema) {
+      payload.generationConfig.responseSchema = responseSchema;
     }
   }
 
-  // 2. Try Groq fallback
-  const groqKey = await getGroqKey(db, env);
-  if (groqKey) {
-    console.log("Calling Groq API fallback...");
-    try {
-      // Groq llama-3.3-70b-versatile: ~6000 TPM free tier
-      // Keep only the essential parts if prompt is too long
-      const MAX_GROQ_CHARS = 5000;
-      let groqPrompt = prompt;
-      if (prompt.length > MAX_GROQ_CHARS) {
-        // Try to preserve the BRANDING_RULES section which has instructions
-        const rulesIndex = prompt.indexOf("=== [BRANDING_RULES]");
-        if (rulesIndex !== -1) {
-          const contentPart = prompt.substring(0, rulesIndex);
-          const rulesPart = prompt.substring(rulesIndex);
-          const allowedContent = MAX_GROQ_CHARS - rulesPart.length;
-          groqPrompt = contentPart.substring(0, Math.max(allowedContent, 1000))
-            + "\n\n[TEXTO TRUNCADO]\n\n" + rulesPart;
-        } else {
-          groqPrompt = prompt.substring(0, MAX_GROQ_CHARS) + "\n\n[TEXTO TRUNCADO]";
-        }
-      }
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 
-      let groqSystemPrompt = systemPrompt;
-      if (responseMimeType === "application/json" && responseSchema) {
-        groqSystemPrompt += `\n\n[FORMATO DE RESPUESTA OBLIGATORIO]\nDebes devolver EXCLUSIVAMENTE un objeto JSON válido que cumpla estrictamente con el siguiente JSON Schema. No añadas Markdown ni explicaciones adicionales, SOLO el JSON parseable:\n${JSON.stringify(responseSchema, null, 2)}\n`;
-      }
-
-      const url = "https://api.groq.com/openai/v1/chat/completions";
-      const payload = {
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: groqSystemPrompt },
-          { role: "user", content: groqPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: responseMimeType === "application/json" ? 2000 : 1500
-      };
-
-      if (responseMimeType === "application/json") {
-        payload.response_format = { type: "json_object" };
-      }
-
-      let currentModel = "llama-3.3-70b-versatile";
-      
-      let retries = 0;
-      const maxRetries = 2;
-      while (retries <= maxRetries) {
-        payload.model = currentModel;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${groqKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          const result = await res.json();
-          const text = result.choices?.[0]?.message?.content;
-          if (text) return text;
-          break;
-        } else if (res.status === 429) {
-          const errText = await res.text();
-          
-          let waitTime = 10; // Default 10 seconds
-          // Attempt to extract "try again in X.XXs"
-          const waitMatch = errText.match(/try again in ([\d\.]+)s/);
-          if (waitMatch && waitMatch[1]) {
-            waitTime = Math.ceil(parseFloat(waitMatch[1])) + 1; // Add 1s padding
-          }
-
-          if (retries < maxRetries) {
-            console.warn(`[Groq] Rate limit hit. Waiting ${waitTime}s...`);
-            await new Promise(r => setTimeout(r, waitTime * 1000));
-            retries++;
-          } else {
-            throw new Error(`Groq API Error: ${res.status} - ${errText}`);
-          }
-        } else {
-          const errText = await res.text();
-          console.error(`Groq API call failed (status ${res.status}): ${errText}`);
-          throw new Error(`Groq API Error: ${res.status} - ${errText}`);
-        }
-      }
-    } catch (err) {
-      console.error(`Groq call failed with exception: ${err.message}`);
-      throw err;
-    }
+  if (res.ok) {
+    const result = await res.json();
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (text) return text;
+    throw new Error('Gemini devolvió una respuesta vacía o sin formato esperado.');
+  } else {
+    const errText = await res.text();
+    console.error(`Gemini API call failed (status ${res.status}): ${errText}`);
+    throw new Error(`Gemini API Error (HTTP ${res.status}): ${errText}`);
   }
-
-  throw new Error("Both Gemini and Groq API calls failed or are not configured.");
 }
 
 export async function regeneratePost(db, env, ctx, id, instructions) {
@@ -683,15 +588,15 @@ Por favor, reescribe el post completo siguiendo las instrucciones del usuario. D
     const uniqueParagraphs = new Set(paragraphs);
     const hasRedundancy = paragraphs.length > 0 && uniqueParagraphs.size !== paragraphs.length;
 
-    if (cleanRewrittenText.length >= 1700 && !hasRedundancy) {
+    if (cleanRewrittenText.length >= 2000 && cleanRewrittenText.length <= 2500 && !hasRedundancy) {
       break; // Success!
     } else {
-      console.warn(`Attempt ${attempt} of regeneratePost failed validation: length ${cleanRewrittenText.length} < 1700, redundancy=${hasRedundancy}. Retrying...`);
+      console.warn(`Attempt ${attempt} of regeneratePost failed validation: length ${cleanRewrittenText.length} not in 2000-2500, redundancy=${hasRedundancy}. Retrying...`);
       if (attempt > maxRetries) {
-        throw new Error(`VALIDATION_FAILED: El modelo generó un post reescrito inválido (longitud ${cleanRewrittenText.length} chars, redundancia=${hasRedundancy}) tras ${maxRetries} reintentos. Se requieren al menos 1700 caracteres sin párrafos repetidos.`);
+        throw new Error(`VALIDATION_FAILED: El modelo generó un post reescrito inválido (longitud ${cleanRewrittenText.length} chars, redundancia=${hasRedundancy}) tras ${maxRetries} reintentos. Se requieren entre 2000 y 2500 caracteres sin párrafos repetidos.`);
       }
       currentTemperature = 0.2;
-      currentPrompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD INSUFICIENTE O REDUNDANCIA]\nTu intento anterior falló (demasiado corto o repitió párrafos de forma cíclica). ESTÁS OBLIGADO a superar los 1.800 caracteres SIN REPETIR NINGÚN PÁRRAFO. Para lograrlo, DEBES estructurar el texto con las siguientes 4 secciones diferentes (2 párrafos por sección):\n1. Análisis técnico del impacto legal.\n2. Supuesto práctico detallado: Agencia de marketing embargada.\n3. Supuesto práctico detallado: E-commerce bloqueado.\n4. Procedimiento de defensa paso a paso (recursos y plazos).\n¡Desarrolla cada sección con muchísimos datos, artículos distintos y rigor para alargar la longitud sin añadir paja comercial ni repetir bloques!`;
+      currentPrompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD ESTRICTA] Tu intento anterior falló (generaste ${cleanRewrittenText.length} caracteres). ESTÁS OBLIGADO a generar un texto de estrictamente entre 2000 y 2500 caracteres SIN REPETIR PÁRRAFOS. Ajusta el nivel de detalle técnico para cumplir esta longitud exacta.`;
     }
   }
 
@@ -875,8 +780,14 @@ Titular original: ${post.source_id ? post.source_id.replace(/-/g, ' ') : 'Notici
 Resumen/Texto completo: ${newsContent}
 
 [INSTRUCCIÓN CRÍTICA DE ESTRUCTURA VISUAL Y DENSIDAD]
-Queda ESTRICTAMENTE PROHIBIDO escribir muros de texto continuos o bloques monolíticos.
-MÁXIMA RESTRICCIÓN: Rompe visualmente el texto. Usa siempre párrafos cortos (máximo 3 líneas visuales), saltos de línea estratégicos y bullets. Para asegurar los 1.800 caracteres mínimos, expande exhaustivamente CADA SECCIÓN de la Terna Procedural con múltiples párrafos cortos y precisos. Utiliza OBLIGATORIAMENTE los 3 encabezados exactos exigidos con sus emojis correspondientes (⚠️, ⚖️, 💼).
+Estás OBLIGADO a estructurar tu texto intercalando párrafos argumentativos (de 2 a 4 líneas) con al menos una LISTA DE VIÑETAS (usando guiones cortos "-"). 
+MÁXIMA RESTRICCIÓN: Queda PROHIBIDO escribir frases sueltas separadas por saltos de línea continuos simulando un poema (prohibido el "broetry"). Si vas a enumerar o listar pasos o requisitos, USA SIEMPRE GUIONES ("- "). Queda PROHIBIDO usar etiquetas, títulos o encabezados en mayúsculas (como "Contexto", "Mecánica", etc.). El post debe fluir de forma natural como una carta agresiva al empresario, pero visualmente estructurada con párrafos reales y listas con viñetas.
+
+[REGLAS INQUEBRANTABLES PARA EL JSON DEL CARRUSEL]
+1. PORTADA: El title DEBE MENCIONAR EL TEMA LEGAL ESPECÍFICO PERO CON MÁXIMO ABSOLUTO 8 PALABRAS. TIENES QUE SER CREATIVO y conciso. PROHIBIDO usar títulos largos de periódico o títulos clickbait genéricos que no digan el tema de la noticia.
+2. INTERIORES: Cada bullet DEBE SER UNA PÍLDORA ULTRACORTA Y PUNZANTE (máx 12 palabras). Queda ESTRICTAMENTE PROHIBIDO hacer oraciones largas o narrativas. Ve directo al grano.
+3. CIERRE: El title DEBE SER UNA PREGUNTA DE MÁXIMO 8 PALABRAS SOBRE PÉRDIDA DE DINERO/PATRIMONIO TOTALMENTE ADAPTADA AL TEMA DE LA NOTICIA. PROHIBIDO copiar ejemplos prefabricados.
+Si te pasas de los límites de palabras, el sistema fallará y se borrará tu respuesta.
 `;
 
   if (prompt.length > 6000) {
@@ -887,7 +798,6 @@ MÁXIMA RESTRICCIÓN: Rompe visualmente el texto. Usa siempre párrafos cortos (
   let generatedData = null;
   let postText = '';
   let carouselData = null;
-  let videoFlowData = null;
   let firstComment = null;
   const maxRetries = 2; // Restauramos los reintentos
   let attempt = 0;
@@ -905,6 +815,8 @@ MÁXIMA RESTRICCIÓN: Rompe visualmente el texto. Usa siempre párrafos cortos (
       }
     }
 
+    console.error(`[generatePost] AI returned raw text on attempt ${attempt}:`, generatedText);
+
     try {
       generatedData = JSON.parse(generatedText);
     } catch (err) {
@@ -917,42 +829,29 @@ MÁXIMA RESTRICCIÓN: Rompe visualmente el texto. Usa siempre párrafos cortos (
     // Check for redundancy
     const paragraphs = postText.split('\n').map(p => p.trim()).filter(p => p.length > 40);
     const uniqueParagraphs = new Set(paragraphs);
-    const hasRedundancy = paragraphs.length > 0 && uniqueParagraphs.size !== paragraphs.length;
+    const isRedundant = paragraphs.length > 0 && uniqueParagraphs.size !== paragraphs.length;
 
-    if (postText.length >= 1700 && !hasRedundancy) {
+    if (typeof postText === 'string' && postText.length >= 2000 && postText.length <= 2500 && !isRedundant) {
       break; // Success!
     } else {
-      console.warn(`Attempt ${attempt} failed validation: post length ${postText.length} < 1700 or redundancy=${hasRedundancy}. Retrying...`);
+      console.warn(`Attempt ${attempt} failed validation: post length ${postText.length} not in 2000-2500 or redundancy=${isRedundant}. Retrying...`);
       if (attempt > maxRetries) {
-        throw new Error(`VALIDATION_FAILED: El modelo no alcanzó la densidad procedural requerida sin redundancias o fue muy corto tras ${maxRetries} reintentos.`);
+        throw new Error(`VALIDATION_FAILED: El modelo no alcanzó la densidad procedural requerida sin redundancias o no respetó el límite de 2000-2500 chars (generó ${postText.length}) tras ${maxRetries} reintentos.`);
       }
       currentTemperature = 0.2; // Force strict, dense structure on retry
       
       // INYECTAR REGAÑINA Y FORZADO DE ESTRUCTURA MULTI-SECCIÓN
-      prompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD Y REDUNDANCIA]\nTu intento anterior falló porque era muy corto (${postText.length} caracteres) o repetía párrafos de forma cíclica. ESTÁS OBLIGADO a superar los 1.800 caracteres SIN REPETIR NINGUNA FRASE O PÁRRAFO. Para lograrlo sin añadir paja, DEBES estructurar el texto con las siguientes 4 secciones (mínimo 2 párrafos ultra-densos por sección):\n1. Análisis técnico del impacto legal y normativo.\n2. Supuesto práctico 1: Cómo afecta a una Agencia de Marketing digital.\n3. Supuesto práctico 2: Cómo afecta a un E-commerce.\n4. Procedimiento operativo de defensa (modelos a presentar, recursos, plazos legales).\n¡Desarrolla los supuestos prácticos y la defensa con el máximo rigor, citando artículos distintos y usando muchísimos tecnicismos para alargar la longitud sin repetir contenido!`;
+      prompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD ESTRICTA]\nTu intento anterior falló porque la longitud fue incorrecta (${postText.length} caracteres) o repetía párrafos. Debes generar estrictamente entre 2000 y 2500 caracteres SIN REPETIR NINGUNA FRASE. Ajusta el nivel de detalle para cumplir esta longitud exacta.\n\n¡ATENCIÓN! RESPONDE ÚNICA Y EXCLUSIVAMENTE CON EL CÓDIGO JSON. NO PIDAS DISCULPAS, SÓLO EL JSON PARSEABLE.`;
     }
   }
 
   carouselData = generatedData.carrusel || generatedData.carousel || null;
-  videoFlowData = generatedData.video_flow || null;
+
   firstComment = generatedData.first_comment || null;
 
   if (!postText) {
     console.warn('Generated JSON did not contain a standard "post_linkedin" field. Falling back to raw JSON dump.');
     postText = "ERROR: La IA no devolvió el campo 'post_linkedin'. Contenido crudo devuelto:\\n\\n" + JSON.stringify(generatedData, null, 2);
-  }
-
-  // Encode carousel JSON as base64 so it can be stored in media_base64
-  // The frontend detects this by checking if it starts with 'CAROUSEL:'
-  let carouselBase64 = null;
-  if (carouselData) {
-    try {
-      const carouselStr = 'CAROUSEL:' + JSON.stringify(carouselData);
-      carouselBase64 = btoa(unescape(encodeURIComponent(carouselStr)));
-    } catch (e) {
-      // If encoding fails, skip carousel - don't fail the whole generation
-      console.error('Failed to encode carousel:', e);
-    }
   }
 
   // Preserve original draft JSON in source_url fragment so we can always re-generate later
@@ -968,29 +867,8 @@ MÁXIMA RESTRICCIÓN: Rompe visualmente el texto. Usa siempre párrafos cortos (
     content: postText,
     content_edited: null, // Clear out the buggy DRAFT_JSON: if it was there
     source_url: newSourceUrl,
-    first_comment: firstComment,
-    ...(carouselBase64 ? { media_base64: carouselBase64 } : {}),
-    ...(videoFlowData ? { video_flow_json: JSON.stringify(videoFlowData) } : {})
+    first_comment: firstComment
   });
-
-  // DISPARADOR ASÍNCRONO PARA VÍDEO
-  // Si tenemos webhook de Make/Zapier y hay video_flow, enviamos el payload en background
-  if (videoFlowData && env.VIDEO_AUTOMATION_WEBHOOK) {
-    if (ctx && ctx.waitUntil) {
-      ctx.waitUntil(
-        fetch(env.VIDEO_AUTOMATION_WEBHOOK, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            postId: id,
-            video_data: videoFlowData
-          })
-        }).catch(err => console.error("Error enviando flujo a automatización de vídeo:", err))
-      );
-    } else {
-      console.warn("ctx.waitUntil no está disponible. No se puede ejecutar el webhook de vídeo de forma segura en background.");
-    }
-  }
 
   return updatedPost;
 }
@@ -1047,6 +925,41 @@ ${fewShotPromptSnippet}
 
 ESTÁS EN MODO "REGENERAR CARRUSEL".
 Tienes que generar SOLO las diapositivas del carrusel para el siguiente post.
+
+[INSTRUCCIONES CRÍTICAS DE COPYWRITING PARA CARRUSEL]
+PROHIBIDO SUBTÍTULOS: ESTÁ ESTRICTAMENTE PROHIBIDO INCLUIR LA CLAVE "subtitle" EN EL JSON DE NINGUNA DIAPOSITIVA (ni en la portada, ni en el cierre, ni en interiores). Solo debes generar slide_type, pre_title, title y bullets.
+AUTONOMÍA NARRATIVA (CRÍTICO): El carrusel DEBE SER 100% AUTOCONCLUSIVO Y AUTÓNOMO. El lector tiene que poder entender toda la historia y la solución técnica solo leyendo las diapositivas interiores.
+PORTADA (cover): El "title" DEBE ABORDAR EL PROBLEMA PRINCIPAL (multas, embargos, parálisis) INCLUYENDO EL TEMA LEGAL EXPLÍCITO. Máximo 8 palabras. Ejemplos de alta conversión: "La trampa de Hacienda con la Revocación del NIF", "El Supremo frena los embargos abusivos en IRPF". TIENE QUE GENERAR ALERTA EXTREMA. PROHIBIDOS títulos planos, abstractos o genéricos tipo "Pymes en peligro".
+CIERRE (closing): El "title" DEBE ESTAR DISEÑADO PARA ABORDAR EL PROBLEMA ESPECÍFICO DE LA NOTICIA. Máximo 10 palabras. Formula una pregunta directa sobre pérdida de dinero/patrimonio adaptada al tema del post. Ejemplos: "¿Cuánto patrimonio personal arriesgas por inercia?", "¿Tu estructura aguanta un embargo así?". PROHIBIDAS las llamadas a la acción directas como "Hablemos", "Escríbeme", "Contacta" o "Audita tu estructura hoy". NADA de clichés.
+INTERIORES (interior): 
+- Cada slide debe tener bullets que sean ORACIONES COMPLETAS Y NARRATIVAS, no frases sueltas telegráficas.
+- Desarrolla la historia: Párrafo 1 (hechos), Párrafo 2 (base legal), Párrafo 3 (consecuencias/solución). Explica el problema con todo lujo de detalles, de forma que se entienda el caso entero. Máximo 25 palabras por bullet.
+
+[EJEMPLO STRICTO DE CARRUSEL PERFECTO]
+[
+  {
+    "slide_type": "cover",
+    "pre_title": "ALERTA LEGAL",
+    "title": "La trampa de Hacienda con la Revocación del NIF",
+    "bullets": []
+  },
+  {
+    "slide_type": "interior",
+    "pre_title": "EL FUNDAMENTO",
+    "title": "Art. 147 LGT",
+    "bullets": [
+      "La Administración está procediendo a dar de baja en los registros a sociedades inactivas de forma automática.",
+      "Esta medida implica el bloqueo total de cuentas bancarias y la imposibilidad absoluta de operar, firmar ante notario o disolver la empresa.",
+      "Como administrador, quedas expuesto a una derivación de responsabilidad patrimonial directa si la sociedad mantenía deudas vivas o incurre en infracciones."
+    ]
+  },
+  {
+    "slide_type": "closing",
+    "pre_title": "LA CUESTIÓN",
+    "title": "¿Están tus operaciones alineadas con la normativa actual?",
+    "bullets": []
+  }
+]
 `;
 
   const prompt = `=== POST EDITADO ===
@@ -1055,6 +968,14 @@ El usuario ha editado su post de LinkedIn y ahora tiene este texto final:
 
 Genera un nuevo Carrusel de 6 diapositivas para acompañar perfectamente a este texto editado.
 Devuelve ÚNICAMENTE un objeto JSON válido con la estructura de las diapositivas.
+[REGLAS INQUEBRANTABLES PARA EL JSON DEL CARRUSEL]
+1. PORTADA: El title TIENE QUE SER DIRECTO, NO GENÉRICO, Y MENCIONAR EL TEMA ESPECÍFICO. TIENES QUE SER CREATIVO.
+2. INTERIORES: Cada bullet TIENE QUE SER UNA ORACIÓN LARGA Y NARRATIVA que cuente la historia paso a paso (máx 25 palabras). NADA de frases sueltas.
+3. CIERRE: El title TIENE QUE SER UNA PREGUNTA SOBRE CONSECUENCIAS LEGALES COMPLETAMENTE ADAPTADA A LA NOTICIA. TIENES QUE SER CREATIVO. PROHIBIDO hacer CTAs directos tipo "Hablemos" o "Escríbeme".
+Si usas frases prohibidas o copias los ejemplos, el sistema fallará.
+
+¡IMPORTANTE! DEVUELVE ÚNICA Y EXCLUSIVAMENTE CÓDIGO JSON VÁLIDO.
+CERO COMENTARIOS, CERO INTRODUCCIONES, CERO DISCULPAS. SOLO EL JSON.
 `;
 
   const groqKey = await getGroqKey(db, env);
@@ -1147,108 +1068,4 @@ export async function getExistingSourceIds(db, sourceIds) {
   }
   
   return foundIds;
-}
-
-/**
- * Regenerate ONLY the video script, based on an edited post text.
- */
-export async function regenerateVideo(db, env, ctx, id, newPostText) {
-  // 1. Get the post
-  const post = await getPost(db, id);
-  if (!post) {
-    throw new Error('Post not found');
-  }
-
-  // 2. Load context variables
-  let prof = 3, emoj = 2, long = 2;
-  try {
-    const userStyle = await db.prepare(
-      "SELECT profundidad_tecnica, densidad_emojis, longitud_oraciones FROM user_settings WHERE user_id = 'default'"
-    ).first();
-    if (userStyle) {
-      prof = userStyle.profundidad_tecnica ?? 3;
-      emoj = userStyle.densidad_emojis ?? 2;
-      long = userStyle.longitud_oraciones ?? 2;
-    }
-  } catch(e) {}
-  
-  let fewShotPromptSnippet = "";
-  try {
-    // BYPASS TEMPORAL: Array vacío para no saturar tokens y ahorrar 1500 tokens por prompt
-    const ejemplosFewShot = { results: [] };
-    if (ejemplosFewShot.results && ejemplosFewShot.results.length > 0) {
-      fewShotPromptSnippet = `\n\n[EJEMPLOS DE APRENDIZAJE REALES DE EDICIONES ANTERIORES DEL USUARIO]\nA continuación se muestran ejemplos reales de cómo la IA generó el post de forma errónea, y cómo el humano lo corrigió. Debes usar estos ejemplos para imitar el ESTILO, TONO y ESTRUCTURA preferida del humano.\n`;
-      ejemplosFewShot.results.forEach((ej, index) => {
-        fewShotPromptSnippet += `\nEjemplo #${index + 1}:\n- Así lo generó la IA erróneamente:\n"""\n${ej.original_text}\n"""\n- Así lo corrigió el humano (Sigue este estándar preferido):\n"""\n${ej.updated_text}\n"""\n--------------------------------------------------------------------------------`;
-      });
-    }
-  } catch(e) {}
-
-  const sectorFocus = getSectorFocusInstruction(post.sector);
-  const verbContext = getContextualVerbInstruction(newPostText || post.content || "");
-  const antiHallucination = getAntiHallucinationInstruction(newPostText || post.content || "");
-  
-  const { SYSTEM_PROMPT, VIDEO_FLOW_SCHEMA, PROMPT_BLINDAJE } = await import('../utils/prompts.js');
-
-  const dynamicSystemPrompt = `
-${SYSTEM_PROMPT}
-${PROMPT_BLINDAJE}
-
-[PARAMETRIZACIÓN DINÁMICA DE ESTILO Y CONTEXTO]
-${sectorFocus}
-${verbContext}
-${antiHallucination}
-- Nivel de profundidad técnica y legal requerido: ${prof}/5 (A mayor nivel, cita más artículos específicos y tecnicismos).
-- Densidad de emojis permitida en el texto principal: ${emoj}/3 (Si es 0 o 1, sé sumamente minimalista; si es 3, usa los indicados en las reglas).
-- Estilo de longitud de oraciones: ${long}/3 (1: Cortas y tajantes, 2: Mixtas, 3: Párrafos densos y argumentativos).
-${fewShotPromptSnippet}
-[RESTRICCIONES DE NATURALIDAD DE VÍDEO (OBLIGATORIAS)]
-1. PROHIBICIÓN DE GANCHOS CLICHÉ: Queda terminantemente PROHIBIDO empezar la primera escena con frases como "Hoy te enseño", "En este vídeo verás", o "¿Sabías que...?". Empieza hablando directamente exponiendo un dato de dolor, métrica de pérdidas o contingencia real.
-2. HUMANIZACIÓN DE LA VOZ: Las frases en 'voice_over_script' deben ser cortas, directas y asépticas. No debe sonar a discurso memorizado; debe imitar la respuesta natural e improvisada de un consultor senior en una reunión de negocio.
-3. DINÁMICA VISUAL: En el campo 'visual_prompt', intercala momentos mirando a cámara con planos de apoyo rápidos (B-roll de código, pantallas financieras oscuras, etc) para evitar más de 4-5 segundos de exposición estática del presentador.
-
-ESTÁS EN MODO "REGENERAR VÍDEO".
-Tienes que generar SOLO el flujo de vídeo para acompañar al siguiente post editado.
-`;
-
-  const prompt = `=== POST EDITADO ===
-El usuario ha editado su post de LinkedIn y ahora tiene este texto final:
-"${newPostText}"
-
-Genera un nuevo Guión de Vídeo dinámico para acompañar perfectamente a este texto editado.
-Devuelve ÚNICAMENTE un objeto JSON válido con la estructura del vídeo (config y scenes).
-`;
-
-
-  const groqKey = await getGroqKey(db, env);
-  if (!env.GEMINI_API_KEY && !groqKey) {
-    throw new Error('Neither GEMINI_API_KEY nor GROQ_API_KEY is configured on the Worker.');
-  }
-
-  let generatedText = await callAIWithFallback(db, env, dynamicSystemPrompt, prompt, "application/json", VIDEO_FLOW_SCHEMA);
-
-  if (generatedText.startsWith("```")) {
-    const parts = generatedText.split("```");
-    if (parts.length >= 3) {
-      generatedText = parts[1].replace(/^json\n/i, "");
-    }
-  }
-  generatedText = generatedText.trim();
-
-  let videoFlowData = null;
-  try {
-    videoFlowData = JSON.parse(generatedText);
-  } catch (e) {
-    console.error("AI did not return valid JSON for video flow:", generatedText);
-    throw new Error("La IA no devolvió un JSON válido para el guion de vídeo.");
-  }
-
-  // 3. Update DB
-  const updatedPost = await updatePost(db, id, {
-    video_flow_json: JSON.stringify(videoFlowData)
-  });
-
-  // The webhook is now triggered in handleApprove when the post is approved.
-
-  return updatedPost;
 }

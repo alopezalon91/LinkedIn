@@ -1,0 +1,30 @@
+[
+  {
+    "results": [
+      {
+        "id": "025ebbf8-d051-4857-833a-abca2877b680",
+        "status": "rejected",
+        "content_edited": null,
+        "media_base64": ""
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "MAD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.2321
+      },
+      "duration": 0.2321,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 14270464,
+      "rows_read": 1,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

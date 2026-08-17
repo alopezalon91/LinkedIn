@@ -44,12 +44,13 @@ export async function scrapeNews(db) {
           const existing = await db.prepare("SELECT id FROM posts WHERE source_id = ?").bind(sourceId).first();
           if (!existing) {
             await db.prepare(`
-              INSERT INTO posts (source_id, url, source, sector, status, original_news_json, content, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              INSERT INTO posts (source_id, source_url, source_name, type, sector, status, original_news_json, content, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).bind(
               sourceId,
               link,
               'PRENSA',
+              'actualidad',
               'general', 
               'pending',
               JSON.stringify({ title, link }),

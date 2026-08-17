@@ -274,14 +274,6 @@ function formatLinkedInText(text) {
   return (text || '').replace(/\*\*(.*?)\*\*/g, (m, p1) => toBoldUnicode(p1));
 }
 
-function getVideoButtonHTML(post) {
-  if (!post || !post.video_flow_json) return '';
-  let html = `<button class="btn btn-outline btn-sm" onclick="PostActions.showVideoScript('${post.id}')" title="Ver script de vídeo generado"><span style="color:var(--accent-green)">🎬 Script de Vídeo</span></button>`;
-  if (post.media_url) {
-    html += ` <a href="${post.media_url}" target="_blank" class="btn btn-primary btn-sm" style="background:var(--accent-purple);border-color:var(--accent-purple);display:inline-flex;align-items:center;padding:0 8px;font-size:12px;" title="Descargar MP4 final">▶️ Ver MP4</a>`;
-  }
-  return html;
-}
 
 function renderPostCard(post) {
   const card = document.createElement('div');
@@ -360,9 +352,6 @@ function renderPostCard(post) {
             <button class="btn btn-ghost btn-sm" id="ai-carousel-btn-${post.id}" onclick="PostActions.regenerateCarouselWithIA('${post.id}')" style="border: 1px dashed var(--border-strong); background: transparent; display: flex; align-items: center; gap: 5px;">
               📸 Rehacer carrusel (según el texto editado)
             </button>
-            <button class="btn btn-ghost btn-sm" id="ai-video-btn-${post.id}" onclick="PostActions.regenerateVideoWithIA('${post.id}')" style="border: 1px dashed var(--accent-purple); color: var(--accent-purple); background: transparent; display: flex; align-items: center; gap: 5px;">
-              🎬 Regenerar Vídeo Script
-            </button>
           </div>
           <div id="ai-rewrite-status-${post.id}" style="font-size:11px; color:var(--accent-red); margin-top:6px; display:none; align-items:center; gap:5px;">
             <span class="pulse-dot"></span> Grabando voz... Pulsa de nuevo el micrófono para parar.
@@ -395,23 +384,19 @@ function renderPostCard(post) {
           ❌ Rechazar
         </button>
         ${State.currentView === 'scheduled'
-          ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             ${getVideoButtonHTML(post)}
+            ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
           : State.currentView === 'approved'
           ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             ${getVideoButtonHTML(post)}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
           : State.currentView === 'published'
           ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes publicadas">📸 Ver Carrusel</button>
-             ${getVideoButtonHTML(post)}
              ${post.linkedin_post_id ? `<a href="https://www.linkedin.com/feed/update/${post.linkedin_post_id}" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;">🔗 Ver en LinkedIn</a>` : ''}`
           : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
              <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
              <button class="btn btn-outline btn-sm" onclick="PostActions.downloadPDF('${post.id}')" title="Descargar PDF del carrusel para LinkedIn">⬇️ Descargar PDF</button>
-             ${getVideoButtonHTML(post)}
              <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
              <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
         }
@@ -453,290 +438,7 @@ function renderPostCard(post) {
 
 // ── Post Actions ───────────────────────────────────────────
 const PostActions = {
-  showVideoScript(postId) {
-    try {
-      const post = State.posts.find(p => p.id === postId);
-      if (!post || !post.video_flow_json) {
-        Toast.show('No hay material de vídeo para este post.', 'warning');
-        return;
-      }
-      
-      const videoFlow = JSON.parse(post.video_flow_json);
-      
-      const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
-      
-      const container = document.createElement('div');
-      container.style.cssText = 'background:#1a1a1a;color:#fff;padding:30px;border-radius:12px;max-width:700px;width:100%;max-height:85vh;overflow-y:auto;text-align:left;box-shadow:0 10px 40px rgba(0,0,0,0.8); border: 1px solid var(--border-strong);';
-      
-      let contentHtml = '';
-      
-      // Handle the scenes format
-      if (videoFlow.scenes && Array.isArray(videoFlow.scenes)) {
-        contentHtml += `<div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-          <h4 style="margin-top:0; color: var(--accent-purple);">Configuración</h4>
-          <div style="display:flex; gap: 15px; font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">
-            <div><strong>Ratio:</strong> ${videoFlow.config?.aspect_ratio || 'N/A'}</div>
-            <div><strong>Voz:</strong> ${videoFlow.config?.voice_tone || 'N/A'}</div>
-            <div><strong>Música:</strong> ${videoFlow.config?.music_style || 'N/A'}</div>
-          </div>
-          ${videoFlow.config?.avatar_prompt ? `<div style="font-size: 13px; color: var(--text-secondary);"><strong>Avatar:</strong> <em>"${videoFlow.config.avatar_prompt}"</em></div>` : ''}
-        </div>`;
-        
-        videoFlow.scenes.forEach(scene => {
-          contentHtml += `
-            <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border);">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                <strong style="color: var(--accent-blue);">Escena ${scene.scene_number}</strong>
-                <span style="color: var(--text-muted); font-size: 12px;">⏱️ ${scene.duration_seconds}s</span>
-              </div>
-              <div style="margin-bottom: 12px;">
-                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Texto en pantalla</div>
-                <div style="font-weight: 600; font-size: 16px; border-left: 3px solid var(--accent-green); padding-left: 10px;">${scene.on_screen_text}</div>
-              </div>
-              <div style="margin-bottom: 12px;">
-                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Locución (Voz en off)</div>
-                <div style="color: var(--text-secondary); font-style: italic; border-left: 3px solid var(--accent-purple); padding-left: 10px;">"${scene.voice_over_script}"</div>
-              </div>
-              <div>
-                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Visual</div>
-                <div style="color: var(--text-secondary); font-size: 13px;">${scene.visual_prompt}</div>
-              </div>
-            </div>
-          `;
-        });
-      } 
-      // Handle the audio_script format
-      else if (videoFlow.audio_script) {
-        contentHtml += `
-          <div style="margin-bottom: 24px;">
-            <h4 style="margin-top:0; color: var(--accent-purple); margin-bottom: 10px;">Guión de Locución</h4>
-            <div style="color: var(--text-secondary); font-style: italic; border-left: 3px solid var(--accent-purple); padding-left: 12px; font-size: 15px; line-height: 1.6;">
-              "${videoFlow.audio_script}"
-            </div>
-          </div>
-        `;
-        
-        if (videoFlow.background_keywords && videoFlow.background_keywords.length > 0) {
-          contentHtml += `
-            <div style="margin-bottom: 20px;">
-              <h4 style="margin-top:0; color: var(--accent-blue); margin-bottom: 10px;">Palabras Clave (Fondo)</h4>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                ${videoFlow.background_keywords.map(kw => `<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 12px; font-size: 12px;">${kw}</span>`).join('')}
-              </div>
-            </div>
-          `;
-        }
-        if (videoFlow.avatar_prompt) {
-          contentHtml += `
-            <div style="margin-bottom: 20px;">
-              <h4 style="margin-top:0; color: var(--accent-green); margin-bottom: 10px;">Avatar Hiperrealista</h4>
-              <div style="color: var(--text-secondary); font-size: 13px; font-style: italic;">
-                "${videoFlow.avatar_prompt}"
-              </div>
-            </div>
-          `;
-        }
-      } else {
-        contentHtml = `<pre style="white-space: pre-wrap; font-family: monospace; font-size: 13px; color: var(--accent-green);">${JSON.stringify(videoFlow, null, 2)}</pre>`;
-      }
-      
-      container.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-strong); padding-bottom: 15px;">
-          <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">🎬 Script de Vídeo</h2>
-          <button id="close-video-script-btn" style="background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer;">&times;</button>
-        </div>
-        <div>
-          ${contentHtml}
-        </div>
-        <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
-          <button id="close-video-script-btn-bottom" class="btn btn-ghost" style="color:var(--text-muted)">Cerrar Script</button>
-          <button id="play-video-preview-btn" class="btn btn-primary" style="background:var(--accent-purple); border-color:var(--accent-purple);">▶️ Ver Previsualización Animada</button>
-          ${!post.media_url ? `<button id="render-final-video-btn" class="btn btn-primary" style="background:var(--accent-blue); border-color:var(--accent-blue);">☁️ Generar MP4 Final</button>` : ''}
-        </div>
-      `;
-      
-      overlay.appendChild(container);
-      document.body.appendChild(overlay);
-      
-      const closeFn = () => document.body.removeChild(overlay);
-      document.getElementById('close-video-script-btn').onclick = closeFn;
-      document.getElementById('close-video-script-btn-bottom').onclick = closeFn;
-      document.getElementById('play-video-preview-btn').onclick = () => {
-        closeFn();
-        PostActions.playVideoPreview(postId);
-      };
-      if (!post.media_url) {
-        document.getElementById('render-final-video-btn').onclick = () => {
-          closeFn();
-          PostActions.renderFinalVideo(postId);
-        };
-      }
-      
-    } catch (e) {
-      console.error(e);
-      Toast.show('Error al leer el script de vídeo.', 'error');
-    }
-  },
 
-  playVideoPreview(postId) {
-    try {
-      const post = State.posts.find(p => p.id === postId);
-      if (!post || !post.video_flow_json) return;
-      
-      const videoFlow = JSON.parse(post.video_flow_json);
-      
-      const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(10px);';
-      
-      const playerContainer = document.createElement('div');
-      let bgStyle = 'background:linear-gradient(135deg, #2a2a35 0%, #1a1a24 100%);';
-      
-      let avatarPrompt = null;
-      if (videoFlow.config && videoFlow.config.avatar_prompt) {
-          avatarPrompt = videoFlow.config.avatar_prompt;
-      }
-      
-      if (avatarPrompt) {
-          const encodedPrompt = encodeURIComponent(avatarPrompt + ", high detail, 8k, photorealistic, professional lighting, corporate, dslr");
-          const avatarUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1080&height=1920&nologo=true`;
-          bgStyle = `background: url('${avatarUrl}') center/cover no-repeat;`;
-      }
-      
-      playerContainer.style.cssText = `position:relative;width:100%;max-width:400px;aspect-ratio:9/16;${bgStyle}border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;`;
-      
-      // We add a dark overlay so text is readable over the avatar
-      const darkOverlay = document.createElement('div');
-      darkOverlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.6);z-index:1;';
-      playerContainer.appendChild(darkOverlay);
-      
-      const textLayer = document.createElement('div');
-      textLayer.style.cssText = 'position:absolute;z-index:2;width:90%;text-align:center;color:#fff;font-family:system-ui,sans-serif;font-weight:900;font-size:32px;text-transform:uppercase;text-shadow:3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;word-wrap:break-word;line-height:1.2;opacity:0;transition:opacity 0.2s ease-in-out; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.5));';
-      
-      const debugInfo = document.createElement('div');
-      debugInfo.style.cssText = 'position:absolute;top:15px;left:15px;color:rgba(255,255,255,0.5);font-size:11px;font-family:monospace;z-index:3;';
-      
-      const closeBtn = document.createElement('button');
-      closeBtn.innerHTML = '✕ Cerrar';
-      closeBtn.style.cssText = 'position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:8px 16px;border-radius:20px;cursor:pointer;z-index:10001;font-weight:bold;backdrop-filter:blur(5px);transition:all 0.2s;';
-      closeBtn.onmouseover = () => closeBtn.style.background = 'rgba(255,255,255,0.25)';
-      closeBtn.onmouseout = () => closeBtn.style.background = 'rgba(255,255,255,0.15)';
-      
-      let isPlaying = true;
-      
-      const cleanup = () => {
-          isPlaying = false;
-          window.speechSynthesis.cancel();
-          if(document.body.contains(overlay)) document.body.removeChild(overlay);
-      };
-      
-      closeBtn.onclick = cleanup;
-      playerContainer.appendChild(textLayer);
-      playerContainer.appendChild(debugInfo);
-      overlay.appendChild(playerContainer);
-      overlay.appendChild(closeBtn);
-      document.body.appendChild(overlay);
-
-      let scenes = [];
-      if (videoFlow.scenes && Array.isArray(videoFlow.scenes)) {
-          scenes = videoFlow.scenes;
-      } else if (videoFlow.audio_script) {
-          scenes = [{
-              duration_seconds: 15,
-              on_screen_text: "🎬 REEL EN PROCESO",
-              voice_over_script: videoFlow.audio_script
-          }];
-      }
-      
-      if (scenes.length === 0) {
-          textLayer.innerText = "NO HAY ESCENAS";
-          textLayer.style.opacity = 1;
-          return;
-      }
-
-      let currentSceneIdx = 0;
-      
-      const playNextScene = () => {
-          if (!isPlaying) return;
-          if (currentSceneIdx >= scenes.length) {
-              textLayer.innerText = "🎬 FIN";
-              textLayer.style.opacity = 1;
-              debugInfo.innerText = "";
-              return;
-          }
-          
-          const scene = scenes[currentSceneIdx];
-          debugInfo.innerText = `ESCENA ${currentSceneIdx + 1}/${scenes.length}`;
-          
-          textLayer.innerText = scene.on_screen_text || '';
-          textLayer.style.opacity = 1;
-          
-          if (scene.voice_over_script) {
-              const utterance = new SpeechSynthesisUtterance(scene.voice_over_script);
-              utterance.lang = 'es-ES';
-              utterance.rate = 1.1; // Slightly faster for reels
-              
-              utterance.onend = () => {
-                  if (!isPlaying) return;
-                  textLayer.style.opacity = 0;
-                  setTimeout(() => {
-                      currentSceneIdx++;
-                      playNextScene();
-                  }, 300);
-              };
-              
-              utterance.onerror = (e) => {
-                  console.error("TTS Error", e);
-                  if (!isPlaying) return;
-                  setTimeout(() => {
-                      currentSceneIdx++;
-                      playNextScene();
-                  }, (scene.duration_seconds || 4) * 1000);
-              };
-              
-              window.speechSynthesis.speak(utterance);
-          } else {
-              setTimeout(() => {
-                  if (!isPlaying) return;
-                  textLayer.style.opacity = 0;
-                  setTimeout(() => {
-                      currentSceneIdx++;
-                      playNextScene();
-                  }, 300);
-              }, (scene.duration_seconds || 4) * 1000);
-          }
-      };
-      
-      setTimeout(() => {
-          window.speechSynthesis.cancel();
-          playNextScene();
-      }, 600);
-      
-    } catch (e) {
-      console.error(e);
-      Toast.show('Error al previsualizar el vídeo.', 'error');
-    }
-  },
-
-  async renderFinalVideo(postId) {
-    try {
-      const btn = document.getElementById(`post-card-${postId}`);
-      if (btn) btn.style.opacity = '0.5';
-      
-      Toast.show('⚙️ Mandando petición a la nube (puede tardar 1-2 minutos)...', 'info');
-      
-      const res = await fetch(`/api/posts/${postId}/render-final-video`, { method: 'POST' });
-      if (!res.ok) throw new Error(await res.text());
-      
-      Toast.show('☁️ Renderizado iniciado en GitHub. La web se actualizará cuando termine.', 'success');
-      
-    } catch (err) {
-      console.error(err);
-      Toast.show('Error al solicitar vídeo: ' + err.message, 'error');
-      const btn = document.getElementById(`post-card-${postId}`);
-      if (btn) btn.style.opacity = '1';
-    }
-  },
 
   showCarousel(postId) {
     try {
@@ -1796,59 +1498,6 @@ const PostActions = {
       if (carouselBtn) {
         carouselBtn.disabled = false;
         carouselBtn.innerHTML = '📸 Rehacer carrusel (según el texto editado)';
-      }
-      if (statusEl) {
-        statusEl.style.display = 'none';
-      }
-    }
-  },
-
-  async regenerateVideoWithIA(postId) {
-    const editor = document.getElementById(`editor-${postId}`);
-    let content = editor ? editor.value.trim() : '';
-    const post = State.posts.find(p => p.id === postId);
-    if (!content && post) content = post.content_edited || post.content;
-
-    if (!content) {
-      Toast.show('El texto del post no puede estar vacío', 'warning');
-      return;
-    }
-
-    const videoBtn = document.getElementById(`ai-video-btn-${postId}`);
-    const statusEl = document.getElementById(`ai-rewrite-status-${postId}`);
-
-    try {
-      if (videoBtn) {
-        videoBtn.disabled = true;
-        videoBtn.innerHTML = '<div class="loading-spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; margin-right:5px;"></div> Procesando...';
-      }
-      if (statusEl) {
-        statusEl.style.color = 'var(--accent-purple)';
-        statusEl.innerHTML = '<span class="pulse-dot" style="background-color:var(--accent-purple);"></span> Regenerando vídeo con IA...';
-        statusEl.style.display = 'flex';
-      }
-
-      const response = await API.request(`/api/posts/${postId}/regenerate-video`, {
-        method: 'POST',
-        body: JSON.stringify({ content_edited: content })
-      });
-
-      // Update state and UI
-      if (post) {
-        post.video_flow_json = response.video_flow_json;
-      }
-
-      Toast.show('Script de vídeo regenerado con IA exitosamente 🎬', 'success');
-      
-      // Re-render
-      renderQueue();
-
-    } catch (err) {
-      Toast.show(`Error al regenerar vídeo: ${err.message}`, 'error');
-    } finally {
-      if (videoBtn) {
-        videoBtn.disabled = false;
-        videoBtn.innerHTML = '🎬 Regenerar Vídeo Script';
       }
       if (statusEl) {
         statusEl.style.display = 'none';

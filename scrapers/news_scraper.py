@@ -71,17 +71,18 @@ def _fetch_feed_raw(url: str) -> Optional[feedparser.FeedParserDict]:
     delay = REQUEST_RETRY_BACKOFF
     for attempt in range(1, REQUEST_MAX_RETRIES + 1):
         try:
-            # feedparser can parse from a URL directly, but we use requests
-            # first to benefit from our retry logic and custom headers.
             resp = requests.get(
                 url,
                 headers=HEADERS,
-                timeout=REQUEST_TIMEOUT,
+                timeout=7,  # Reduce timeout to fail fast on blocked IPs
                 allow_redirects=True,
             )
             if resp.status_code == 200:
                 feed = feedparser.parse(resp.content)
                 return feed
+            if resp.status_code in (403, 404):
+                log.warning("HTTP %s for %s. Skipping retries as it is permanently blocked or missing.", resp.status_code, url)
+                return None
             log.warning(
                 "HTTP %s fetching feed %s (attempt %d/%d)",
                 resp.status_code, url, attempt, REQUEST_MAX_RETRIES,
@@ -89,12 +90,11 @@ def _fetch_feed_raw(url: str) -> Optional[feedparser.FeedParserDict]:
         except requests.exceptions.RequestException as exc:
             log.warning(
                 "Request error fetching %s (attempt %d/%d): %s",
-                url, attempt, REQUEST_MAX_RETRIES, exc,
+                url, attempt, REQUEST_MAX_RETRIES, type(exc).__name__,
             )
         if attempt < REQUEST_MAX_RETRIES:
-            log.info("Retrying in %.1fs…", delay)
             time.sleep(delay)
-            delay *= 2
+            delay *= 1.5
 
     log.error("All retries exhausted for feed: %s", url)
     return None

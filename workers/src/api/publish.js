@@ -55,24 +55,48 @@ export async function publishPost(db, env, postId, request) {
     throw new Error('LinkedIn user URN not stored. Re-complete the OAuth flow.');
   }
 
-  // 3. Decide which content to publish (prefer user-edited version)
-  let textToPublish = (post.content_edited ?? post.content).trim();
+  // 3. Decide which content to publish (prefer request payload if available, else user-edited version, else generated)
+  let textToPublish = null;
+  let binaryPdfData = null;
+  let multiImageUrns = [];
+  let mediaUrn = null;
+
+  if (request) {
+    const contentType = request.headers.get('content-type') || '';
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const file = formData.get('pdf');
+      if (file) {
+        binaryPdfData = new Uint8Array(await file.arrayBuffer());
+      }
+      const formText = formData.get('content_edited') || formData.get('text');
+      if (formText) textToPublish = formText;
+    } else if (contentType.includes('application/json')) {
+      try {
+        const body = await request.clone().json();
+        if (body.content_edited) textToPublish = body.content_edited;
+        else if (body.text) textToPublish = body.text;
+      } catch (e) {
+        console.error('[worker] Failed to parse JSON body in publishPost:', e);
+      }
+    }
+  }
+
+  // Fallback to database
+  if (!textToPublish) {
+    textToPublish = post.content_edited ?? post.content;
+  }
+  
+  textToPublish = (textToPublish || '').trim();
   if (!textToPublish) throw new Error('Post content is empty — cannot publish');
+
+  // Also save it to D1 to avoid desync if the frontend didn't save yet
+  if (textToPublish !== post.content_edited) {
+    await updatePost(db, postId, { content_edited: textToPublish });
+  }
 
   // Convert markdown bold to Unicode bold for LinkedIn
   textToPublish = formatLinkedInText(textToPublish);
-
-  let mediaUrn = null;
-  let multiImageUrns = [];
-
-  let binaryPdfData = null;
-  if (request && request.headers.get('content-type')?.includes('multipart/form-data')) {
-    const formData = await request.formData();
-    const file = formData.get('pdf');
-    if (file) {
-      binaryPdfData = new Uint8Array(await file.arrayBuffer());
-    }
-  }
 
   if (binaryPdfData) {
     mediaUrn = await uploadDocumentBinaryToLinkedIn(access_token, linkedin_urn, binaryPdfData);

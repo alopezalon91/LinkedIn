@@ -233,16 +233,8 @@ async function route(request, env, ctx, url, path, method) {
     return handleCheckSources(db, request);
   }
 
-  // ── Videos endpoints ───────────────────────────────────────────────────────
-  if (path === '/api/videos/pending' && method === 'GET') {
-    return handlePendingVideos(db);
-  }
-  if (path === '/api/videos/complete' && method === 'POST') {
-    return handleCompleteVideo(db, request);
-  }
-
-  // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate|generate|regenerate-carousel|regenerate-video|render-final-video ────
-  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate|generate|regenerate-carousel|regenerate-video|render-final-video)$/);
+  // ── Post sub-actions: /api/posts/:id/approve|reject|review|schedule|regenerate|generate|regenerate-carousel ────
+  const subActionMatch = path.match(/^\/api\/posts\/([^/]+)\/(approve|reject|review|schedule|regenerate|generate|regenerate-carousel)$/);
   if (subActionMatch && method === 'POST') {
     const [, postId, action] = subActionMatch;
     return handlePostAction(db, env, ctx, request, postId, action);
@@ -431,8 +423,7 @@ async function handlePostAction(db, env, ctx, request, postId, action) {
     case 'regenerate': return _handleRegenerate(db, env, ctx, postId, body.instructions);
     case 'generate': return _handleGenerate(db, env, ctx, postId);
     case 'regenerate-carousel': return _handleRegenerateCarousel(db, env, postId, body.content_edited);
-    case 'regenerate-video': return _handleRegenerateVideo(db, env, ctx, postId, body.content_edited);
-    case 'render-final-video': return _handleRenderFinalVideo(db, env, ctx, postId);
+
     case 'update':   return _handleGenericUpdate(db, postId, body);
     default:         return errorResponse(`Unknown action: ${action}`, 400);
   }
@@ -465,39 +456,7 @@ async function _handleApprove(db, env, ctx, postId, editedContent, mediaBase64) 
   }
 }
 
-async function _handleRenderFinalVideo(db, env, ctx, postId) {
-  try {
-    const { getPost } = await import('./api/posts.js');
-    const post = await getPost(db, postId);
-    if (!post) return errorResponse("Post not found", 404);
-    
-    if (post.video_flow_json && env.GITHUB_PAT) {
-      const videoData = JSON.parse(post.video_flow_json);
-      const ghPayload = {
-        event_type: "render_video",
-        client_payload: {
-          postId: postId,
-          video_data: videoData
-        }
-      };
-      await fetch("https://api.github.com/repos/alopezalon91/LinkedIn/dispatches", {
-        method: "POST",
-        headers: {
-          "Accept": "application/vnd.github.v3+json",
-          "Authorization": `token ${env.GITHUB_PAT}`,
-          "User-Agent": "Mytaxbot-Worker",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(ghPayload)
-      });
-      return jsonResponse({ success: true, message: "Vídeo final en renderizado en GitHub Actions..." });
-    } else {
-      return errorResponse("No hay json de video o falta el token de GitHub (GITHUB_PAT)", 400);
-    }
-  } catch (err) {
-    return errorResponse(err.message, 500);
-  }
-}
+
 
 async function _handleReview(db, postId, editedContent) {
   try {
@@ -560,18 +519,7 @@ async function _handleRegenerateCarousel(db, env, postId, newPostText) {
   }
 }
 
-async function _handleRegenerateVideo(db, env, ctx, postId, newPostText) {
-  try {
-    if (!newPostText) {
-      return errorResponse('content_edited is required for video regeneration', 400);
-    }
-    const { regenerateVideo } = await import('./api/posts.js');
-    const post = await regenerateVideo(db, env, ctx, postId, newPostText);
-    return jsonResponse(post);
-  } catch (err) {
-    return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);
-  }
-}
+
 
 // ── Publish ───────────────────────────────────────────────────────────────────
 
@@ -651,41 +599,7 @@ async function handleGithubDispatch(request) {
   }
 }
 
-// ── Videos handlers ──────────────────────────────────────────────────────────
 
-async function handlePendingVideos(db) {
-  try {
-    const { results } = await db.prepare(`
-      SELECT id, video_flow_json 
-      FROM posts 
-      WHERE status = 'approved' 
-        AND video_flow_json IS NOT NULL 
-        AND media_url IS NULL
-    `).all();
-    return jsonResponse(results || []);
-  } catch (err) {
-    return errorResponse(err.message, 500);
-  }
-}
-
-async function handleCompleteVideo(db, request) {
-  try {
-    const body = await parseJSON(request);
-    if (!body.postId || !body.mediaUrl) {
-      return errorResponse('Missing postId or mediaUrl', 400);
-    }
-    
-    await db.prepare(`
-      UPDATE posts 
-      SET media_url = ?, updated_at = ? 
-      WHERE id = ?
-    `).bind(body.mediaUrl, new Date().toISOString(), body.postId).run();
-    
-    return jsonResponse({ success: true, postId: body.postId });
-  } catch (err) {
-    return errorResponse(err.message, 500);
-  }
-}
 
 async function handleListDecisions(db) {
   try {
