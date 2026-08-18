@@ -607,9 +607,9 @@ const PostActions = {
         }
         
         if (editedContent) {
-          await API.approvePost(postId, editedContent, null); // Save edits first
+          await API.approvePost(postId, editedContent, post.media_base64); // Save edits first
         }
-        await API.schedulePost(postId, isoStr, null);
+        await API.schedulePost(postId, isoStr, post.media_base64);
         Toast.show('Post programado ✅', 'success');
         modal.classList.remove('visible');
         removePostCard(postId);
@@ -695,7 +695,7 @@ const PostActions = {
         }
       }
 
-      await API.approvePost(postId, null, null);
+      await API.approvePost(postId, null, post?.media_base64 || null);
       
       await API.recordFeedback({
         post_id: postId,
@@ -1044,7 +1044,7 @@ const PostActions = {
         }
       }
 
-      await API.approvePost(postId, null, null);
+      await API.approvePost(postId, null, post?.media_base64 || null);
 
       let formData = null;
       if (pdfBlob) {
@@ -1151,7 +1151,7 @@ const PostActions = {
         }
       }
       
-      await API.approvePost(postId, editedContent, null);
+      await API.approvePost(postId, editedContent, post?.media_base64 || null);
       await API.recordFeedback({
         post_id: postId,
         decision: 'edited',
