@@ -43,7 +43,7 @@ import {
   getExistingSourceIds,
 } from './api/posts.js';
 
-import { publishPost }                              from './api/publish.js';
+import { publishPost, fetchLinkedInStats } from './api/publish.js';
 import { recordFeedback, getLearningProgress }      from './api/feedback.js';
 import { getSystemStats }                           from './api/stats.js';
 import { learnFromEdits }                           from './api/learning.js';
@@ -120,6 +120,46 @@ export default {
           console.error(`[worker] Failed to publish scheduled post ${row.id}:`, err);
         }
       }
+
+      // 3. Sync stats for recent published posts
+      console.log('[worker] Starting stats sync for recent posts...');
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { results: recentPosts } = await db.prepare(`
+        SELECT id, linkedin_post_id FROM posts 
+        WHERE status = 'published' 
+          AND linkedin_post_id IS NOT NULL 
+          AND published_at >= ?
+      `).bind(thirtyDaysAgo.toISOString()).all();
+
+      if (recentPosts && recentPosts.length > 0) {
+        let tokenInfo;
+        try {
+          tokenInfo = await getStoredToken(db);
+        } catch (e) {
+          console.error('[worker] Cannot sync stats: LinkedIn token missing or invalid');
+        }
+
+        if (tokenInfo && tokenInfo.access_token) {
+          for (const post of recentPosts) {
+            try {
+              const stats = await fetchLinkedInStats(tokenInfo.access_token, post.linkedin_post_id);
+              if (stats) {
+                await db.prepare(`
+                  UPDATE posts 
+                  SET likes_count = ?, comments_count = ?, last_stats_sync = ? 
+                  WHERE id = ?
+                `).bind(stats.likes, stats.comments, new Date().toISOString(), post.id).run();
+                console.log(`[worker] Synced stats for post ${post.id}: ${stats.likes} likes, ${stats.comments} comments`);
+              }
+            } catch (err) {
+              console.error(`[worker] Error syncing stats for post ${post.id}:`, err);
+            }
+          }
+        }
+      }
+      console.log('[worker] Stats sync finished.');
     } catch (err) {
       console.error('[worker] Error in scheduled task:', err);
     }

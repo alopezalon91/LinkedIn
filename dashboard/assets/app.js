@@ -2253,7 +2253,7 @@ function applyHistoryFilters() {
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:40px">Sin resultados para esta selección</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:40px">Sin resultados para esta selección</td></tr>';
     return;
   }
 
@@ -2266,6 +2266,9 @@ function applyHistoryFilters() {
         <td>${renderSectorBadge(post.sector)}</td>
         <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="Ver detalle">${preview}</td>
         <td style="color:var(--text-muted); font-size:12px">${post.source_name || '—'}</td>
+        <td style="font-size:12px; white-space:nowrap">
+          ${post.status === 'published' ? `👍 ${post.likes_count || 0} &nbsp; 💬 ${post.comments_count || 0}` : '—'}
+        </td>
         <td>${renderStatusPill(post.status)}</td>
         <td>
           ${post.status === 'published' && post.linkedin_post_id ? `<a href="https://www.linkedin.com/feed/update/${post.linkedin_post_id}" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">🔗 Ver</a>` : ''}

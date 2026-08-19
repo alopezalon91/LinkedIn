@@ -697,6 +697,27 @@ export async function generatePostFromDraft(db, env, ctx, id) {
     console.error("Error reading best_posts_examples:", e);
   }
 
+  // 1.6 Fetch Top Performing Posts (AI Feedback Loop)
+  let topPostsSnippet = "";
+  try {
+    const topPosts = await db.prepare(`
+      SELECT content_edited, likes_count, comments_count 
+      FROM posts 
+      WHERE status = 'published' AND likes_count > 0 
+      ORDER BY likes_count DESC, comments_count DESC 
+      LIMIT 3
+    `).all();
+    
+    if (topPosts.results && topPosts.results.length > 0) {
+      topPostsSnippet = `\n\n[RETROALIMENTACIÓN DE ÉXITO REAL: TUS MEJORES POSTS]\nEl sistema ha analizado las métricas de LinkedIn y ha detectado que estos son tus posts más exitosos (más likes y comentarios). Analiza por qué funcionaron (su estructura humana, agresión fiscal directa, frases cortas) e imita ese mismo nivel de éxito y formato en el post que vas a generar hoy:\n`;
+      topPosts.results.forEach((tp, i) => {
+        topPostsSnippet += `\nPost Top #${i + 1} (${tp.likes_count} likes, ${tp.comments_count} comentarios):\n"""\n${tp.content_edited}\n"""\n--------------------------------------------------------------------------------`;
+      });
+    }
+  } catch(e) {
+    console.error("Error fetching top posts for feedback loop:", e);
+  }
+
   let rawNewsContent = draftData?.original_text || post.content || '';
   // Limpieza agresiva de metadatos, menús y exceso de texto de scrapeo
   let newsContent = rawNewsContent
@@ -769,6 +790,7 @@ ${routingInstruction}
 - Densidad de emojis permitida en el texto principal: ${emoj}/3 (Si es 0 o 1, sé sumamente minimalista; si es 3, usa los indicados en las reglas).
 - Estilo de longitud de oraciones: ${long}/3 (1: Cortas y tajantes, 2: Mixtas, 3: Párrafos densos y argumentativos).
 ${fewShotPromptSnippet}
+${topPostsSnippet}
 
 [FORMATO DE SALIDA ESTRICTO]
 Responde ÚNICAMENTE con un objeto JSON válido que cumpla estrictamente con el esquema definido.

@@ -511,3 +511,34 @@ export async function getPublishedTodayCount(db) {
 
   return result?.count ?? 0;
 }
+
+// ─── Stats Sync ───────────────────────────────────────────────────────────────
+
+/**
+ * Fetch likes and comments for a specific post URN.
+ */
+export async function fetchLinkedInStats(accessToken, linkedinUrn) {
+  if (!linkedinUrn) return null;
+  
+  // Clean up URN if needed. We need the exact share URN.
+  const encodedUrn = encodeURIComponent(linkedinUrn);
+  const url = `https://api.linkedin.com/v2/socialActions/${encodedUrn}`;
+
+  const res = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'X-Restli-Protocol-Version': '2.0.0'
+    }
+  });
+
+  if (!res.ok) {
+    console.error(`[worker] Error fetching stats for ${linkedinUrn}:`, await res.text());
+    return null;
+  }
+
+  const data = await res.json();
+  return {
+    likes: data?.likesSummary?.totalLikes ?? 0,
+    comments: data?.commentsSummary?.totalFirstDegreeComments ?? 0 // Total comments (LinkedIn sometimes uses totalFirstDegreeComments for personal profiles)
+  };
+}
