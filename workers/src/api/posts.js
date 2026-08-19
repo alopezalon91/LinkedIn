@@ -806,9 +806,9 @@ Estás OBLIGADO a estructurar tu texto intercalando párrafos argumentativos (de
 MÁXIMA RESTRICCIÓN: Queda PROHIBIDO escribir frases sueltas separadas por saltos de línea continuos simulando un poema (prohibido el "broetry"). Si vas a enumerar o listar pasos o requisitos, USA SIEMPRE GUIONES ("- "). Queda PROHIBIDO usar etiquetas, títulos o encabezados en mayúsculas (como "Contexto", "Mecánica", etc.). El post debe fluir de forma natural como una carta agresiva al empresario, pero visualmente estructurada con párrafos reales y listas con viñetas.
 
 [REGLAS INQUEBRANTABLES PARA EL JSON DEL CARRUSEL]
-1. PORTADA: El title DEBE destacar el DATO MÁS ESCANDALOSO o el GANCHO MÁS LLAMATIVO del texto (ej. fechas extremas, cantidades confiscatorias, días trabajados para el Estado). TIENES QUE SER AGRESIVO y conciso. MÁXIMO ABSOLUTO 8 PALABRAS.
-2. INTERIORES: Cada bullet DEBE SER UNA PÍLDORA ULTRACORTA Y PUNZANTE (máx 12 palabras). Queda ESTRICTAMENTE PROHIBIDO hacer oraciones largas o narrativas. Ve directo al grano.
-3. CIERRE: El title DEBE SER UNA PREGUNTA DE MÁXIMO 8 PALABRAS SOBRE PÉRDIDA DE DINERO/PATRIMONIO TOTALMENTE ADAPTADA AL TEMA DE LA NOTICIA. PROHIBIDO copiar ejemplos prefabricados.
+1. PORTADA: El title DEBE extraer la FRASE MÁS LLAMATIVA, POLÉMICA O IRÓNICA del texto (especialmente del primer párrafo, ej. "Feliz Año Nuevo en agosto"). MÁXIMO ABSOLUTO 8 PALABRAS.
+2. INTERIORES: Cada bullet DEBE SER EXTREMADAMENTE TELEGRÁFICO (MÁXIMO 6 PALABRAS). Prohibido hacer oraciones largas. Usa frases cortadas, datos crudos o verbos de acción. Redacta como un titular de prensa.
+3. CIERRE: El title DEBE SER UNA PREGUNTA DE MÁXIMO 8 PALABRAS MUY INCISIVA y polémica que interpele directamente al lector.
 Si te pasas de los límites de palabras, el sistema fallará y se borrará tu respuesta.
 `;
 
