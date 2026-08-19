@@ -806,7 +806,7 @@ Estás OBLIGADO a estructurar tu texto intercalando párrafos argumentativos (de
 MÁXIMA RESTRICCIÓN: Queda PROHIBIDO escribir frases sueltas separadas por saltos de línea continuos simulando un poema (prohibido el "broetry"). Si vas a enumerar o listar pasos o requisitos, USA SIEMPRE GUIONES ("- "). Queda PROHIBIDO usar etiquetas, títulos o encabezados en mayúsculas (como "Contexto", "Mecánica", etc.). El post debe fluir de forma natural como una carta agresiva al empresario, pero visualmente estructurada con párrafos reales y listas con viñetas.
 
 [REGLAS INQUEBRANTABLES PARA EL JSON DEL CARRUSEL]
-1. PORTADA: El title DEBE MENCIONAR EL TEMA LEGAL ESPECÍFICO PERO CON MÁXIMO ABSOLUTO 8 PALABRAS. TIENES QUE SER CREATIVO y conciso. PROHIBIDO usar títulos largos de periódico o títulos clickbait genéricos que no digan el tema de la noticia.
+1. PORTADA: El title DEBE CAPTURAR EL MENSAJE O DOLOR PRINCIPAL (ya sea económico, fiscal, legal o emocional) CON MÁXIMO ABSOLUTO 8 PALABRAS. TIENES QUE SER CREATIVO y conciso. No te obsesiones con buscar un "trámite legal" si la noticia va sobre presión fiscal general. PROHIBIDO usar títulos genéricos.
 2. INTERIORES: Cada bullet DEBE SER UNA PÍLDORA ULTRACORTA Y PUNZANTE (máx 12 palabras). Queda ESTRICTAMENTE PROHIBIDO hacer oraciones largas o narrativas. Ve directo al grano.
 3. CIERRE: El title DEBE SER UNA PREGUNTA DE MÁXIMO 8 PALABRAS SOBRE PÉRDIDA DE DINERO/PATRIMONIO TOTALMENTE ADAPTADA AL TEMA DE LA NOTICIA. PROHIBIDO copiar ejemplos prefabricados.
 Si te pasas de los límites de palabras, el sistema fallará y se borrará tu respuesta.
