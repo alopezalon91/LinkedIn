@@ -602,7 +602,13 @@ const PostActions = {
           } catch (e) {}
           if (isCarousel) {
             Toast.show('Renderizando imágenes...', 'info');
-            await PostActions.generateCarouselImages(post, post.media_base64);
+            const { pdfBlob } = await PostActions.generateCarouselImages(post, post.media_base64);
+            const base64Pdf = await new Promise(r => {
+              const reader = new FileReader();
+              reader.readAsDataURL(pdfBlob);
+              reader.onloadend = () => r(reader.result.split(',')[1]);
+            });
+            post.media_base64 = btoa(JSON.stringify({ type: 'pdf_carousel', pdf_base64: base64Pdf }));
           }
         }
         
@@ -691,7 +697,13 @@ const PostActions = {
         } catch (e) {}
         if (isCarousel) {
           Toast.show('Renderizando imágenes del carrusel...', 'info');
-          await PostActions.generateCarouselImages(post, post.media_base64);
+          const { pdfBlob } = await PostActions.generateCarouselImages(post, post.media_base64);
+          const base64Pdf = await new Promise(r => {
+            const reader = new FileReader();
+            reader.readAsDataURL(pdfBlob);
+            reader.onloadend = () => r(reader.result.split(',')[1]);
+          });
+          post.media_base64 = btoa(JSON.stringify({ type: 'pdf_carousel', pdf_base64: base64Pdf }));
         }
       }
 
@@ -1041,6 +1053,12 @@ const PostActions = {
           Toast.show('Renderizando carrusel...', 'info');
           const result = await PostActions.generateCarouselImages(post, post.media_base64);
           pdfBlob = result.pdfBlob;
+          const base64Pdf = await new Promise(r => {
+            const reader = new FileReader();
+            reader.readAsDataURL(pdfBlob);
+            reader.onloadend = () => r(reader.result.split(',')[1]);
+          });
+          post.media_base64 = btoa(JSON.stringify({ type: 'pdf_carousel', pdf_base64: base64Pdf }));
         }
       }
 
@@ -1147,7 +1165,13 @@ const PostActions = {
         } catch (e) {}
         if (isCarousel) {
           Toast.show('Renderizando imágenes...', 'info');
-          await PostActions.generateCarouselImages(post, post.media_base64);
+          const { pdfBlob } = await PostActions.generateCarouselImages(post, post.media_base64);
+          const base64Pdf = await new Promise(r => {
+            const reader = new FileReader();
+            reader.readAsDataURL(pdfBlob);
+            reader.onloadend = () => r(reader.result.split(',')[1]);
+          });
+          post.media_base64 = btoa(JSON.stringify({ type: 'pdf_carousel', pdf_base64: base64Pdf }));
         }
       }
       
