@@ -949,39 +949,8 @@ ESTÁS EN MODO "REGENERAR CARRUSEL".
 Tienes que generar SOLO las diapositivas del carrusel para el siguiente post.
 
 [INSTRUCCIONES CRÍTICAS DE COPYWRITING PARA CARRUSEL]
-PROHIBIDO SUBTÍTULOS: ESTÁ ESTRICTAMENTE PROHIBIDO INCLUIR LA CLAVE "subtitle" EN EL JSON DE NINGUNA DIAPOSITIVA (ni en la portada, ni en el cierre, ni en interiores). Solo debes generar slide_type, pre_title, title y bullets.
-AUTONOMÍA NARRATIVA (CRÍTICO): El carrusel DEBE SER 100% AUTOCONCLUSIVO Y AUTÓNOMO. El lector tiene que poder entender toda la historia y la solución técnica solo leyendo las diapositivas interiores.
-PORTADA (cover): El "title" DEBE ABORDAR EL PROBLEMA PRINCIPAL (multas, embargos, parálisis) INCLUYENDO EL TEMA LEGAL EXPLÍCITO. Máximo 8 palabras. Ejemplos de alta conversión: "La trampa de Hacienda con la Revocación del NIF", "El Supremo frena los embargos abusivos en IRPF". TIENE QUE GENERAR ALERTA EXTREMA. PROHIBIDOS títulos planos, abstractos o genéricos tipo "Pymes en peligro".
-CIERRE (closing): El "title" DEBE ESTAR DISEÑADO PARA ABORDAR EL PROBLEMA ESPECÍFICO DE LA NOTICIA. Máximo 10 palabras. Formula una pregunta directa sobre pérdida de dinero/patrimonio adaptada al tema del post. Ejemplos: "¿Cuánto patrimonio personal arriesgas por inercia?", "¿Tu estructura aguanta un embargo así?". PROHIBIDAS las llamadas a la acción directas como "Hablemos", "Escríbeme", "Contacta" o "Audita tu estructura hoy". NADA de clichés.
-INTERIORES (interior): 
-- Cada slide debe tener bullets que sean ORACIONES COMPLETAS Y NARRATIVAS, no frases sueltas telegráficas.
-- Desarrolla la historia: Párrafo 1 (hechos), Párrafo 2 (base legal), Párrafo 3 (consecuencias/solución). Explica el problema con todo lujo de detalles, de forma que se entienda el caso entero. Máximo 25 palabras por bullet.
-
-[EJEMPLO STRICTO DE CARRUSEL PERFECTO]
-[
-  {
-    "slide_type": "cover",
-    "pre_title": "ALERTA LEGAL",
-    "title": "La trampa de Hacienda con la Revocación del NIF",
-    "bullets": []
-  },
-  {
-    "slide_type": "interior",
-    "pre_title": "EL FUNDAMENTO",
-    "title": "Art. 147 LGT",
-    "bullets": [
-      "La Administración está procediendo a dar de baja en los registros a sociedades inactivas de forma automática.",
-      "Esta medida implica el bloqueo total de cuentas bancarias y la imposibilidad absoluta de operar, firmar ante notario o disolver la empresa.",
-      "Como administrador, quedas expuesto a una derivación de responsabilidad patrimonial directa si la sociedad mantenía deudas vivas o incurre en infracciones."
-    ]
-  },
-  {
-    "slide_type": "closing",
-    "pre_title": "LA CUESTIÓN",
-    "title": "¿Están tus operaciones alineadas con la normativa actual?",
-    "bullets": []
-  }
-]
+APLICA EXACTAMENTE LAS MISMAS REGLAS DE CARRUSEL DEFINIDAS EN TU SYSTEM_PROMPT Y PROMPT_BLINDAJE.
+PROHIBIDO inventar reglas nuevas. Usa la misma brevedad extrema (máx 6 palabras), títulos irónicos, y el mismo ejemplo base.
 `;
 
   const prompt = `=== POST EDITADO ===
@@ -990,11 +959,12 @@ El usuario ha editado su post de LinkedIn y ahora tiene este texto final:
 
 Genera un nuevo Carrusel de 6 diapositivas para acompañar perfectamente a este texto editado.
 Devuelve ÚNICAMENTE un objeto JSON válido con la estructura de las diapositivas.
+
 [REGLAS INQUEBRANTABLES PARA EL JSON DEL CARRUSEL]
-1. PORTADA: El title TIENE QUE SER DIRECTO, NO GENÉRICO, Y MENCIONAR EL TEMA ESPECÍFICO. TIENES QUE SER CREATIVO.
-2. INTERIORES: Cada bullet TIENE QUE SER UNA ORACIÓN LARGA Y NARRATIVA que cuente la historia paso a paso (máx 25 palabras). NADA de frases sueltas.
-3. CIERRE: El title TIENE QUE SER UNA PREGUNTA SOBRE CONSECUENCIAS LEGALES COMPLETAMENTE ADAPTADA A LA NOTICIA. TIENES QUE SER CREATIVO. PROHIBIDO hacer CTAs directos tipo "Hablemos" o "Escríbeme".
-Si usas frases prohibidas o copias los ejemplos, el sistema fallará.
+1. PORTADA: El title DEBE extraer la FRASE MÁS LLAMATIVA, POLÉMICA O IRÓNICA del texto (ej. "Feliz Año Nuevo en agosto"). MÁXIMO ABSOLUTO 8 PALABRAS.
+2. INTERIORES: Cada bullet DEBE SER EXTREMADAMENTE TELEGRÁFICO (MÁXIMO 6 PALABRAS). Prohibido hacer oraciones largas. Usa frases cortadas, datos crudos o verbos de acción. Redacta como un titular de prensa.
+3. CIERRE: El title DEBE SER UNA PREGUNTA DE MÁXIMO 8 PALABRAS MUY INCISIVA y polémica que interpele directamente al lector.
+Si te pasas de los límites de palabras, el sistema fallará y se borrará tu respuesta.
 
 ¡IMPORTANTE! DEVUELVE ÚNICA Y EXCLUSIVAMENTE CÓDIGO JSON VÁLIDO.
 CERO COMENTARIOS, CERO INTRODUCCIONES, CERO DISCULPAS. SOLO EL JSON.
