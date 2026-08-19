@@ -1884,36 +1884,6 @@ const Pages = {
         });
       }
 
-      // Refresh btn
-      document.getElementById('refresh-btn')?.addEventListener('click', () => Pages.queue());
-
-      // Trigger BOE / news workflows
-      document.getElementById('trigger-boe-btn')?.addEventListener('click', async () => {
-        const success = await API.triggerWorkflow('boe_daily.yml');
-        if (success) {
-          Toast.show('BOE scraping iniciado en GitHub Actions', 'success');
-        }
-      });
-      document.getElementById('trigger-news-btn')?.addEventListener('click', async () => {
-        const success = await API.triggerWorkflow('news_scraper.yml');
-        if (success) {
-          Toast.show('Búsqueda de noticias iniciada en GitHub Actions', 'success');
-        }
-      });
-      document.getElementById('trigger-search-btn')?.addEventListener('click', async () => {
-        const input = document.getElementById('search-query-input');
-        const query = input ? input.value.trim() : '';
-        if (!query) {
-          Toast.show('Escribe una palabra clave para buscar', 'warning');
-          return;
-        }
-        const success = await API.triggerWorkflow('news_scraper.yml', { query });
-        if (success) {
-          Toast.show(`Búsqueda de "${query}" iniciada en GitHub Actions`, 'success');
-          if (input) input.value = '';
-        }
-      });
-
 
     } catch (err) {
       Toast.show(`Error al cargar posts: ${err.message}`, 'error');
@@ -2540,6 +2510,36 @@ const App = {
     initRejectModal();
     initEditFeedbackModal();
     initHistoryModal();
+
+    window.AppCurrentPage = page;
+    document.getElementById('refresh-btn')?.addEventListener('click', () => {
+      if (Pages[window.AppCurrentPage]) Pages[window.AppCurrentPage]();
+    });
+
+    document.getElementById('trigger-boe-btn')?.addEventListener('click', async () => {
+      const success = await API.triggerWorkflow('boe_daily.yml');
+      if (success) Toast.show('BOE scraping iniciado en GitHub Actions', 'success');
+    });
+
+    document.getElementById('trigger-news-btn')?.addEventListener('click', async () => {
+      const success = await API.triggerWorkflow('news_scraper.yml');
+      if (success) Toast.show('Búsqueda de noticias iniciada en GitHub Actions', 'success');
+    });
+
+    document.getElementById('trigger-search-btn')?.addEventListener('click', async () => {
+      const input = document.getElementById('search-query-input');
+      const query = input ? input.value.trim() : '';
+      if (!query) {
+        Toast.show('Escribe una palabra clave para buscar', 'warning');
+        return;
+      }
+      const success = await API.triggerWorkflow('news_scraper.yml', { query });
+      if (success) {
+        Toast.show(`Búsqueda de "${query}" iniciada`, 'success');
+        if (input) input.value = '';
+      }
+    });
+
     if (Pages[page]) Pages[page]();
   },
 };
