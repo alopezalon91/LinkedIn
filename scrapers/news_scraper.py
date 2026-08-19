@@ -203,7 +203,7 @@ def fetch_rss_feed(url: str, source_name: str) -> list[dict]:
         # To prevent hitting the 1500 requests/day Gemini Free API limit,
         # aggressively discard news that don't trigger any sector keywords
         # unless they come from an official/specialized source.
-        if sector == "general" and not is_official and source_name not in ["supercontable", "infoautonomos", "pymes_y_autonomos", "iberley", "cef", "expansion", "cinco_dias", "eleconomista_autonomos"]:
+        if sector == "general" and not is_official and source_name not in ["supercontable", "infoautonomos", "pymes_y_autonomos", "iberley", "cef", "expansion", "cinco_dias", "eleconomista_autonomos", "eleconomista_general"]:
             continue
 
         articles.append(
