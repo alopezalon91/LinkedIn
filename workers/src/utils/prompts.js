@@ -21,12 +21,12 @@ Analiza la implicación de la noticia. PROHIBIDO usar art. 81.3 y 94 LGT para co
 
 [3. carrusel]
 Array "slides" (5-7 diapositivas). Tipos: "cover", "interior", "closing".
-- PORTADA: "title" incisivo sobre el tema legal (MÁX 8 PALABRAS). Cero clickbait genérico.
+- PORTADA: "title" incisivo sobre el tema o dolor principal (MÁX 8 PALABRAS). Cero clickbait genérico.
 - INTERIORES: Autonomía narrativa. Bullets cortos (máx 15 palabras).
 - FORMATO (CRÍTICO): 
   - CERO EMOJIS, CERO PUNTOS FINALES, CERO FIRMAS ("AL"), CERO marcas de viñeta manuales en bullets.
   - PROHIBIDO usar la clave "subtitle".
-- CIERRE: Bullets VACÍOS ([]). "title" = Pregunta directa (MÁX 8 PALABRAS) sobre impacto legal VINCULADA EXACTO a la noticia.
+- CIERRE: Bullets VACÍOS ([]). "title" = Pregunta directa (MÁX 8 PALABRAS) sobre impacto o dolor VINCULADA EXACTO a la noticia.
 `;
 
 export const PROMPT_BLINDAJE = `
@@ -38,9 +38,9 @@ export const PROMPT_BLINDAJE = `
 
 [EJEMPLO JSON CARRUSEL ESTRICTO]
 [
-  {"slide_type": "cover", "pre_title": "NOVEDAD LEGAL", "title": "El enfoque de la Administración con la Revocación del NIF", "bullets": []},
-  {"slide_type": "interior", "pre_title": "EL FUNDAMENTO", "title": "Art. 147 LGT", "bullets": ["La Administración da de baja el NIF de sociedades inactivas de forma automática", "Bloqueo total de cuentas y parálisis registral absoluta", "Exposición a derivación de responsabilidad patrimonial del administrador"]},
-  {"slide_type": "closing", "pre_title": "LA CUESTIÓN", "title": "[PREGUNTA DIRECTA ESPECÍFICA DE LA NOTICIA]", "bullets": []}
+  {"slide_type": "cover", "pre_title": "EL PROBLEMA", "title": "Por qué pierdes dinero sin darte cuenta", "bullets": []},
+  {"slide_type": "interior", "pre_title": "EL FUNDAMENTO", "title": "La inflación oculta", "bullets": ["La falta de deflactación absorbe cualquier mejora en tu facturación", "Trabajas meses enteros solo para mantener el sistema público", "El esfuerzo fiscal recae de forma silenciosa sobre tu margen operativo"]},
+  {"slide_type": "closing", "pre_title": "LA CUESTIÓN", "title": "¿Cuántos meses trabajas gratis para el Estado?", "bullets": []}
 ]
 `;
 
@@ -85,8 +85,8 @@ export const CAROUSEL_SCHEMA = {
         type: "object",
         properties: {
           slide_type: { type: "string", enum: ["cover", "interior", "closing"] },
-          pre_title: { type: "string", description: "Categoría en mayúsculas (ej: NOVEDAD LEGAL, LA CUESTIÓN). Sin números." },
-          title: { type: "string", description: "Portada: GANCHO INCISIVO (ej: 'Nuevos requisitos para holdings'), muy corto. Cierre: Pregunta directa. Interiores: Descriptivo corto." },
+          pre_title: { type: "string", description: "Categoría en mayúsculas (ej: EL PROBLEMA, LA CUESTIÓN). Sin números." },
+          title: { type: "string", description: "Portada: GANCHO INCISIVO (ej: 'Nuevos requisitos' o 'Trabajas gratis'). Cierre: Pregunta directa. Interiores: Descriptivo corto." },
           bullets: { type: "array", items: { type: "string" }, description: "Dejar vacío en portada y cierre. Rellenar SOLO en interiores (máx 5) con acciones y datos densos." }
         },
         required: ["slide_type", "pre_title", "title"]
