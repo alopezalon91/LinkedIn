@@ -46,13 +46,19 @@ export async function scrapeBOE(db) {
       }
     }
 
-    const keywordRegex = /\b(tributario|fiscal|laboral|hacienda|impuestos?|autónomos?|autonomos?|irpf|is|seguridad social)\b/i;
+    // Palabras clave que SÍ nos interesan (muy enfocadas en autónomos/pymes)
+    const keywordRegex = /\b(autónomos?|autonomos?|pymes?|empresas?|irpf|iva|is|impuesto sobre sociedades|seguridad social|reforma laboral|cuota|ayudas? directas?|subvencion(?:es)?|cese de actividad|hacienda)\b/i;
+    
+    // Palabras clave que NO nos interesan (ruido del BOE: nombramientos, universidades, convenios colectivos muy específicos de grandes empresas, etc.)
+    const excludeRegex = /\b(nombramientos?|ceses?|licitaci[óo]n|adjudicaci[óo]n|concurso|oposici[óo]n|funcionarios?|universidad|convenio colectivo|ministerio|ayuntamiento|diputaci[óo]n|fuerzas armadas|polic[ií]a|guardia civil|condecoraci[óo]n|expropiaci[óo]n|becas?|premios?|subasta)\b/i;
+    
     let inserted = 0;
 
     for (const item of items) {
       const title = item.titulo || '';
       
-      if (keywordRegex.test(title)) {
+      // Filtrar por palabra clave Y asegurar que no tenga palabras de exclusión
+      if (keywordRegex.test(title) && !excludeRegex.test(title)) {
         const sourceId = item.identificador || `boe-${Date.now()}`;
         
         // Verificar si ya existe
