@@ -24,48 +24,53 @@ export async function scrapeBOE(db) {
     if (!data.data || !data.data.sumario || !data.data.sumario.diario) return 0;
     
     let items = [];
-    const diario = data.data.sumario.diario;
-    const secciones = Array.isArray(diario.seccion) ? diario.seccion : [diario.seccion];
+    const diarios = Array.isArray(data.data.sumario.diario) ? data.data.sumario.diario : [data.data.sumario.diario];
     
-    for (const seccion of secciones) {
-      if (!seccion || !seccion.departamento) continue;
-      const deptos = Array.isArray(seccion.departamento) ? seccion.departamento : [seccion.departamento];
+    for (const diario of diarios) {
+      if (!diario || !diario.seccion) continue;
+      const secciones = Array.isArray(diario.seccion) ? diario.seccion : [diario.seccion];
       
-      for (const depto of deptos) {
-        if (!depto.epigrafe) continue;
-        const eps = Array.isArray(depto.epigrafe) ? depto.epigrafe : [depto.epigrafe];
-        for (const ep of eps) {
-          if (!ep.item) continue;
-          const epsItems = Array.isArray(ep.item) ? ep.item : [ep.item];
-          items.push(...epsItems);
+      for (const seccion of secciones) {
+        if (!seccion || !seccion.departamento) continue;
+        const deptos = Array.isArray(seccion.departamento) ? seccion.departamento : [seccion.departamento];
+        
+        for (const depto of deptos) {
+          if (!depto.epigrafe) continue;
+          const eps = Array.isArray(depto.epigrafe) ? depto.epigrafe : [depto.epigrafe];
+          for (const ep of eps) {
+            if (!ep.item) continue;
+            const epsItems = Array.isArray(ep.item) ? ep.item : [ep.item];
+            items.push(...epsItems);
+          }
         }
       }
     }
 
-    const keywords = ['tributario', 'fiscal', 'laboral', 'hacienda', 'impuesto', 'autónomo', 'irpf', 'is', 'seguridad social'];
+    const keywordRegex = /\b(tributario|fiscal|laboral|hacienda|impuestos?|autónomos?|autonomos?|irpf|is|seguridad social)\b/i;
     let inserted = 0;
 
     for (const item of items) {
       const title = item.titulo || '';
-      const textLower = title.toLowerCase();
       
-      if (keywords.some(k => textLower.includes(k))) {
+      if (keywordRegex.test(title)) {
         const sourceId = item.identificador || `boe-${Date.now()}`;
         
         // Verificar si ya existe
         const existing = await db.prepare("SELECT id FROM posts WHERE source_id = ?").bind(sourceId).first();
         if (!existing) {
+          const contentJsonStr = JSON.stringify(item);
           await db.prepare(`
-            INSERT INTO posts (source_id, url, source, sector, status, original_news_json, content, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO posts (id, source_id, source_url, source_name, type, sector, status, content, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).bind(
+            crypto.randomUUID(),
             sourceId,
             `https://www.boe.es/diario_boe/txt.php?id=${sourceId}`,
             'BOE',
+            'normativa',
             'general', // El router cognitivo lo refinará
             'pending',
-            JSON.stringify(item),
-            title, // Como contenido inicial guardamos el título
+            contentJsonStr, // Save original JSON here to parse it later
             nowISO(),
             nowISO()
           ).run();

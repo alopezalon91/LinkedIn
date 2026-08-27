@@ -23,7 +23,7 @@ export async function scrapeNews(db) {
       const itemRegex = /<item>([\s\S]*?)<\/item>/g;
       let match;
       
-      const keywords = ['tributario', 'fiscal', 'laboral', 'hacienda', 'impuesto', 'autónomo', 'irpf', 'is', 'seguridad social'];
+      const keywordRegex = /\b(tributario|fiscal|laboral|hacienda|impuestos?|autónomos?|autonomos?|irpf|is|seguridad social)\b/i;
 
       while ((match = itemRegex.exec(xml)) !== null) {
         const itemXml = match[1];
@@ -36,17 +36,17 @@ export async function scrapeNews(db) {
         const title = titleMatch[1].trim();
         const link = linkMatch[1].trim();
         
-        const textLower = title.toLowerCase();
-        if (keywords.some(k => textLower.includes(k))) {
+        if (keywordRegex.test(title)) {
           // Generar ID a partir de URL
           const sourceId = `news-${btoa(link).substring(0, 30)}`;
           
           const existing = await db.prepare("SELECT id FROM posts WHERE source_id = ?").bind(sourceId).first();
           if (!existing) {
             await db.prepare(`
-              INSERT INTO posts (source_id, source_url, source_name, type, sector, status, original_news_json, content, created_at, updated_at)
+              INSERT INTO posts (id, source_id, source_url, source_name, type, sector, status, content, created_at, updated_at)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).bind(
+              crypto.randomUUID(),
               sourceId,
               link,
               'PRENSA',
@@ -54,7 +54,6 @@ export async function scrapeNews(db) {
               'general', 
               'pending',
               JSON.stringify({ title, link }),
-              title,
               nowISO(),
               nowISO()
             ).run();
