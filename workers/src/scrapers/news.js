@@ -30,13 +30,17 @@ export async function scrapeNews(db) {
         
         const titleMatch = itemXml.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) || itemXml.match(/<title>([\s\S]*?)<\/title>/);
         const linkMatch = itemXml.match(/<link><!\[CDATA\[([\s\S]*?)\]\]><\/link>/) || itemXml.match(/<link>([\s\S]*?)<\/link>/);
+        const descMatch = itemXml.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) || itemXml.match(/<description>([\s\S]*?)<\/description>/);
         
         if (!titleMatch || !linkMatch) continue;
         
         const title = titleMatch[1].trim();
         const link = linkMatch[1].trim();
+        let summary = descMatch ? descMatch[1].trim() : '';
+        // Limpiar HTML tags del summary
+        summary = summary.replace(/<[^>]*>?/gm, '').trim();
         
-        if (keywordRegex.test(title)) {
+        if (keywordRegex.test(title) || keywordRegex.test(summary)) {
           // Generar ID a partir de URL
           const sourceId = `news-${btoa(link).substring(0, 30)}`;
           
@@ -53,7 +57,7 @@ export async function scrapeNews(db) {
               'actualidad',
               'general', 
               'pending',
-              JSON.stringify({ title, link }),
+              JSON.stringify({ title, link, summary }),
               nowISO(),
               nowISO()
             ).run();
