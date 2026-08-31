@@ -23,11 +23,12 @@ Analiza la implicación de la noticia. Cruza la información con el marco legal 
 
 [3. carrusel]
 Array "slides" (5 diapositivas estructuradas y con alto valor informativo). Tipos: "cover", "interior", "closing".
-- PORTADA: "title" claro, directo y con la tesis principal de la noticia (MÁX 10 PALABRAS). "subtitle" explicativo del tema.
+- PORTADA: "title" claro, directo y con la tesis principal de la noticia (MÁX 10 PALABRAS). PROHIBIDO subtítulo en la portada (debe ser "" o no incluirse).
 - INTERIORES (3 diapositivas): Cada slide debe tener entre 2 y 3 viñetas descriptivas y completas con sustancia real (12-25 palabras por viñeta). Cada viñeta debe empezar con un concepto clave en **[NEGRITA]** seguido de una explicación con causa, datos o implicaciones prácticas. PROHIBIDO poner frases telegráficas de 3 palabras o datos sueltos sin contexto.
 - FORMATO: 
   - CERO EMOJIS, CERO PUNTOS FINALES al final de cada viñeta, CERO FIRMAS manuales.
-- CIERRE: Slide 5 ("closing"), bullets VACÍOS ([]). "title" = Pregunta directa de debate (MÁX 8-10 PALABRAS).
+  - CERO SUBTÍTULOS en portada ("cover") y en cierre ("closing").
+- CIERRE: Slide 5 ("closing"), bullets VACÍOS ([]). "title" = Pregunta directa de debate (MÁX 8-10 PALABRAS). PROHIBIDO subtítulo en el cierre.
 `;
 
 export const PROMPT_BLINDAJE = `
@@ -36,7 +37,7 @@ export const PROMPT_BLINDAJE = `
 - PROHIBIDO concatenar historial previo.
 - Tema NIF/Censos: SOLO usar Art. 147 LGT y 119 RGAT. NUNCA 81.3/94 LGT.
 - JSON: Sin claves repetidas ni strings duplicados.
-- CARRUSEL BULLETS: ¡MÁXIMO 6 PALABRAS POR BULLET! Si excedes este límite el sistema fallará.
+- CARRUSEL: Cero subtítulos en portada y cierre.
 
 [EJEMPLO JSON CARRUSEL ESTRICTO]
 [
