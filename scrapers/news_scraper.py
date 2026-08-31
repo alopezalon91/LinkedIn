@@ -165,7 +165,7 @@ def fetch_rss_feed(url: str, source_name: str) -> list[dict]:
         # Strip HTML tags from summary
         from bs4 import BeautifulSoup
         summary = BeautifulSoup(summary, "lxml").get_text(separator=" ", strip=True)
-        summary = summary[:500]  # cap at 500 chars
+        summary = summary[:1500]  # cap at 1500 chars
 
         # Extract URL
         article_url = getattr(entry, "link", "")
@@ -461,11 +461,11 @@ def run(query: Optional[str] = None) -> list[dict]:
         log.info("Scraping full text for: %s", url)
         texto = get_article_text(url)
         
-        # We need substantial text to generate a 2500-char high-quality post.
-        # Fallback to summary usually results in < 400 chars, which causes generic AI outputs.
+        # We need some text to generate a post.
+        # Fallback to summary if full text fetch fails.
         final_text = texto if texto else article.get("summary", "")
         
-        if len(final_text) >= 600:
+        if len(final_text) >= 150:
             article["texto"] = final_text
             article["short_text"] = final_text[:1000]
             log.info("  → Successfully kept article with %d characters of text", len(final_text))

@@ -351,12 +351,13 @@ def get_sector_from_text(text: str) -> str:
     Returns:
         Sector string key (e.g. 'ecommerce', 'autonomos', …).
     """
+    import re
     text_lower = text.lower()
     scores: dict[str, int] = {sector: 0 for sector in SECTOR_KEYWORDS}
 
     for sector, keywords in SECTOR_KEYWORDS.items():
         for kw in keywords:
-            if kw in text_lower:
+            if re.search(r'\b' + re.escape(kw) + r'\b', text_lower):
                 scores[sector] += 1
 
     best_sector = max(scores, key=lambda s: scores[s])
@@ -392,5 +393,8 @@ def text_matches_any_keyword(text: str) -> bool:
     Returns True if text contains at least one MYTAXBOT_FOCUS_KEYWORDS term.
     Used as a cheap pre-filter before calling the Gemini API.
     """
+    import re
     text_lower = text.lower()
-    return any(kw in text_lower for kw in MYTAXBOT_FOCUS_KEYWORDS)
+    pattern = r'\b(' + '|'.join(re.escape(kw) for kw in MYTAXBOT_FOCUS_KEYWORDS) + r')\b'
+    return bool(re.search(pattern, text_lower))
+

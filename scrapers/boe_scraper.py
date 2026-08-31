@@ -308,13 +308,16 @@ def filter_by_keywords(entries: list[dict], keywords: list[str] | None = None) -
     Returns:
         Filtered list of entries.
     """
+    import re
     if keywords is None:
         keywords = MYTAXBOT_FOCUS_KEYWORDS
 
     filtered: list[dict] = []
+    pattern = re.compile(r'\b(' + '|'.join(re.escape(kw) for kw in keywords) + r')\b', re.IGNORECASE)
+    
     for entry in entries:
         searchable = f"{entry.get('titulo', '')} {entry.get('departamento', '')}".lower()
-        if any(kw in searchable for kw in keywords):
+        if pattern.search(searchable):
             filtered.append(entry)
 
     log.info(
