@@ -327,8 +327,8 @@ function renderPostCard(post) {
         </button>
   
         <!-- Editor (hidden by default) -->
-        <textarea class="post-editor" id="editor-${post.id}" maxlength="2500">${post.content_edited || post.content || ''}</textarea>
-        <div class="char-counter ok" id="counter-${post.id}">${(post.content_edited || post.content || '').length} / 2500 caracteres</div>
+        <textarea class="post-editor" id="editor-${post.id}" maxlength="3000">${post.content_edited || post.content || ''}</textarea>
+        <div class="char-counter ok" id="counter-${post.id}">${(post.content_edited || post.content || '').length} / 3000 caracteres</div>
         ${post.content_edited ? `
           <div style="margin-top: 8px;">
             <button class="btn btn-ghost btn-sm" onclick="PostActions.undoRegenerate('${post.id}')" style="color: var(--accent-amber); font-size: 12px; padding: 4px 8px;">
@@ -420,8 +420,8 @@ function renderPostCard(post) {
   if (editor && counter) {
     editor.addEventListener('input', () => {
       const len = editor.value.length;
-      counter.textContent = `${len} / 2500 caracteres`;
-      counter.className = `char-counter ${len <= 2100 ? 'ok' : len <= 2500 ? 'warn' : 'over'}`;
+      counter.textContent = `${len} / 3000 caracteres`;
+      counter.className = `char-counter ${len <= 2600 ? 'ok' : len <= 2950 ? 'warn' : 'over'}`;
     });
   }
 
