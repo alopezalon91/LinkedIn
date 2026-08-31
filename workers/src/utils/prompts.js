@@ -22,13 +22,12 @@ Analiza la implicación de la noticia. Cruza la información con el marco legal 
 - TONO: Autoritativo, analítico, directo y ejecutivo. Escribe como un socio director de un despacho de asesoría corporativa.
 
 [3. carrusel]
-Array "slides" (5-6 diapositivas). Tipos: "cover", "interior", "closing".
-- PORTADA: "title" incisivo (MÁX 8 PALABRAS).
-- INTERIORES: Bullets TELEGRÁFICOS (máx 6-8 palabras) sintetizando los puntos clave del post.
-- FORMATO (CRÍTICO): 
-  - CERO EMOJIS, CERO PUNTOS FINALES, CERO FIRMAS ("AL").
-  - PROHIBIDO usar la clave "subtitle".
-- CIERRE: Bullets VACÍOS ([]). "title" = Pregunta directa (MÁX 8 PALABRAS) altamente incisiva y de debate.
+Array "slides" (5 diapositivas estructuradas y con alto valor informativo). Tipos: "cover", "interior", "closing".
+- PORTADA: "title" claro, directo y con la tesis principal de la noticia (MÁX 10 PALABRAS). "subtitle" explicativo del tema.
+- INTERIORES (3 diapositivas): Cada slide debe tener entre 2 y 3 viñetas descriptivas y completas con sustancia real (12-25 palabras por viñeta). Cada viñeta debe empezar con un concepto clave en **[NEGRITA]** seguido de una explicación con causa, datos o implicaciones prácticas. PROHIBIDO poner frases telegráficas de 3 palabras o datos sueltos sin contexto.
+- FORMATO: 
+  - CERO EMOJIS, CERO PUNTOS FINALES al final de cada viñeta, CERO FIRMAS manuales.
+- CIERRE: Slide 5 ("closing"), bullets VACÍOS ([]). "title" = Pregunta directa de debate (MÁX 8-10 PALABRAS).
 `;
 
 export const PROMPT_BLINDAJE = `
