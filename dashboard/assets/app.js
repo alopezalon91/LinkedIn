@@ -1062,13 +1062,14 @@ const PostActions = {
         }
       }
 
-      await API.approvePost(postId, null, post?.media_base64 || null);
+      const textToPublish = (editor && editor.value ? editor.value : (post.content_edited || post.content || '')).trim();
+      await API.approvePost(postId, textToPublish, post?.media_base64 || null);
 
-      let formData = null;
+      const formData = new FormData();
       if (pdfBlob) {
-        formData = new FormData();
         formData.append('pdf', pdfBlob, 'carrusel.pdf');
       }
+      formData.append('content_edited', textToPublish);
 
       await API.publishPost(postId, formData);
       Toast.show('¡Publicado con éxito en LinkedIn! 🚀', 'success');
