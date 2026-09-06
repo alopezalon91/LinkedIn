@@ -131,17 +131,17 @@ def normalize_title(title: str, article_url: str) -> str:
 # Core scraper functions
 # ---------------------------------------------------------------------------
 
-def fetch_rss_feed(url: str, source_name: str) -> list[dict]:
+def fetch_rss_feed(url: str, source_name: str, max_age_hours: Optional[int] = 24) -> list[dict]:
     """
     Fetches and parses a single RSS/Atom feed.
 
     Args:
-        url:         Feed URL.
-        source_name: Human-readable source name (e.g. 'expansion').
+        url:           Feed URL.
+        source_name:   Human-readable source name (e.g. 'expansion').
+        max_age_hours: Max age of articles to keep (default 24h, None to disable).
 
     Returns:
-        List of article dicts, each with keys:
-            id, title, summary, url, published, source, is_official
+        List of article dicts.
     """
     log.info("Fetching feed: %s → %s", source_name, url)
     feed = _fetch_feed_raw(url)
@@ -169,6 +169,12 @@ def fetch_rss_feed(url: str, source_name: str) -> list[dict]:
 
         # Extract URL
         article_url = getattr(entry, "link", "")
+        # Resolve Bing News proxy links to actual article URLs
+        if "bing.com/news/apiclick.aspx" in article_url:
+            import urllib.parse
+            parsed_q = urllib.parse.parse_qs(urllib.parse.urlparse(article_url).query)
+            if "url" in parsed_q and parsed_q["url"]:
+                article_url = parsed_q["url"][0]
 
         # Extract publication date
         published = ""
@@ -184,14 +190,13 @@ def fetch_rss_feed(url: str, source_name: str) -> list[dict]:
         # Generate stable ID from normalized title slug
         article_id = normalize_title(title, article_url)
 
-        # Filter out articles older than 24 hours to save API processing time
-        from datetime import timedelta
-        if published:
+        # Filter out articles older than max_age_hours
+        if max_age_hours and published:
+            from datetime import timedelta
             try:
-                # published is ISO format e.g. '2026-05-28T10:00:00+00:00'
                 pub_dt = datetime.fromisoformat(published.replace('Z', '+00:00'))
                 now = datetime.now(timezone.utc)
-                if now - pub_dt > timedelta(hours=24):
+                if now - pub_dt > timedelta(hours=max_age_hours):
                     continue
             except Exception:
                 pass
@@ -397,8 +402,36 @@ def run(query: Optional[str] = None) -> list[dict]:
         log.info("=== News Search started for query: %s ===", query)
         import urllib.parse
         encoded_query = urllib.parse.quote(query)
-        search_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=es&gl=ES&ceid=ES:es"
-        all_articles = fetch_rss_feed(search_url, "Google News Search")
+        all_articles = []
+
+        # 1. Bing News RSS (resolves real article URLs and rich descriptions)
+        try:
+            bing_url = f"https://www.bing.com/news/search?q={encoded_query}+espana&format=rss"
+            bing_articles = fetch_rss_feed(bing_url, "Bing News", max_age_hours=168)
+            all_articles.extend(bing_articles)
+        except Exception as e:
+            log.warning("Bing news query failed: %s", e)
+
+        # 2. Google News RSS
+        try:
+            google_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=es&gl=ES&ceid=ES:es"
+            google_articles = fetch_rss_feed(google_url, "Google News", max_age_hours=168)
+            all_articles.extend(google_articles)
+        except Exception as e:
+            log.warning("Google news query failed: %s", e)
+
+        # 3. Check our curated Spanish media feeds for matches
+        try:
+            q_lower = query.lower()
+            feeds_articles = fetch_all_sources()
+            matching_feed_articles = [
+                a for a in feeds_articles
+                if q_lower in (a.get("title", "") + " " + a.get("summary", "")).lower()
+            ]
+            all_articles.extend(matching_feed_articles)
+        except Exception as e:
+            log.warning("Feed sources search failed: %s", e)
+
         if not all_articles:
             log.warning("No articles retrieved for query: %s", query)
             return []
@@ -440,6 +473,11 @@ def run(query: Optional[str] = None) -> list[dict]:
             article["texto"] = final_text
             article["short_text"] = final_text[:1000]
             log.info("  → Successfully kept article with %d characters of text", len(final_text))
+            enriched_articles.append(article)
+        elif query and len(final_text) >= 40:
+            article["texto"] = final_text
+            article["short_text"] = final_text
+            log.info("  → Kept search article with summary text (%d chars)", len(final_text))
             enriched_articles.append(article)
         else:
             log.warning("  → Discarding article %s: text too short (%d chars). Not enough info for a deep post.", url, len(final_text))
