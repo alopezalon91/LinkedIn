@@ -596,8 +596,6 @@ const PostActions = {
             const raw = atob(post.media_base64);
             if (raw.startsWith('CAROUSEL:')) {
               isCarousel = true;
-            } else if (decodeURIComponent(escape(raw)).startsWith('{"type":"pdf_carousel"')) {
-              isCarousel = true;
             }
           } catch (e) {}
           if (isCarousel) {
@@ -1044,8 +1042,6 @@ const PostActions = {
         try {
           const raw = atob(post.media_base64);
           if (raw.startsWith('CAROUSEL:')) {
-            isCarousel = true;
-          } else if (decodeURIComponent(escape(raw)).startsWith('{"type":"pdf_carousel"')) {
             isCarousel = true;
           }
         } catch (e) {}

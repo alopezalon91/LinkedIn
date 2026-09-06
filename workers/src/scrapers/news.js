@@ -2,7 +2,15 @@ import { nowISO } from '../utils.js';
 
 const RSS_FEEDS = [
   'https://www.eleconomista.es/rss/rss-economia.php',
-  'https://e00-expansion.uecdn.es/rss/economia.xml'
+  'https://sindicacion.expansion.com/rss/economia.xml',
+  'https://e00-elmundo.uecdn.es/elmundo/rss/economia.xml',
+  'https://www.abc.es/rss/2.0/economia/',
+  'https://www.elconfidencial.com/rss/economia/',
+  'https://www.eleconomista.es/rss/rss-autonomos-pymes.php',
+  'https://sindicacion.expansion.com/rss/juridico.xml',
+  'https://www.autonomosyemprendedor.es/rss/rss.xml',
+  'https://www.pymesyautonomos.com/feed',
+  'https://cincodias.elpais.com/arc/outboundfeeds/rss/?outputType=xml'
 ];
 
 /**
@@ -23,7 +31,7 @@ export async function scrapeNews(db) {
       const itemRegex = /<item>([\s\S]*?)<\/item>/g;
       let match;
       
-      const keywordRegex = /\b(tributario|fiscal|laboral|hacienda|impuestos?|autónomos?|autonomos?|irpf|is|seguridad social)\b/i;
+      const keywordRegex = /\b(tributario|fiscal|laboral|hacienda|impuestos?|autónomos?|autonomos?|irpf|is|iva|seguridad social|pymes?|empresas?|startups?|ecommerce|emprendedores|negocios?|subvenciones|ayudas?|sentencia|tribunal supremo)\b/i;
 
       while ((match = itemRegex.exec(xml)) !== null) {
         const itemXml = match[1];

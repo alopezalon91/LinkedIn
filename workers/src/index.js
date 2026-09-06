@@ -182,6 +182,15 @@ async function route(request, env, ctx, url, path, method) {
     }
   }
 
+  if (url.pathname === '/api/trigger-scrape') {
+    try {
+      await scrapeNews(db);
+      return new Response('Scraper ejecutado', { status: 200, headers: corsHeaders(request, '*') });
+    } catch (err) {
+      return new Response(err.message, { status: 500, headers: corsHeaders(request, '*') });
+    }
+  }
+
   if (url.pathname === '/api/test-groq') {
     try {
       let groqKey = env.GROQ_API_KEY;
@@ -389,8 +398,37 @@ async function handleAuthCallback(db, env, url) {
 
 async function handleAuthRefresh(db, env) {
   try {
-    const token = await refreshToken(db, env);
-    return jsonResponse({ success: true, expires_at: token.expires_at });
+    const raw = await db.prepare("SELECT * FROM oauth_tokens WHERE id = 'linkedin'").first();
+    if (!raw) {
+      return errorResponse('No hay token de LinkedIn guardado en la base de datos.', 404);
+    }
+
+    if (raw.refresh_token) {
+      const token = await refreshToken(db, env);
+      return jsonResponse({ success: true, refreshed: true, expires_at: token.expires_at });
+    }
+
+    // LinkedIn estándar no proporciona refresh_token para apps personales/self-serve.
+    // El access_token dura 60 días. Verificamos el estado actual.
+    const expiresAt = new Date(raw.expires_at).getTime();
+    const now = Date.now();
+    const daysLeft = Math.round((expiresAt - now) / (1000 * 60 * 60 * 24));
+
+    if (now >= expiresAt) {
+      return errorResponse('El token de LinkedIn ha caducado. Es necesario reautorizar desde el Dashboard.', 401);
+    }
+
+    if (daysLeft < 7) {
+      return errorResponse(`El token de LinkedIn caduca en ${daysLeft} días. Por favor, reautoriza desde el Dashboard.`, 400);
+    }
+
+    return jsonResponse({
+      success: true,
+      refreshed: false,
+      message: `Token válido (quedan ${daysLeft} días).`,
+      days_left: daysLeft,
+      expires_at: raw.expires_at,
+    });
   } catch (err) {
     return errorResponse(err.message, 500);
   }
