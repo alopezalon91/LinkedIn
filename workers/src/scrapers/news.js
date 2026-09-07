@@ -64,7 +64,7 @@ export async function scrapeNews(db) {
               'PRENSA',
               'actualidad',
               'general', 
-              'pending',
+              'draft',
               JSON.stringify({ title, link, summary }),
               nowISO(),
               nowISO()

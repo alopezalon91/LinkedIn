@@ -2,8 +2,8 @@ name: "📰 News Scraper (cada 6h)"
 
 on:
   schedule:
-    # Runs at 8:00 UTC (10:00h España)
-    - cron: '0 8 * * *'
+    # Runs 4 times a day at off-peak minutes (8:20h, 12:20h, 16:20h, 20:20h España)
+    - cron: '20 6,10,14,18 * * *'
 
   workflow_dispatch:
     inputs:
