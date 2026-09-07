@@ -54,7 +54,7 @@ import {
   getStoredToken,
 } from './api/linkedin_auth.js';
 import { scrapeBOE } from './scrapers/boe.js';
-import { scrapeNews } from './scrapers/news.js';
+import { scrapeNews, searchNewsLive } from './scrapers/news.js';
 
 // ─── Worker entry point ───────────────────────────────────────────────────────
 
@@ -257,6 +257,46 @@ async function route(request, env, ctx, url, path, method) {
   }
   if (path === '/api/auth/callback' && method === 'GET') {
     return handleAuthCallback(db, env, url);
+  }
+
+  // ── Manual news scrape trigger ─────────────────────────────────────────────
+  if (path === '/api/scrape-news-now') {
+    try {
+      const result = await scrapeNews(db, env, ctx);
+      return jsonResponse({ status: 'ok', ...result, ts: new Date().toISOString() });
+    } catch(err) {
+      return errorResponse(`Scrape error: ${err.message}`, 500);
+    }
+  }
+
+  // ── Live news search trigger ───────────────────────────────────────────────
+  if (path === '/api/search-news') {
+    try {
+      const q = url.searchParams.get('q') || '';
+      const result = await searchNewsLive(db, env, ctx, q);
+      return jsonResponse({ status: 'ok', ...result, ts: new Date().toISOString() });
+    } catch(err) {
+      return errorResponse(`Search error: ${err.message}`, 500);
+    }
+  }
+
+  // ── Cleanup irrelevant news drafts ─────────────────────────────────────────
+  if (path === '/api/cleanup-irrelevant') {
+    try {
+      const excludeRegex = /fútbol|liga|champions|partido|fichaje|marruecos|ucrania|guerra|misil|israel|baterías|osnabrück|audiovisual|volkswagen|cine|película|concierto|festival|hollywood|inmersivas|job crafting|inteligencia artificial reinventa la comunicación|tecnologías inmersivas|envejecimiento|tecnológica perfeccionada|tecnologías disruptivas|Criteria Caixa|Casa 47|baterías|Marruecos|arranque de curso del sector tecnológico/i;
+      await db.prepare("UPDATE posts SET status = 'rejected' WHERE source_id = 'news-wwwbingcomnewsapiclickaspx'").run();
+      const drafts = await db.prepare("SELECT id, content FROM posts WHERE status = 'draft'").all();
+      let deleted = 0;
+      for (const d of (drafts.results || [])) {
+        if (excludeRegex.test(d.content)) {
+          await db.prepare("UPDATE posts SET status = 'rejected' WHERE id = ?").bind(d.id).run();
+          deleted++;
+        }
+      }
+      return jsonResponse({ status: 'ok', deleted, ts: new Date().toISOString() });
+    } catch(err) {
+      return errorResponse(`Cleanup error: ${err.message}`, 500);
+    }
   }
 
   // ── All other /api/* routes require Bearer auth ────────────────────────────

@@ -1718,6 +1718,54 @@ const PostActions = {
       Toast.show(`Error al deshacer cambios: ${err.message}`, 'error');
     }
   },
+
+  async searchNewsLiveOnline(query) {
+    const q = (query || State.searchQuery || '').trim();
+    if (!q) {
+      Toast.show('Escribe un término de búsqueda', 'warning');
+      return;
+    }
+    try {
+      Toast.show(`Buscando noticias sobre "${q}" en medios y Google News... 🌐`, 'info');
+      const res = await API.request(`/api/search-news?q=${encodeURIComponent(q)}`);
+      if (res && res.inserted > 0) {
+        Toast.show(`¡Encontradas e importadas ${res.inserted} noticias nuevas! 📰`, 'success');
+        Pages.queue();
+      } else if (res && res.posts && res.posts.length > 0) {
+        Toast.show(`Se encontraron ${res.posts.length} noticias ya disponibles.`, 'info');
+        Pages.queue();
+      } else {
+        Toast.show(`No se encontraron noticias recientes para "${q}".`, 'warning');
+      }
+    } catch (err) {
+      Toast.show(`Error en la búsqueda online: ${err.message}`, 'error');
+    }
+  },
+
+  async scrapeNewsNow() {
+    const btn = document.getElementById('scrape-news-btn');
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;margin-right:5px;"></div> Buscando en prensa...';
+      }
+      Toast.show('Rastreando periódicos y Google News...', 'info');
+      const res = await API.request('/api/scrape-news-now');
+      if (res && res.inserted > 0) {
+        Toast.show(`¡Encontradas ${res.inserted} noticias nuevas! 🗞️`, 'success');
+      } else {
+        Toast.show('Noticias al día. No hay nuevas publicaciones recientes.', 'info');
+      }
+      Pages.queue();
+    } catch(err) {
+      Toast.show(`Error al buscar noticias: ${err.message}`, 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>📰</span> Buscar Noticias Ahora';
+      }
+    }
+  },
 };
 
 // Make PostActions global for inline onclick handlers
@@ -1765,12 +1813,17 @@ function levenshteinRatio(a, b) {
 
 // ── Filtering ──────────────────────────────────────────────
 function applyFilters() {
-  const query = (State.searchQuery || '').toLowerCase();
+  const query = (State.searchQuery || '').toLowerCase().trim();
   State.filteredPosts = State.posts.filter(post => {
     const matchType = State.currentFilter === 'all' || post.type === State.currentFilter;
     const matchUrgency = State.currentUrgency === 'all' || post.urgency === State.currentUrgency;
-    const matchSearch = !query || (post.content || '').toLowerCase().includes(query)
-      || (post.source_name || '').toLowerCase().includes(query);
+    let contentToSearch = `${post.content || ''} ${post.content_edited || ''} ${post.source_name || ''}`;
+    try {
+      const d = JSON.parse(post.content);
+      if (d && d.title) contentToSearch += ' ' + d.title;
+      if (d && d.summary) contentToSearch += ' ' + d.summary;
+    } catch(e){}
+    const matchSearch = !query || contentToSearch.toLowerCase().includes(query);
     return matchType && matchUrgency && matchSearch;
   });
   renderQueue();
@@ -1783,7 +1836,24 @@ function renderQueue() {
   grid.innerHTML = '';
   if (State.filteredPosts.length === 0) {
     checkEmpty();
-    if (subtitle) subtitle.textContent = 'No hay posts que coincidan con los filtros.';
+    if (State.searchQuery && State.searchQuery.trim()) {
+      const qClean = State.searchQuery.replace(/"/g, '&quot;');
+      grid.innerHTML = `
+        <div class="empty-state" style="display:block; padding: 40px 20px; text-align: center;">
+          <div class="empty-state-icon" style="font-size: 40px; margin-bottom: 12px;">🔍</div>
+          <div class="empty-state-title" style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">No hay posts guardados con "${qClean}"</div>
+          <div class="empty-state-sub" style="color: var(--text-secondary); max-width: 450px; margin: 0 auto 20px auto; font-size: 14px;">
+            ¿Quieres buscar noticias sobre "${qClean}" en Google News y periódicos ahora mismo?
+          </div>
+          <button class="btn btn-primary" onclick="PostActions.searchNewsLiveOnline('${qClean}')" style="font-weight: 600;">
+            🌐 Rastrear noticias de "${qClean}" en Internet
+          </button>
+        </div>
+      `;
+      if (subtitle) subtitle.textContent = `0 resultados para "${qClean}"`;
+    } else {
+      if (subtitle) subtitle.textContent = 'No hay posts que coincidan con los filtros.';
+    }
     return;
   }
   const emptyState = document.getElementById('empty-state');

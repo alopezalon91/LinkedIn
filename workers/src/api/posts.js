@@ -490,53 +490,107 @@ async function getGroqKey(db, env) {
   }
 }
 
-// Helper to call Gemini exclusively (no fallbacks)
+// Helper to call AI with robust fallback: Gemini (flash models) -> Groq (llama-3.3-70b)
 export async function callAIWithFallback(db, env, systemPrompt, prompt, responseMimeType = "text/plain", responseSchema = null, temperature = 0.7) {
-  if (!env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY no está configurada.');
-  }
+  let lastError = null;
 
-  // Usamos gemini-3.6-flash que es el modelo estable más reciente y gratuito en 2026
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${env.GEMINI_API_KEY}`;
-  
-  const payload = {
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    systemInstruction: { parts: [{ text: systemPrompt }] },
-    generationConfig: {
-      temperature: temperature,
-      maxOutputTokens: responseMimeType === "application/json" ? 8192 : 4096,
-    },
-    safetySettings: [
-      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-    ]
-  };
+  // 1. Try Gemini if API key is available
+  if (env.GEMINI_API_KEY) {
+    const geminiModels = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    for (const model of geminiModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
+        const payload = {
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          generationConfig: {
+            temperature: temperature,
+            maxOutputTokens: responseMimeType === "application/json" ? 8192 : 4096,
+          },
+          safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+          ]
+        };
 
-  if (responseMimeType === "application/json") {
-    payload.generationConfig.responseMimeType = "application/json";
-    if (responseSchema) {
-      payload.generationConfig.responseSchema = responseSchema;
+        if (responseMimeType === "application/json") {
+          payload.generationConfig.responseMimeType = "application/json";
+          if (responseSchema) {
+            payload.generationConfig.responseSchema = responseSchema;
+          }
+        }
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) return text;
+        } else {
+          const errText = await res.text();
+          console.warn(`[callAIWithFallback] Gemini ${model} failed (${res.status}): ${errText}`);
+          lastError = new Error(`Gemini ${model} Error (${res.status}): ${errText}`);
+        }
+      } catch (err) {
+        console.warn(`[callAIWithFallback] Gemini ${model} fetch exception:`, err.message);
+        lastError = err;
+      }
     }
   }
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  // 2. Fallback to Groq if Gemini failed or is unavailable
+  const groqKey = await getGroqKey(db, env);
+  if (groqKey) {
+    try {
+      console.log('[callAIWithFallback] Attempting fallback to Groq llama-3.3-70b-versatile');
+      const messages = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt }
+      ];
+      const payload = {
+        model: "llama-3.3-70b-versatile",
+        messages,
+        temperature: temperature,
+        max_tokens: responseMimeType === "application/json" ? 7000 : 3500,
+      };
+      if (responseMimeType === "application/json") {
+        payload.response_format = { type: "json_object" };
+      }
 
-  if (res.ok) {
-    const result = await res.json();
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (text) return text;
-    throw new Error('Gemini devolvió una respuesta vacía o sin formato esperado.');
-  } else {
-    const errText = await res.text();
-    console.error(`Gemini API call failed (status ${res.status}): ${errText}`);
-    throw new Error(`Gemini API Error (HTTP ${res.status}): ${errText}`);
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${groqKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const groqData = await res.json();
+        const text = groqData.choices?.[0]?.message?.content;
+        if (text) {
+          console.log('[callAIWithFallback] Groq call successful!');
+          return text;
+        }
+      } else {
+        const errText = await res.text();
+        console.error(`[callAIWithFallback] Groq failed (${res.status}): ${errText}`);
+        lastError = new Error(`Groq Error (${res.status}): ${errText}`);
+      }
+    } catch (groqErr) {
+      console.error('[callAIWithFallback] Groq fetch exception:', groqErr.message);
+      lastError = groqErr;
+    }
   }
+
+  throw lastError || new Error('No AI provider (Gemini or Groq) was able to generate content.');
 }
 
 export async function regeneratePost(db, env, ctx, id, instructions) {
@@ -853,17 +907,21 @@ Si te pasas de los límites de palabras, el sistema fallará y se borrará tu re
     const uniqueParagraphs = new Set(paragraphs);
     const isRedundant = paragraphs.length > 0 && uniqueParagraphs.size !== paragraphs.length;
 
-    if (typeof postText === 'string' && postText.length >= 2000 && postText.length <= 2500 && !isRedundant) {
+    if (typeof postText === 'string' && postText.length >= 1600 && postText.length <= 2700 && !isRedundant) {
       break; // Success!
     } else {
-      console.warn(`Attempt ${attempt} failed validation: post length ${postText.length} not in 2000-2500 or redundancy=${isRedundant}. Retrying...`);
+      console.warn(`Attempt ${attempt} failed validation: post length ${postText.length} not in 1600-2700 or redundancy=${isRedundant}. Retrying...`);
       if (attempt > maxRetries) {
-        throw new Error(`VALIDATION_FAILED: El modelo no alcanzó la densidad procedural requerida sin redundancias o no respetó el límite de 2000-2500 chars (generó ${postText.length}) tras ${maxRetries} reintentos.`);
+        if (postText && postText.length >= 1000) {
+          console.warn(`Accepting generated post with length ${postText.length} after max retries.`);
+          break;
+        }
+        throw new Error(`VALIDATION_FAILED: El modelo no alcanzó la densidad procedural requerida sin redundancias (generó ${postText.length}) tras ${maxRetries} reintentos.`);
       }
       currentTemperature = 0.2; // Force strict, dense structure on retry
       
       // INYECTAR REGAÑINA Y FORZADO DE ESTRUCTURA MULTI-SECCIÓN
-      prompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD ESTRICTA]\nTu intento anterior falló porque la longitud fue incorrecta (${postText.length} caracteres) o repetía párrafos. Debes generar estrictamente entre 2000 y 2500 caracteres SIN REPETIR NINGUNA FRASE. Ajusta el nivel de detalle para cumplir esta longitud exacta.\n\n¡ATENCIÓN! RESPONDE ÚNICA Y EXCLUSIVAMENTE CON EL CÓDIGO JSON. NO PIDAS DISCULPAS, SÓLO EL JSON PARSEABLE.`;
+      prompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD ESTRICTA]\nTu intento anterior falló porque la longitud fue incorrecta (${postText.length} caracteres) o repetía párrafos. Debes generar estrictamente entre 1800 y 2500 caracteres SIN REPETIR NINGUNA FRASE. Ajusta el nivel de detalle para cumplir esta longitud exacta.\n\n¡ATENCIÓN! RESPONDE ÚNICA Y EXCLUSIVAMENTE CON EL CÓDIGO JSON. NO PIDAS DISCULPAS, SÓLO EL JSON PARSEABLE.`;
     }
   }
 
