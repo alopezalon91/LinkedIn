@@ -149,7 +149,8 @@ function cleanGeneratedPostText(text) {
 export async function listPosts(db, params = {}) {
   const { status, type, sector } = params;
   const page  = Math.max(1, parseInt(params.page  ?? 1,  10));
-  const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? 20, 10)));
+  const defaultLimit = (status === 'pending' || status === 'all') ? 300 : 50;
+  const limit = Math.min(500, Math.max(1, parseInt(params.limit ?? defaultLimit, 10)));
   const offset = (page - 1) * limit;
 
   // Build WHERE clauses dynamically

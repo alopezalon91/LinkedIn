@@ -2,21 +2,35 @@ import { nowISO } from '../utils.js';
 import { generatePostFromDraft } from '../api/posts.js';
 
 const RSS_SOURCES = [
-  // Bing News (consultas de alta precisión de 2 palabras que no son bloqueadas)
-  { name: 'Bing Fiscal / Hacienda', url: 'https://www.bing.com/news/search?q=hacienda+impuestos&format=rss' },
-  { name: 'Bing Autónomos / RETA', url: 'https://www.bing.com/news/search?q=autonomos+seguridad+social&format=rss' },
-  { name: 'Bing Ecommerce', url: 'https://www.bing.com/news/search?q=ecommerce&format=rss' },
-  { name: 'Bing Verifactu / Facturación', url: 'https://www.bing.com/news/search?q=factura+electronica+verifactu&format=rss' },
-  { name: 'Bing IRPF / IVA', url: 'https://www.bing.com/news/search?q=irpf+iva+hacienda&format=rss' },
-  // Medios especializados directos
+  // Bing News España con parámetros estrictos de mercado e idioma español
+  { name: 'Bing Fiscal / Hacienda', url: 'https://www.bing.com/news/search?q=hacienda+impuestos+espana&format=rss&setmkt=es-ES&setlang=es' },
+  { name: 'Bing Autónomos / RETA', url: 'https://www.bing.com/news/search?q=autonomos+seguridad+social+espana&format=rss&setmkt=es-ES&setlang=es' },
+  { name: 'Bing Ecommerce', url: 'https://www.bing.com/news/search?q=ecommerce+espana&format=rss&setmkt=es-ES&setlang=es' },
+  { name: 'Bing Verifactu / Facturación', url: 'https://www.bing.com/news/search?q=factura+electronica+verifactu&format=rss&setmkt=es-ES&setlang=es' },
+  { name: 'Bing IRPF / IVA', url: 'https://www.bing.com/news/search?q=irpf+iva+hacienda&format=rss&setmkt=es-ES&setlang=es' },
+  // Medios especializados directos de España
   { name: 'Infoautónomos', url: 'https://www.infoautonomos.com/feed/' },
   { name: 'El Debate Economía', url: 'https://www.eldebate.com/rss/economia.xml' },
   { name: 'El Mundo Economía', url: 'https://e00-elmundo.uecdn.es/elmundo/rss/economia.xml' }
 ];
 
-const HIGH_RELEVANCE_KEYWORDS = /\b(tributari[oa]s?|fiscal(es)?|hacienda|aeat|agencia tributaria|impuest[oa]s?|irpf|iva|sociedades|plusval[ií]a|sanci[oó]n(es)?|embargo|inspecci[oó]n|inspeccion|deducci[oó]n|deducciones|autónom[oa]s?|autonom[oa]s?|reta|cuota de aut[oó]nomos|cuota|seguridad social|facturaci[oó]n electr[oó]nica|factura electr[oó]nica|verifactu|ticketbai|ecommerce|e-commerce|comercio electr[oó]nico|tienda online|dropshipping|declaraci[oó]n de la renta|renta|despido|nif|revocaci[oó]n|cotizaci[oó]n|cotizaciones|ingreso m[ií]nimo vital|laboral|pensiones?|jubilaci[oó]n|modelo 720|modelo 303|modelo 390|modelo 100|campa[ñn]a de la renta|finanzas)\b/i;
+const HIGH_RELEVANCE_KEYWORDS = /\b(tributari[oa]s?|fiscal(es)?|hacienda|aeat|agencia tributaria|impuest[oa]s?|irpf|iva|sociedades|plusval[ií]a|sanci[oó]n(es)?|embargo|inspecci[oó]n|inspeccion|deducci[oó]n|deducciones|autónom[oa]s?|autonom[oa]s?|reta|cuota de aut[oó]nomos|cuota|seguridad social|facturaci[oó]n electr[oó]nica|factura electr[oó]nica|verifactu|ticketbai|ecommerce|e-commerce|comercio electr[oó]nico|tienda online|dropshipping|declaraci[oó]n de la renta|renta|despido|nif|revocaci[oó]n|cotizaci[oó]n|cotizaciones|laboral|pensiones?|jubilaci[oó]n|modelo 720|modelo 303|modelo 390|modelo 100|campa[ñn]a de la renta|finanzas|pyme|pymes)\b/i;
 
-const EXCLUDE_KEYWORDS = /\b(f[uú]tbol|liga|champions|partido|fichaje|marruecos|ucrania|guerra|misil|israel|bater[ií]as?|osnabrück|audiovisual|volkswagen|cine|pel[ií]cula|concierto|festival|hollywood|inmersivas|job crafting)\b/i;
+const EXCLUDE_KEYWORDS = /\b(f[uú]tbol|liga|champions|partido|fichaje|marruecos|ucrania|guerra|misil|israel|bater[ií]as?|osnabrück|audiovisual|volkswagen|cine|pel[ií]cula|concierto|festival|hollywood|inmersivas|job crafting|mba\b|m[aá]ster|master|cursos? gratuitos?|gimnasio|renting flexible|softphone|ecosistema mac|cu[aá]ntica|f[ií]sica cu[aá]ntica|gas europeo|almacenamiento de gas|bonos mundiales|financiaci[oó]n auton[oó]mica|consejo de pol[ií]tica fiscal|plant[oó]n de madrid|ayuso planta|madrid se borra|junta de castilla y le[oó]n exige|consejeros del psoe|ingreso m[ií]nimo vital|aut[oó]nomos chinos|pesebre|hipoteca inversa|airbus|efactura f[oó]rum|calendario laboral.*festivos|tasa tur[ií]stica)\b/i;
+
+const FOREIGN_EXCLUDE = /\b(mexico|méxico|sheinbaum|monreal|mañanera|sat\b|mmdp|pesos mexicanos|paquete económico|diputados de méxico|senado mexicano|lópez obrador|amlo|colombia|bogot[aá]|dian\b|gustavo petro|argentina|afip\b|arca\b|milei|buenos aires|pesos argentinos|per[uú]|sunat\b|chile\b|sii\b|latam|estados unidos|biden|trump|irs\b|india\b|sitharaman|gst\b|rupees|dólares\b|francia\b|precriterios|morena\b)\b/i;
+
+const ENGLISH_STOPWORDS = /\b(the|and|for|with|this|that|from|how to|why you need|market|global|growth|revenue|business|ecommerce side hustles|dropshipping in|top 10|retailers|shopping|brands|selling|sellers|strategies|tools|tiktok shop is|what is|best practices|guide to)\b/gi;
+
+export function isValidSpanishTaxNews(title, summary) {
+  const combined = `${title || ''} ${summary || ''}`;
+  if (EXCLUDE_KEYWORDS.test(combined)) return false;
+  if (FOREIGN_EXCLUDE.test(combined)) return false;
+  const englishMatches = combined.match(ENGLISH_STOPWORDS);
+  if (englishMatches && englishMatches.length >= 2) return false;
+  if (!HIGH_RELEVANCE_KEYWORDS.test(combined)) return false;
+  return true;
+}
 
 function decodeEntities(str) {
   return (str || '')
@@ -132,12 +146,10 @@ export async function scrapeNews(db, env = null, ctx = null) {
         
         const combinedText = `${title} ${summary}`;
         
-        // Filtrado estricto de relevancia
-        if (EXCLUDE_KEYWORDS.test(title)) {
+        // Filtrado estricto de relevancia y ámbito fiscal español
+        if (!isValidSpanishTaxNews(title, summary)) {
           continue;
         }
-
-        if (HIGH_RELEVANCE_KEYWORDS.test(combinedText)) {
           matchCount++;
           const sourceId = generateSourceId(link, title);
           
@@ -168,7 +180,6 @@ export async function scrapeNews(db, env = null, ctx = null) {
             newPostIds.push(newId);
             inserted++;
           }
-        }
       }
       debug.push({ name: source.name, items: feedCount, matches: matchCount, duplicates: dupCount });
     } catch (e) {
@@ -211,7 +222,7 @@ export async function searchNewsLive(db, env, ctx, query) {
   if (!query || !query.trim()) return { inserted: 0, posts: [] };
 
   const cleanQuery = encodeURIComponent(query.trim());
-  const feedUrl = `https://www.bing.com/news/search?q=${cleanQuery}&format=rss`;
+  const feedUrl = `https://www.bing.com/news/search?q=${cleanQuery}+espana&format=rss&setmkt=es-ES&setlang=es`;
   
   const headers = {
     'User-Agent': 'curl/7.88.1',
@@ -238,6 +249,12 @@ export async function searchNewsLive(db, env, ctx, query) {
     let title = decodeEntities(titleMatch[1]);
     let link = linkMatch[1].trim();
     let summary = descMatch ? decodeEntities(descMatch[1].replace(/<[^>]*>?/gm, '')) : '';
+
+    const combined = `${title} ${summary}`;
+    if (FOREIGN_EXCLUDE.test(combined)) continue;
+    if (EXCLUDE_KEYWORDS.test(combined)) continue;
+    const englishMatches = combined.match(ENGLISH_STOPWORDS);
+    if (englishMatches && englishMatches.length >= 2) continue;
 
     if (link.includes('bing.com/news/apiclick.aspx')) {
       try {

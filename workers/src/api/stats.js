@@ -101,7 +101,11 @@ async function _computeSystemStats(db) {
   // Map status counts to a tidy object
   const postCounts = { total: 0, pending: 0, approved: 0, rejected: 0, published: 0, scheduled: 0 };
   for (const row of statusCounts.results ?? []) {
-    if (row.status in postCounts) postCounts[row.status] = row.n;
+    if (row.status === 'draft' || row.status === 'pending') {
+      postCounts.pending = (postCounts.pending || 0) + row.n;
+    } else if (row.status in postCounts) {
+      postCounts[row.status] = (postCounts[row.status] || 0) + row.n;
+    }
     postCounts.total += row.n;
   }
 

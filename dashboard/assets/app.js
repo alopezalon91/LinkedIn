@@ -1861,14 +1861,14 @@ function renderQueue() {
   if (subtitle) subtitle.textContent = `${State.filteredPosts.length} post${State.filteredPosts.length > 1 ? 's' : ''} pendiente${State.filteredPosts.length > 1 ? 's' : ''} de revisión`;
   State.filteredPosts.forEach((post, i) => {
     const card = renderPostCard(post);
-    card.style.animationDelay = `${i * 50}ms`;
+    card.style.animationDelay = `${Math.min(i * 20, 300)}ms`;
     grid.appendChild(card);
   });
 }
 
 // ── Stats Update ───────────────────────────────────────────
 function updateStats() {
-  const pending = State.posts.filter(p => p.status === 'pending').length;
+  const pending = State.posts.filter(p => p.status === 'pending' || p.status === 'draft').length;
   const el = document.getElementById('stat-pending');
   if (el) el.textContent = pending;
   const countEl = document.getElementById('pending-count');
@@ -1882,7 +1882,7 @@ const Pages = {
     try {
       const statusFilter = State.currentView;
       const [postsRes, statsRes] = await Promise.all([
-        API.getPosts({ status: statusFilter }),
+        API.getPosts({ status: statusFilter, limit: 300 }),
         API.getStats().catch(() => null),
       ]);
 
