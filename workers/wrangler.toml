@@ -16,7 +16,7 @@ CORS_ORIGIN = "https://panel.alasesoria.es, https://linkedin-2cg.pages.dev"
 # TELEGRAM_CHAT_ID
 
 [triggers]
-crons = ["0,30 * * * *"]
+crons = ["0 */2 * * *"]
 
 [[vectorize]]
 binding = "VECTOR_DB"

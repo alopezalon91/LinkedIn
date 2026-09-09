@@ -497,7 +497,7 @@ export async function callAIWithFallback(db, env, systemPrompt, prompt, response
 
   // 1. Try Gemini if API key is available
   if (env.GEMINI_API_KEY) {
-    const geminiModels = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    const geminiModels = ['gemini-2.0-flash', 'gemini-1.5-flash'];
     for (const model of geminiModels) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
@@ -548,46 +548,49 @@ export async function callAIWithFallback(db, env, systemPrompt, prompt, response
   // 2. Fallback to Groq if Gemini failed or is unavailable
   const groqKey = await getGroqKey(db, env);
   if (groqKey) {
-    try {
-      console.log('[callAIWithFallback] Attempting fallback to Groq llama-3.3-70b-versatile');
-      const messages = [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: prompt }
-      ];
-      const payload = {
-        model: "llama-3.3-70b-versatile",
-        messages,
-        temperature: temperature,
-        max_tokens: responseMimeType === "application/json" ? 7000 : 3500,
-      };
-      if (responseMimeType === "application/json") {
-        payload.response_format = { type: "json_object" };
-      }
-
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${groqKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        const groqData = await res.json();
-        const text = groqData.choices?.[0]?.message?.content;
-        if (text) {
-          console.log('[callAIWithFallback] Groq call successful!');
-          return text;
+    const groqModels = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b'];
+    for (const model of groqModels) {
+      try {
+        console.log(`[callAIWithFallback] Attempting fallback to Groq ${model}`);
+        const messages = [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ];
+        const payload = {
+          model,
+          messages,
+          temperature: temperature,
+          max_tokens: responseMimeType === "application/json" ? 7000 : 3500,
+        };
+        if (responseMimeType === "application/json") {
+          payload.response_format = { type: "json_object" };
         }
-      } else {
-        const errText = await res.text();
-        console.error(`[callAIWithFallback] Groq failed (${res.status}): ${errText}`);
-        lastError = new Error(`Groq Error (${res.status}): ${errText}`);
+
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${groqKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const groqData = await res.json();
+          const text = groqData.choices?.[0]?.message?.content;
+          if (text) {
+            console.log(`[callAIWithFallback] Groq ${model} call successful!`);
+            return text;
+          }
+        } else {
+          const errText = await res.text();
+          console.error(`[callAIWithFallback] Groq ${model} failed (${res.status}): ${errText}`);
+          lastError = new Error(`Groq ${model} Error (${res.status}): ${errText}`);
+        }
+      } catch (groqErr) {
+        console.error(`[callAIWithFallback] Groq ${model} fetch exception:`, groqErr.message);
+        lastError = groqErr;
       }
-    } catch (groqErr) {
-      console.error('[callAIWithFallback] Groq fetch exception:', groqErr.message);
-      lastError = groqErr;
     }
   }
 
@@ -643,15 +646,19 @@ Por favor, reescribe el post completo siguiendo las instrucciones del usuario. D
     const uniqueParagraphs = new Set(paragraphs);
     const hasRedundancy = paragraphs.length > 0 && uniqueParagraphs.size !== paragraphs.length;
 
-    if (cleanRewrittenText.length >= 2000 && cleanRewrittenText.length <= 2500 && !hasRedundancy) {
+    if (cleanRewrittenText.length >= 1400 && cleanRewrittenText.length <= 2800 && !hasRedundancy) {
       break; // Success!
     } else {
-      console.warn(`Attempt ${attempt} of regeneratePost failed validation: length ${cleanRewrittenText.length} not in 2000-2500, redundancy=${hasRedundancy}. Retrying...`);
+      console.warn(`Attempt ${attempt} of regeneratePost failed validation: length ${cleanRewrittenText.length} not in 1400-2800, redundancy=${hasRedundancy}. Retrying...`);
       if (attempt > maxRetries) {
-        throw new Error(`VALIDATION_FAILED: El modelo generó un post reescrito inválido (longitud ${cleanRewrittenText.length} chars, redundancia=${hasRedundancy}) tras ${maxRetries} reintentos. Se requieren entre 2000 y 2500 caracteres sin párrafos repetidos.`);
+        if (cleanRewrittenText && cleanRewrittenText.length >= 1000) {
+          console.warn(`Accepting rewritten post with length ${cleanRewrittenText.length} after max retries.`);
+          break;
+        }
+        throw new Error(`VALIDATION_FAILED: El modelo generó un post reescrito inválido (longitud ${cleanRewrittenText.length} chars, redundancia=${hasRedundancy}) tras ${maxRetries} reintentos.`);
       }
       currentTemperature = 0.2;
-      currentPrompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD ESTRICTA] Tu intento anterior falló (generaste ${cleanRewrittenText.length} caracteres). ESTÁS OBLIGADO a generar un texto de estrictamente entre 2000 y 2500 caracteres SIN REPETIR PÁRRAFOS. Ajusta el nivel de detalle técnico para cumplir esta longitud exacta.`;
+      currentPrompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD ESTRICTA] Tu intento anterior falló (generaste ${cleanRewrittenText.length} caracteres). ESTÁS OBLIGADO a generar un texto de estrictamente entre 1400 y 2800 caracteres SIN REPETIR PÁRRAFOS. Ajusta el nivel de detalle técnico para cumplir esta longitud exacta.`;
     }
   }
 
@@ -908,10 +915,10 @@ Si te pasas de los límites de palabras, el sistema fallará y se borrará tu re
     const uniqueParagraphs = new Set(paragraphs);
     const isRedundant = paragraphs.length > 0 && uniqueParagraphs.size !== paragraphs.length;
 
-    if (typeof postText === 'string' && postText.length >= 1600 && postText.length <= 2700 && !isRedundant) {
+    if (typeof postText === 'string' && postText.length >= 1400 && postText.length <= 2800 && !isRedundant) {
       break; // Success!
     } else {
-      console.warn(`Attempt ${attempt} failed validation: post length ${postText.length} not in 1600-2700 or redundancy=${isRedundant}. Retrying...`);
+      console.warn(`Attempt ${attempt} failed validation: post length ${postText.length} not in 1400-2800 or redundancy=${isRedundant}. Retrying...`);
       if (attempt > maxRetries) {
         if (postText && postText.length >= 1000) {
           console.warn(`Accepting generated post with length ${postText.length} after max retries.`);

@@ -37,11 +37,12 @@ CREATE TABLE IF NOT EXISTS posts (
   media_url TEXT                            -- URL of the rendered video uploaded to R2
 );
 
-CREATE INDEX IF NOT EXISTS idx_posts_status   ON posts(status);
-CREATE INDEX IF NOT EXISTS idx_posts_type     ON posts(type);
-CREATE INDEX IF NOT EXISTS idx_posts_sector   ON posts(sector);
-CREATE INDEX IF NOT EXISTS idx_posts_urgency  ON posts(urgency);
-CREATE INDEX IF NOT EXISTS idx_posts_created  ON posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_status    ON posts(status);
+CREATE INDEX IF NOT EXISTS idx_posts_type      ON posts(type);
+CREATE INDEX IF NOT EXISTS idx_posts_sector    ON posts(sector);
+CREATE INDEX IF NOT EXISTS idx_posts_urgency   ON posts(urgency);
+CREATE INDEX IF NOT EXISTS idx_posts_created   ON posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_source_id ON posts(source_id);
 
 -- User decisions table (learning system training data)
 CREATE TABLE IF NOT EXISTS decisions (
