@@ -497,7 +497,7 @@ export async function callAIWithFallback(db, env, systemPrompt, prompt, response
 
   // 1. Try Gemini if API key is available
   if (env.GEMINI_API_KEY) {
-    const geminiModels = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+    const geminiModels = ['gemini-2.5-flash', 'gemini-3.6-flash'];
     for (const model of geminiModels) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;

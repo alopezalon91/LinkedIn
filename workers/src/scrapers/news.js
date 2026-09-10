@@ -34,6 +34,9 @@ export function isValidSpanishTaxNews(title, summary) {
 
 function decodeEntities(str) {
   return (str || '')
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
+    .replace(/<!\[CDATA\[/gi, '')
+    .replace(/\]\]>/gi, '')
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(code))
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
@@ -41,6 +44,12 @@ function decodeEntities(str) {
     .replace(/&gt;/g, '>')
     .replace(/&nbsp;/g, ' ')
     .trim();
+}
+
+function extractTagContent(xml, tagName) {
+  const match = xml.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'));
+  if (!match) return '';
+  return decodeEntities(match[1]);
 }
 
 function generateSourceId(link, title) {
@@ -116,15 +125,11 @@ export async function scrapeNews(db, env = null, ctx = null) {
         feedCount++;
         const itemXml = match[1];
         
-        const titleMatch = itemXml.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) || itemXml.match(/<title>([\s\S]*?)<\/title>/);
-        const linkMatch = itemXml.match(/<link><!\[CDATA\[([\s\S]*?)\]\]><\/link>/) || itemXml.match(/<link>([\s\S]*?)<\/link>/);
-        const descMatch = itemXml.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) || itemXml.match(/<description>([\s\S]*?)<\/description>/);
+        let title = extractTagContent(itemXml, 'title');
+        let link = extractTagContent(itemXml, 'link').trim();
+        let summary = extractTagContent(itemXml, 'description').replace(/<[^>]*>?/gm, '').trim();
         
-        if (!titleMatch || !linkMatch) continue;
-        
-        let title = decodeEntities(titleMatch[1]);
-        let link = linkMatch[1].trim();
-        let summary = descMatch ? decodeEntities(descMatch[1].replace(/<[^>]*>?/gm, '')) : '';
+        if (!title || !link) continue;
         
         let sourceName = source.name;
         if (source.name.startsWith('Google') && title.includes(' - ')) {
@@ -240,15 +245,11 @@ export async function searchNewsLive(db, env, ctx, query) {
 
   while ((match = itemRegex.exec(xml)) !== null && inserted < 10) {
     const itemXml = match[1];
-    const titleMatch = itemXml.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) || itemXml.match(/<title>([\s\S]*?)<\/title>/);
-    const linkMatch = itemXml.match(/<link><!\[CDATA\[([\s\S]*?)\]\]><\/link>/) || itemXml.match(/<link>([\s\S]*?)<\/link>/);
-    const descMatch = itemXml.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) || itemXml.match(/<description>([\s\S]*?)<\/description>/);
+    let title = extractTagContent(itemXml, 'title');
+    let link = extractTagContent(itemXml, 'link').trim();
+    let summary = extractTagContent(itemXml, 'description').replace(/<[^>]*>?/gm, '').trim();
     
-    if (!titleMatch || !linkMatch) continue;
-
-    let title = decodeEntities(titleMatch[1]);
-    let link = linkMatch[1].trim();
-    let summary = descMatch ? decodeEntities(descMatch[1].replace(/<[^>]*>?/gm, '')) : '';
+    if (!title || !link) continue;
 
     const combined = `${title} ${summary}`;
     if (FOREIGN_EXCLUDE.test(combined)) continue;

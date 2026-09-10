@@ -295,9 +295,24 @@ function renderPostCard(post) {
   const isHighConfidence = confidence >= 0.85;
 
   let draftData = null;
+  let draftTitle = 'Borrador en proceso o incompleto';
+  let draftSummary = 'Se produjo un error al generar este contenido. Puedes intentar regenerarlo.';
   if (post.status === 'draft') {
     try {
       draftData = JSON.parse(post.content);
+      const cleanDraftText = s => (s || '')
+        .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
+        .replace(/<!\[CDATA\[/gi, '')
+        .replace(/\]\]>/gi, '')
+        .trim();
+      const escapeHtml = s => (s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+      if (draftData && draftData.title) draftTitle = escapeHtml(cleanDraftText(draftData.title));
+      if (draftData && draftData.summary) draftSummary = escapeHtml(cleanDraftText(draftData.summary));
     } catch (e) {
       console.error("Error parsing draft data", e);
     }
@@ -317,8 +332,8 @@ function renderPostCard(post) {
     <div class="post-card-body">
       ${post.status === 'draft' ? `
         <div style="padding:16px; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:12px;">
-          <h3 style="margin-top:0; color:var(--text-primary); font-size:16px;">${draftData && draftData.title ? draftData.title : 'Borrador en proceso o incompleto'}</h3>
-          <p style="color:var(--text-secondary); font-size:14px; line-height:1.5;">${draftData && draftData.summary ? draftData.summary : 'Se produjo un error al generar este contenido. Puedes intentar regenerarlo.'}</p>
+          <h3 style="margin-top:0; color:var(--text-primary); font-size:16px;">${draftTitle}</h3>
+          <p style="color:var(--text-secondary); font-size:14px; line-height:1.5;">${draftSummary}</p>
         </div>
       ` : `
         <div class="post-content-preview" id="preview-${post.id}">${previewText}</div>
