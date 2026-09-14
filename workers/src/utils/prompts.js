@@ -111,7 +111,7 @@ export const CAROUSEL_SCHEMA = {
           slide_type: { type: "string", enum: ["cover", "interior", "closing"] },
           pre_title: { type: "string", description: "Categoría en mayúsculas (ej: EL DATO, LA CUESTIÓN). Sin números." },
           title: { type: "string", description: "Portada: GANCHO INCISIVO o irónico (ej: 'Feliz Año Nuevo en agosto'). Cierre: Pregunta directa. Interiores: Descriptivo corto." },
-          bullets: { type: "array", items: { type: "string" }, description: "Dejar vacío en portada y cierre. Rellenar SOLO en interiores (máx 5) con textos ULTRA CORTOS (máximo 6 palabras por bullet)." }
+          bullets: { type: "array", items: { type: "string" }, description: "Dejar vacío en portada y cierre. Rellenar SOLO en interiores (2 a 3 bullets) con oraciones completas, claras y autoexplicativas (12-25 palabras por bullet) que se entiendan por sí solas sin leer el post, con concepto clave al inicio." }
         },
         required: ["slide_type", "pre_title", "title"]
       }

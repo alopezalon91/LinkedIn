@@ -868,10 +868,9 @@ Estás OBLIGADO a estructurar tu texto intercalando párrafos argumentativos (de
 MÁXIMA RESTRICCIÓN: Queda PROHIBIDO escribir frases sueltas separadas por saltos de línea continuos simulando un poema (prohibido el "broetry"). Si vas a enumerar o listar pasos o requisitos, USA SIEMPRE GUIONES ("- "). Queda PROHIBIDO usar etiquetas, títulos o encabezados en mayúsculas (como "Contexto", "Mecánica", etc.). El post debe fluir de forma natural como una carta agresiva al empresario, pero visualmente estructurada con párrafos reales y listas con viñetas.
 
 [REGLAS INQUEBRANTABLES PARA EL JSON DEL CARRUSEL]
-1. PORTADA: El title DEBE extraer la FRASE MÁS LLAMATIVA, POLÉMICA O IRÓNICA del texto (especialmente del primer párrafo, ej. "Feliz Año Nuevo en agosto"). MÁXIMO ABSOLUTO 8 PALABRAS.
-2. INTERIORES: Cada bullet DEBE SER EXTREMADAMENTE TELEGRÁFICO (MÁXIMO 6 PALABRAS). Prohibido hacer oraciones largas. Usa frases cortadas, datos crudos o verbos de acción. Redacta como un titular de prensa.
-3. CIERRE: El title DEBE SER UNA PREGUNTA DE MÁXIMO 8 PALABRAS MUY INCISIVA y polémica que interpele directamente al lector.
-Si te pasas de los límites de palabras, el sistema fallará y se borrará tu respuesta.
+1. PORTADA: El title DEBE ser un GANCHO CLARO Y DIRECTO que plantee el problema o la conclusión contundente. MÁXIMO 10 PALABRAS. PROHIBIDO subtítulo en portada.
+2. INTERIORES: Cada viñeta (bullet) DEBE SER UNA ORACIÓN COMPLETA, NARRATIVA Y AUTOEXPLICATIVA (12-25 palabras) con un concepto clave en negrita al inicio (**Concepto:** Explicación). El carrusel DEBE entenderse al 100% por sí mismo sin necesidad de leer el post. Queda PROHIBIDO usar frases telegráficas o crípticas sin contexto.
+3. CIERRE: El title DEBE SER UNA PREGUNTA INCISIVA de reflexión y debate para el lector (MÁXIMO 10 PALABRAS). Bullets vacíos ([]). PROHIBIDO subtítulo en cierre.
 `;
 
   if (prompt.length > 6000) {
@@ -1015,8 +1014,8 @@ ESTÁS EN MODO "REGENERAR CARRUSEL".
 Tienes que generar SOLO las diapositivas del carrusel para el siguiente post.
 
 [INSTRUCCIONES CRÍTICAS DE COPYWRITING PARA CARRUSEL]
-APLICA EXACTAMENTE LAS MISMAS REGLAS DE CARRUSEL DEFINIDAS EN TU SYSTEM_PROMPT Y PROMPT_BLINDAJE.
-PROHIBIDO inventar reglas nuevas. Usa la misma brevedad extrema (máx 6 palabras), títulos irónicos, y el mismo ejemplo base.
+APLICA EXACTAMENTE LAS REGLAS DE CARRUSEL DEFINIDAS EN TU SYSTEM_PROMPT Y PROMPT_BLINDAJE.
+El carrusel tiene que ser totalmente autoexplicativo y entenderse sin necesidad de leer el post. Cada viñeta debe ser una oración completa con sentido (12-25 palabras) con concepto clave al inicio.
 `;
 
   const prompt = `=== POST EDITADO ===
@@ -1027,10 +1026,9 @@ Genera un nuevo Carrusel de 6 diapositivas para acompañar perfectamente a este 
 Devuelve ÚNICAMENTE un objeto JSON válido con la estructura de las diapositivas.
 
 [REGLAS INQUEBRANTABLES PARA EL JSON DEL CARRUSEL]
-1. PORTADA: El title DEBE extraer la FRASE MÁS LLAMATIVA, POLÉMICA O IRÓNICA del texto (ej. "Feliz Año Nuevo en agosto"). MÁXIMO ABSOLUTO 8 PALABRAS.
-2. INTERIORES: Cada bullet DEBE SER EXTREMADAMENTE TELEGRÁFICO (MÁXIMO 6 PALABRAS). Prohibido hacer oraciones largas. Usa frases cortadas, datos crudos o verbos de acción. Redacta como un titular de prensa.
-3. CIERRE: El title DEBE SER UNA PREGUNTA DE MÁXIMO 8 PALABRAS MUY INCISIVA y polémica que interpele directamente al lector.
-Si te pasas de los límites de palabras, el sistema fallará y se borrará tu respuesta.
+1. PORTADA: El title DEBE ser un GANCHO CLARO Y DIRECTO que plantee el problema o la conclusión contundente. MÁXIMO 10 PALABRAS. PROHIBIDO subtítulo en portada.
+2. INTERIORES: Cada viñeta (bullet) DEBE SER UNA ORACIÓN COMPLETA, NARRATIVA Y AUTOEXPLICATIVA (12-25 palabras) con un concepto clave en negrita al inicio (**Concepto:** Explicación). El carrusel DEBE entenderse al 100% por sí mismo sin necesidad de leer el post. Queda PROHIBIDO usar frases telegráficas o crípticas sin contexto.
+3. CIERRE: El title DEBE SER UNA PREGUNTA INCISIVA de reflexión y debate para el lector (MÁXIMO 10 PALABRAS). Bullets vacíos ([]). PROHIBIDO subtítulo en cierre.
 
 ¡IMPORTANTE! DEVUELVE ÚNICA Y EXCLUSIVAMENTE CÓDIGO JSON VÁLIDO.
 CERO COMENTARIOS, CERO INTRODUCCIONES, CERO DISCULPAS. SOLO EL JSON.
