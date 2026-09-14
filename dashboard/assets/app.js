@@ -1749,6 +1749,10 @@ const PostActions = {
       } else if (res && res.posts && res.posts.length > 0) {
         Toast.show(`Se encontraron ${res.posts.length} noticias ya disponibles.`, 'info');
         Pages.queue();
+      } else if (res && res.skipped_discarded > 0) {
+        Toast.show(`Las noticias encontradas sobre "${q}" ya fueron descartadas anteriormente y no se duplicarán.`, 'info');
+      } else if (res && res.already_in_queue > 0) {
+        Toast.show(`Las noticias sobre "${q}" ya están en tu cola de pendientes.`, 'info');
       } else {
         Toast.show(`No se encontraron noticias recientes para "${q}".`, 'warning');
       }

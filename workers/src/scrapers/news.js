@@ -52,11 +52,65 @@ function extractTagContent(xml, tagName) {
   return decodeEntities(match[1]);
 }
 
+const SPANISH_STOP_WORDS = new Set([
+  'para', 'como', 'pero', 'este', 'esta', 'estos', 'estas', 'entre', 'sobre', 'desde', 'hasta', 'hacia',
+  'todo', 'toda', 'todos', 'todas', 'otro', 'otra', 'otros', 'otras', 'porque', 'cuando', 'donde', 'quien',
+  'cual', 'cuales', 'tiene', 'tienen', 'puede', 'pueden', 'haber', 'hacer', 'dice', 'segun', 'tras',
+  'ante', 'bajo', 'cabe', 'mediante', 'durante', 'sino', 'siquiera', 'algo', 'nada', 'poco', 'mucho',
+  'tanto', 'cuanto', 'cada', 'cierto', 'unos', 'unas', 'estas', 'estos', 'ellos', 'ellas',
+  'aqui', 'alla', 'bien', 'solo', 'gran', 'mas', 'menos', 'despues', 'antes', 'ahora', 'tambien',
+  'nuevo', 'nueva', 'nuevos', 'nuevas', 'ultimo', 'ultima', 'ultimos', 'ultimas', 'dice', 'avisa',
+  'confirma', 'senala', 'revela', 'anuncia', 'explica'
+]);
+
+export function cleanTitleForComparison(title) {
+  if (!title) return '';
+  return title
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/^(video|vídeo|economia|economía|tribuna|opinion|opinión|directo|ultima hora|última hora|atencion|atención|aviso|alerta|exclusiva|analisis|análisis|urgente|editorial|en directo)[\s:.-]+/gi, '')
+    .replace(/[^a-z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function getSignificantWords(normTitle) {
+  return new Set(
+    (normTitle || '').split(' ')
+      .filter(w => w.length > 3 && !SPANISH_STOP_WORDS.has(w))
+  );
+}
+
+export function canonicalizeUrl(urlStr) {
+  if (!urlStr) return '';
+  try {
+    let u = decodeEntities(urlStr);
+    if (u.includes('bing.com/news/apiclick.aspx')) {
+      const parsed = new URL(u.replace(/&amp;/g, '&'));
+      const real = parsed.searchParams.get('url');
+      if (real) u = decodeURIComponent(real);
+    }
+    const obj = new URL(u);
+    const cleanParams = new URLSearchParams();
+    for (const [k, v] of obj.searchParams) {
+      const kl = k.toLowerCase();
+      if (!kl.startsWith('utm_') && !['ref', 'tid', 'ocid', 'cvid', 'ei', 'form', 'sp'].includes(kl)) {
+        cleanParams.set(k, v);
+      }
+    }
+    obj.search = cleanParams.toString() ? `?${cleanParams.toString()}` : '';
+    obj.hash = '';
+    return obj.toString().replace(/\/$/, '').toLowerCase();
+  } catch(e) {
+    return urlStr.split('?')[0].replace(/\/$/, '').toLowerCase();
+  }
+}
+
 function generateSourceId(link, title) {
   let target = link || '';
   if (target.includes('bing.com/news/apiclick.aspx')) {
     try {
-      const urlObj = new URL(target);
+      const urlObj = new URL(target.replace(/&amp;/g, '&'));
       const realUrl = urlObj.searchParams.get('url');
       if (realUrl) {
         target = decodeURIComponent(realUrl);
@@ -69,6 +123,93 @@ function generateSourceId(link, title) {
   const cleanUrl = target.split('?')[0].replace(/https?:\/\//, '').replace(/[^a-zA-Z0-9]/g, '').substring(0, 24);
   const cleanTitle = (title || '').toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 24);
   return `news-${cleanUrl}-${cleanTitle}`;
+}
+
+export async function loadHistorySignatures(db) {
+  const { results } = await db.prepare(`
+    SELECT id, source_id, source_url, content, status 
+    FROM posts 
+    WHERE created_at >= datetime('now', '-90 days')
+       OR status IN ('pending', 'draft', 'scheduled', 'approved', 'rejected')
+  `).all();
+
+  const knownSourceIds = new Set();
+  const knownUrls = new Set();
+  const signatures = [];
+
+  for (const r of (results || [])) {
+    if (r.source_id) knownSourceIds.add(r.source_id);
+    const cUrl = canonicalizeUrl(r.source_url);
+    if (cUrl) knownUrls.add(cUrl);
+
+    let rawTitle = '';
+    try {
+      const parsed = JSON.parse(r.content);
+      rawTitle = parsed.title || '';
+    } catch(e) {
+      rawTitle = r.content?.split('\n')[0] || '';
+    }
+
+    const normTitle = cleanTitleForComparison(rawTitle);
+    const words = getSignificantWords(normTitle);
+    if (words.size > 0) {
+      signatures.push({
+        id: r.id,
+        status: r.status,
+        sourceId: r.source_id,
+        canonicalUrl: cUrl,
+        normTitle,
+        words,
+        rawTitle
+      });
+    }
+  }
+
+  return { knownSourceIds, knownUrls, signatures };
+}
+
+export function findDuplicateMatch(history, item) {
+  // 1. Direct Source ID match
+  if (item.sourceId && history.knownSourceIds.has(item.sourceId)) {
+    const matched = history.signatures.find(s => s.sourceId === item.sourceId);
+    return { isDuplicate: true, matched, reason: 'source_id' };
+  }
+
+  // 2. Canonical URL match
+  if (item.canonicalUrl && history.knownUrls.has(item.canonicalUrl)) {
+    const matched = history.signatures.find(s => s.canonicalUrl === item.canonicalUrl);
+    return { isDuplicate: true, matched, reason: 'canonical_url' };
+  }
+
+  // 3. Title Semantic / Fuzzy Similarity match
+  const itemNorm = cleanTitleForComparison(item.title);
+  const itemWords = getSignificantWords(itemNorm);
+  if (!itemWords.size) return { isDuplicate: false };
+
+  for (const sig of history.signatures) {
+    if (sig.normTitle === itemNorm) {
+      return { isDuplicate: true, matched: sig, reason: 'exact_title' };
+    }
+
+    if (itemNorm.length > 25 && sig.normTitle.length > 25 && (itemNorm.includes(sig.normTitle) || sig.normTitle.includes(itemNorm))) {
+      return { isDuplicate: true, matched: sig, reason: 'title_substring' };
+    }
+
+    let common = 0;
+    for (const w of itemWords) {
+      if (sig.words.has(w)) common++;
+    }
+
+    const union = new Set([...itemWords, ...sig.words]).size;
+    const jaccard = common / union;
+    const minOverlap = common / Math.min(itemWords.size, sig.words.size);
+
+    if (jaccard >= 0.45 || (common >= 4 && minOverlap >= 0.50)) {
+      return { isDuplicate: true, matched: sig, reason: 'semantic_title_overlap' };
+    }
+  }
+
+  return { isDuplicate: false };
 }
 
 export function detectSector(text) {
@@ -106,6 +247,8 @@ export async function scrapeNews(db, env = null, ctx = null) {
     'Accept': 'application/rss+xml, application/xml, text/xml, */*'
   };
 
+  const history = await loadHistorySignatures(db);
+
   for (const source of RSS_SOURCES) {
     let feedCount = 0;
     let matchCount = 0;
@@ -140,51 +283,60 @@ export async function scrapeNews(db, env = null, ctx = null) {
           }
         }
         
-        // Resolver proxy URLs de Bing a enlaces reales
-        if (link.includes('bing.com/news/apiclick.aspx')) {
-          try {
-            const urlObj = new URL(link);
-            const realUrl = urlObj.searchParams.get('url');
-            if (realUrl) link = realUrl;
-          } catch(e) {}
-        }
-        
         const combinedText = `${title} ${summary}`;
         
         // Filtrado estricto de relevancia y ámbito fiscal español
         if (!isValidSpanishTaxNews(title, summary)) {
           continue;
         }
-          matchCount++;
-          const sourceId = generateSourceId(link, title);
-          
-          const existing = await db.prepare("SELECT id FROM posts WHERE source_id = ?").bind(sourceId).first();
-          if (existing) {
-            dupCount++;
-          } else {
-            const newId = crypto.randomUUID();
-            const sector = detectSector(combinedText);
-            const urgency = detectUrgency(combinedText);
-            
-            await db.prepare(`
-              INSERT INTO posts (id, source_id, source_url, source_name, type, sector, urgency, status, content, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).bind(
-              newId,
-              sourceId,
-              link,
-              sourceName,
-              'actualidad',
-              sector,
-              urgency,
-              'draft',
-              JSON.stringify({ title, link, summary, original_text: `${title}\n\n${summary}` }),
-              nowISO(),
-              nowISO()
-            ).run();
-            newPostIds.push(newId);
-            inserted++;
-          }
+
+        matchCount++;
+        const canonicalUrl = canonicalizeUrl(link);
+        const sourceId = generateSourceId(link, title);
+        
+        const dup = findDuplicateMatch(history, { title, sourceId, canonicalUrl });
+        if (dup.isDuplicate) {
+          dupCount++;
+          continue;
+        }
+
+        const newId = crypto.randomUUID();
+        const sector = detectSector(combinedText);
+        const urgency = detectUrgency(combinedText);
+        const contentJson = JSON.stringify({ title, link, summary, original_text: `${title}\n\n${summary}` });
+        
+        await db.prepare(`
+          INSERT INTO posts (id, source_id, source_url, source_name, type, sector, urgency, status, content, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          newId,
+          sourceId,
+          link,
+          sourceName,
+          'actualidad',
+          sector,
+          urgency,
+          'draft',
+          contentJson,
+          nowISO(),
+          nowISO()
+        ).run();
+
+        history.knownSourceIds.add(sourceId);
+        if (canonicalUrl) history.knownUrls.add(canonicalUrl);
+        const normTitle = cleanTitleForComparison(title);
+        history.signatures.push({
+          id: newId,
+          status: 'draft',
+          sourceId,
+          canonicalUrl,
+          normTitle,
+          words: getSignificantWords(normTitle),
+          rawTitle: title
+        });
+
+        newPostIds.push(newId);
+        inserted++;
       }
       debug.push({ name: source.name, items: feedCount, matches: matchCount, duplicates: dupCount });
     } catch (e) {
@@ -241,7 +393,11 @@ export async function searchNewsLive(db, env, ctx, query) {
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let match;
   let inserted = 0;
+  let skippedDiscarded = 0;
+  let alreadyPending = 0;
   const foundPosts = [];
+
+  const history = await loadHistorySignatures(db);
 
   while ((match = itemRegex.exec(xml)) !== null && inserted < 10) {
     const itemXml = match[1];
@@ -257,12 +413,17 @@ export async function searchNewsLive(db, env, ctx, query) {
     const englishMatches = combined.match(ENGLISH_STOPWORDS);
     if (englishMatches && englishMatches.length >= 2) continue;
 
-    if (link.includes('bing.com/news/apiclick.aspx')) {
-      try {
-        const urlObj = new URL(link);
-        const realUrl = urlObj.searchParams.get('url');
-        if (realUrl) link = realUrl;
-      } catch(e) {}
+    const canonicalUrl = canonicalizeUrl(link);
+    const sourceId = generateSourceId(link, title);
+
+    const dup = findDuplicateMatch(history, { title, sourceId, canonicalUrl });
+    if (dup.isDuplicate) {
+      if (dup.matched?.status === 'rejected') {
+        skippedDiscarded++;
+      } else if (dup.matched?.status === 'draft' || dup.matched?.status === 'pending') {
+        alreadyPending++;
+      }
+      continue;
     }
     
     let sourceName = 'Prensa Digital';
@@ -271,50 +432,55 @@ export async function searchNewsLive(db, env, ctx, query) {
       sourceName = decodeEntities(sourceTag[1]);
     }
 
-    const sourceId = generateSourceId(link, title);
-    
-    const existing = await db.prepare("SELECT * FROM posts WHERE source_id = ?").bind(sourceId).first();
-    if (existing) {
-      foundPosts.push(existing);
-    } else {
-      const newId = crypto.randomUUID();
-      const combined = `${title} ${summary}`;
-      const sector = detectSector(combined);
-      const urgency = detectUrgency(combined);
-      const contentJson = JSON.stringify({ title, link, summary, original_text: `${title}\n\n${summary}` });
+    const newId = crypto.randomUUID();
+    const sector = detectSector(combined);
+    const urgency = detectUrgency(combined);
+    const contentJson = JSON.stringify({ title, link, summary, original_text: `${title}\n\n${summary}` });
 
-      await db.prepare(`
-        INSERT INTO posts (id, source_id, source_url, source_name, type, sector, urgency, status, content, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        newId,
-        sourceId,
-        link,
-        sourceName,
-        'actualidad',
-        sector,
-        urgency,
-        'draft',
-        contentJson,
-        nowISO(),
-        nowISO()
-      ).run();
+    await db.prepare(`
+      INSERT INTO posts (id, source_id, source_url, source_name, type, sector, urgency, status, content, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      newId,
+      sourceId,
+      link,
+      sourceName,
+      'actualidad',
+      sector,
+      urgency,
+      'draft',
+      contentJson,
+      nowISO(),
+      nowISO()
+    ).run();
 
-      foundPosts.push({
-        id: newId,
-        source_id: sourceId,
-        source_url: link,
-        source_name: sourceName,
-        type: 'actualidad',
-        sector,
-        urgency,
-        status: 'draft',
-        content: contentJson,
-        created_at: nowISO()
-      });
-      inserted++;
-    }
+    history.knownSourceIds.add(sourceId);
+    if (canonicalUrl) history.knownUrls.add(canonicalUrl);
+    const normTitle = cleanTitleForComparison(title);
+    history.signatures.push({
+      id: newId,
+      status: 'draft',
+      sourceId,
+      canonicalUrl,
+      normTitle,
+      words: getSignificantWords(normTitle),
+      rawTitle: title
+    });
+
+    foundPosts.push({
+      id: newId,
+      source_id: sourceId,
+      source_url: link,
+      source_name: sourceName,
+      type: 'actualidad',
+      sector,
+      urgency,
+      status: 'draft',
+      content: contentJson,
+      created_at: nowISO()
+    });
+    inserted++;
   }
 
-  return { inserted, posts: foundPosts };
+  return { inserted, posts: foundPosts, skipped_discarded: skippedDiscarded, already_in_queue: alreadyPending };
 }
