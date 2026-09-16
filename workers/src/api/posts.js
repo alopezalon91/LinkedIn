@@ -863,9 +863,10 @@ Responde ÚNICAMENTE con un objeto JSON válido que cumpla estrictamente con el 
 Titular original: ${post.source_id ? post.source_id.replace(/-/g, ' ') : 'Noticia'}
 Resumen/Texto completo: ${newsContent}
 
-[INSTRUCCIÓN CRÍTICA DE ESTRUCTURA VISUAL Y DENSIDAD]
-Estás OBLIGADO a estructurar tu texto intercalando párrafos argumentativos (de 2 a 4 líneas) con al menos una LISTA DE VIÑETAS (usando guiones cortos "-"). 
-MÁXIMA RESTRICCIÓN: Queda PROHIBIDO escribir frases sueltas separadas por saltos de línea continuos simulando un poema (prohibido el "broetry"). Si vas a enumerar o listar pasos o requisitos, USA SIEMPRE GUIONES ("- "). Queda PROHIBIDO usar etiquetas, títulos o encabezados en mayúsculas (como "Contexto", "Mecánica", etc.). El post debe fluir de forma natural como una carta agresiva al empresario, pero visualmente estructurada con párrafos reales y listas con viñetas.
+[INSTRUCCIÓN CRÍTICA DE REDACCIÓN HUMANA Y ESTRUCTURA]
+Escribe con voz de asesor fiscal senior de carne y hueso: directo, práctico, cercano y riguroso. CERO lenguaje de IA / ChatGPT.
+PROHIBIDO el cliché retórico 'No es X: es Y' y PROHIBIDO inventar epígrafes dramáticos ('El cerrojo temporal...'). Integra los artículos de ley de forma fluida y conversacional en el texto.
+Estructura en párrafos claros y legibles (2 a 4 líneas), usando enumeraciones limpias (1., 2., 3. o guiones cortos "-") para los puntos prácticos. Queda PROHIBIDO el "broetry" (frases sueltas de una línea continuas como un poema). Queda PROHIBIDO usar etiquetas o títulos genéricos en mayúsculas (como "Contexto", "Mecánica", etc.).
 
 [REGLAS INQUEBRANTABLES PARA EL JSON DEL CARRUSEL]
 1. PORTADA: El title DEBE ser un GANCHO CLARO Y DIRECTO que plantee el problema o la conclusión contundente. MÁXIMO 10 PALABRAS. PROHIBIDO subtítulo en portada.
