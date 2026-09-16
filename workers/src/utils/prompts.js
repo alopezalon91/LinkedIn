@@ -22,7 +22,7 @@ Analiza la implicación de la noticia. Cruza la información con el marco legal 
   2. El criterio oficial o normativo: Qué dice la DGT, el Tribunal Supremo o la ley y por qué afecta al bolsillo o a la gestión.
   3. Desglose práctico numerado (1., 2., 3.): Puntos claros, explicados con lenguaje accesible y técnico a la vez, explicando qué pasa, cómo resolverlo o qué alternativa legal existe.
   4. La realidad probatoria / operativa ante una comprobación de Hacienda.
-  5. Cierre con reflexión estratégica y una pregunta final de debate genuina para que otros profesionales comenten.
+  5. Cierre técnico y estratégico: Reflexión de fondo sobre el impacto fiscal/financiero y una pregunta técnica de control de riesgos y coste-beneficio para directivos y profesionales (PROHIBIDO el tono informal, 'cercano' o de community manager tipo '¿Y vosotros cómo lo hacéis en vuestra empresa/despacho?').
   6. Exactamente 4 a 7 hashtags profesionales y técnicos al final.
 
 [3. carrusel]
@@ -67,9 +67,9 @@ Muchos profesionales asumen que con tener dos teléfonos y dos líneas distintas
 
 Si Hacienda abre una comprobación (artículo 105.1 de la LGT), exigirá pruebas concretas de uso exclusivo: que el número figure en tu web corporativa, en presupuestos, firmas de correo o WhatsApp Business, y que la fecha de afectación conste en tus libros contables.
 
-Forzar la deducción de 150 o 200 euros de IVA en una factura antigua no compensa si eso abre la puerta a que revisen cuatro ejercicios fiscales completos.
+Forzar la deducción del IVA en terminales de uso personal genera una contingencia innecesaria que facilita la apertura de expedientes sobre ejercicios abiertos.
 
-¿Cómo gestionáis en vuestro despacho o empresa la asignación de terminales para evitar contingencias en una comprobación?
+¿Compensa el ahorro puntual del IVA soportado asumir la regularización tributaria y el régimen sancionador sobre los cuatro ejercicios no prescritos?
 
 #Fiscalidad #Autonomos #Pymes #IRPF #IVA #Hacienda #AsesoriaFiscal
 """
