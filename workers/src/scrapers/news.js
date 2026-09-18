@@ -2,33 +2,34 @@ import { nowISO } from '../utils.js';
 import { generatePostFromDraft } from '../api/posts.js';
 
 const RSS_SOURCES = [
-  // Bing News España con parámetros estrictos de mercado e idioma español
-  { name: 'Bing Fiscal / Hacienda', url: 'https://www.bing.com/news/search?q=hacienda+impuestos+espana&format=rss&setmkt=es-ES&setlang=es' },
-  { name: 'Bing Autónomos / RETA', url: 'https://www.bing.com/news/search?q=autonomos+seguridad+social+espana&format=rss&setmkt=es-ES&setlang=es' },
-  { name: 'Bing Ecommerce', url: 'https://www.bing.com/news/search?q=ecommerce+espana&format=rss&setmkt=es-ES&setlang=es' },
-  { name: 'Bing Verifactu / Facturación', url: 'https://www.bing.com/news/search?q=factura+electronica+verifactu&format=rss&setmkt=es-ES&setlang=es' },
-  { name: 'Bing IRPF / IVA', url: 'https://www.bing.com/news/search?q=irpf+iva+hacienda&format=rss&setmkt=es-ES&setlang=es' },
   // Medios especializados directos de España
+  { name: 'Autónomos y Emprendedor (ATA)', url: 'https://www.autonomosyemprendedor.es/rss' },
   { name: 'Infoautónomos', url: 'https://www.infoautonomos.com/feed/' },
-  { name: 'El Debate Economía', url: 'https://www.eldebate.com/rss/economia.xml' },
-  { name: 'El Mundo Economía', url: 'https://e00-elmundo.uecdn.es/elmundo/rss/economia.xml' }
+  // Búsquedas de Bing News España especializadas en normativa y compliance
+  { name: 'Bing Hacienda Autónomos', url: 'https://www.bing.com/news/search?q=hacienda+autonomos+espana&format=rss&setmkt=es-ES&setlang=es' },
+  { name: 'Bing Verifactu / Factura Electrónica', url: 'https://www.bing.com/news/search?q=verifactu+factura+electronica&format=rss&setmkt=es-ES&setlang=es' },
+  { name: 'Bing Seguridad Social / RETA', url: 'https://www.bing.com/news/search?q=seguridad+social+reta+autonomos&format=rss&setmkt=es-ES&setlang=es' },
+  { name: 'Bing Inspección Hacienda / Trabajo', url: 'https://www.bing.com/news/search?q=inspeccion+hacienda+espana&format=rss&setmkt=es-ES&setlang=es' },
+  { name: 'Bing IRPF / IVA Autónomos', url: 'https://www.bing.com/news/search?q=irpf+iva+autonomos&format=rss&setmkt=es-ES&setlang=es' },
+  { name: 'Bing Tributos Pymes', url: 'https://www.bing.com/news/search?q=tributos+pymes+espana&format=rss&setmkt=es-ES&setlang=es' }
 ];
 
-const HIGH_RELEVANCE_KEYWORDS = /\b(tributari[oa]s?|fiscal(es)?|hacienda|aeat|agencia tributaria|impuest[oa]s?|irpf|iva|sociedades|plusval[ií]a|sanci[oó]n(es)?|embargo|inspecci[oó]n|inspeccion|deducci[oó]n|deducciones|autónom[oa]s?|autonom[oa]s?|reta|cuota de aut[oó]nomos|cuota|seguridad social|facturaci[oó]n electr[oó]nica|factura electr[oó]nica|verifactu|ticketbai|ecommerce|e-commerce|comercio electr[oó]nico|tienda online|dropshipping|declaraci[oó]n de la renta|renta|despido|nif|revocaci[oó]n|cotizaci[oó]n|cotizaciones|laboral|pensiones?|jubilaci[oó]n|modelo 720|modelo 303|modelo 390|modelo 100|campa[ñn]a de la renta|finanzas|pyme|pymes)\b/i;
-
-const EXCLUDE_KEYWORDS = /\b(f[uú]tbol|liga|champions|partido|fichaje|marruecos|ucrania|guerra|misil|israel|bater[ií]as?|osnabrück|audiovisual|volkswagen|cine|pel[ií]cula|concierto|festival|hollywood|inmersivas|job crafting|mba\b|m[aá]ster|master|cursos? gratuitos?|gimnasio|renting flexible|softphone|ecosistema mac|cu[aá]ntica|f[ií]sica cu[aá]ntica|gas europeo|almacenamiento de gas|bonos mundiales|financiaci[oó]n auton[oó]mica|consejo de pol[ií]tica fiscal|plant[oó]n de madrid|ayuso planta|madrid se borra|junta de castilla y le[oó]n exige|consejeros del psoe|ingreso m[ií]nimo vital|aut[oó]nomos chinos|pesebre|hipoteca inversa|airbus|efactura f[oó]rum|calendario laboral.*festivos|tasa tur[ií]stica)\b/i;
+const STRICT_EXCLUDE_KEYWORDS = /\b(shakira|pique|futbol|futbolista|jugador|fichaje|partido|liga|champions|cantante|artista|actor|actriz|cine|pel[ií]cula|concierto|festival|hollywood|novela|televisi[oó]n|gh vip|supervivientes|celebrity|marruecos|ucrania|guerra|misil|israel|bater[ií]as?|audiovisual|volkswagen|padres e hijos|padre a hijo|hijos? a padres?|hermano|hermana|familiares?|entre familiares|pr[eé]stamos? familiares?|donar dinero a un familiar|donaciones? entre familiares|cajero|cajeros|sacar dinero|dinero en efectivo|efectivo que se puede|l[ií]mite de efectivo|bizum que reciben|declarar los bizum|inquilino|casero|alquiler de vivienda|destroza la vivienda|arrendamiento de vivienda|ganancias del juego|casinos?|loter[ií]a|apuestas?|juegos? de azar|pesebre|hipoteca inversa|licencia de apertura|brics|desdolarizaci[oó]n|d[oó]lar|blackrock|fondos? buitre|bancos? centrales?|wall street|gas europeo|almacenamiento de gas|bonos mundiales|financiaci[oó]n auton[oó]mica|financiacion auton[oó]mica|reparto.*ccaa|comunidades aut[oó]nomas|estado y las comunidades|las comunidades y el estado|concierto econ[oó]mico|cupo catal[aá]n|consejo de pol[ií]tica fiscal|ley de financiaci[oó]n|plant[oó]n de madrid|ayuso planta|madrid se borra|junta de castilla y le[oó]n exige|consejeros del psoe|hacienda presume de dar.*a las ccaa|voracidad fiscal|liberaci[oó]n fiscal|d[ií]a de la liberaci[oó]n fiscal|hacienda recauda|recaudaci[oó]n casi el doble|recauda.*m[aá]s r[aá]pido|recauda cada mes|la agencia tributaria recauda|gpt-3|gpt-4|gpt-5|openai|sam altman|f[ií]sica cu[aá]ntica|cu[aá]ntica|ceuta|melilla|ayuntamiento de|cabildo|inversor:\s*['"«]|inspector.*:\s*['"«]|asesor.*:\s*['"«]|presidente de.*:\s*['"«]|entrevista a\b|afirma en una entrevista|en declaraciones a|osnabrück|job crafting|mba\b|m[aá]ster|master|cursos? gratuitos?|gimnasio|renting flexible|softphone|ecosistema mac|airbus|efactura f[oó]rum|calendario laboral.*festivos|tasa tur[ií]stica)\b/i;
 
 const FOREIGN_EXCLUDE = /\b(mexico|méxico|sheinbaum|monreal|mañanera|sat\b|mmdp|pesos mexicanos|paquete económico|diputados de méxico|senado mexicano|lópez obrador|amlo|colombia|bogot[aá]|dian\b|gustavo petro|argentina|afip\b|arca\b|milei|buenos aires|pesos argentinos|per[uú]|sunat\b|chile\b|sii\b|latam|estados unidos|biden|trump|irs\b|india\b|sitharaman|gst\b|rupees|dólares\b|francia\b|precriterios|morena\b)\b/i;
 
 const ENGLISH_STOPWORDS = /\b(the|and|for|with|this|that|from|how to|why you need|market|global|growth|revenue|business|ecommerce side hustles|dropshipping in|top 10|retailers|shopping|brands|selling|sellers|strategies|tools|tiktok shop is|what is|best practices|guide to)\b/gi;
 
+// Palabras clave obligatorias que demuestran impacto real en la actividad de empresas o autónomos
+const BUSINESS_TARGET_KEYWORDS = /\b(autónom[oa]s?|autonom[oa]s?|pymes?|empresas?|empresarios?|sociedades|sociedad limitada|reta|cuota de aut[oó]nomos?|cuotas|base de cotizaci[oó]n|factura electr[oó]nica|facturaci[oó]n electr[oó]nica|verifactu|ticketbai|inspecci[oó]n de trabajo|inspecci[oó]n de hacienda|inspecci[oó]n tributaria|inspecci[oó]n|tributos|consulta vinculante|dgt\b|tribunal supremo|teac|tear|tsj|liquidaci[oó]n|modelo 303|modelo 390|modelo 200|modelo 111|modelo 190|modelo 036|modelo 037|iva deducible|deducci[oó]n|desgravar|amortizaci[oó]n|embargo|sanci[oó]n tributaria|recargo|lgt\b|liva\b|lirpf\b|falsos aut[oó]nomos?|registro de jornada|despido|nif|nómina|laboral|ecommerce|e-commerce|tienda online|dropshipping)\b/i;
+
 export function isValidSpanishTaxNews(title, summary) {
   const combined = `${title || ''} ${summary || ''}`;
-  if (EXCLUDE_KEYWORDS.test(combined)) return false;
+  if (STRICT_EXCLUDE_KEYWORDS.test(combined)) return false;
   if (FOREIGN_EXCLUDE.test(combined)) return false;
   const englishMatches = combined.match(ENGLISH_STOPWORDS);
   if (englishMatches && englishMatches.length >= 2) return false;
-  if (!HIGH_RELEVANCE_KEYWORDS.test(combined)) return false;
+  if (!BUSINESS_TARGET_KEYWORDS.test(combined)) return false;
   return true;
 }
 
