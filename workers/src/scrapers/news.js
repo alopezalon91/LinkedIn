@@ -4,7 +4,6 @@ import { generatePostFromDraft } from '../api/posts.js';
 const RSS_SOURCES = [
   // Medios especializados directos de España
   { name: 'Autónomos y Emprendedor (ATA)', url: 'https://www.autonomosyemprendedor.es/rss' },
-  { name: 'Infoautónomos', url: 'https://www.infoautonomos.com/feed/' },
   // Búsquedas de Bing News España especializadas en normativa y compliance
   { name: 'Bing Hacienda Autónomos', url: 'https://www.bing.com/news/search?q=hacienda+autonomos+espana&format=rss&setmkt=es-ES&setlang=es' },
   { name: 'Bing Verifactu / Factura Electrónica', url: 'https://www.bing.com/news/search?q=verifactu+factura+electronica&format=rss&setmkt=es-ES&setlang=es' },
@@ -264,7 +263,7 @@ export async function scrapeNews(db, env = null, ctx = null) {
   const history = await loadHistorySignatures(db);
 
   for (const source of RSS_SOURCES) {
-    if (inserted >= 3) break; // Máximo 3 noticias nuevas por ejecución diaria
+    if (inserted >= 5) break; // Hasta 5 noticias nuevas relevantes por ejecución
     let feedCount = 0;
     let matchCount = 0;
     let dupCount = 0;
@@ -280,7 +279,7 @@ export async function scrapeNews(db, env = null, ctx = null) {
       let match;
       
       while ((match = itemRegex.exec(xml)) !== null) {
-        if (inserted >= 3) break;
+        if (inserted >= 5) break;
         feedCount++;
         const itemXml = match[1];
         
@@ -290,13 +289,13 @@ export async function scrapeNews(db, env = null, ctx = null) {
         
         if (!title || !link) continue;
 
-        // Filtro estricto de frescura: ignorar artículos con más de 36 horas
+        // Filtro estricto de frescura: ignorar artículos con más de 72 horas (permite captar desde el viernes durante el fin de semana)
         let pubDateStr = extractTagContent(itemXml, 'pubDate') || extractTagContent(itemXml, 'dc:date');
         if (pubDateStr) {
           const pubDate = new Date(pubDateStr);
           if (!isNaN(pubDate.getTime())) {
             const diffHours = (Date.now() - pubDate.getTime()) / (1000 * 60 * 60);
-            if (diffHours > 36) continue;
+            if (diffHours > 72) continue;
           }
         }
         
@@ -374,7 +373,7 @@ export async function scrapeNews(db, env = null, ctx = null) {
 
   // Generar automáticamente con IA los posts más relevantes para la cola de revisión
   if (env && newPostIds.length > 0) {
-    const toGenerate = newPostIds.slice(0, 3);
+    const toGenerate = newPostIds.slice(0, 5);
     const bgGenerate = async () => {
       for (const id of toGenerate) {
         try {

@@ -1,6 +1,7 @@
 {
   "name": "mytaxbot-linkedin-workers",
   "version": "1.0.0",
+  "type": "module",
   "description": "Cloudflare Workers backend for the MyTaxBot LinkedIn automation system",
   "scripts": {
     "dev": "wrangler dev",

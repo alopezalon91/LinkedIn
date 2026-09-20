@@ -189,10 +189,16 @@ async function route(request, env, ctx, url, path, method) {
 
   if (url.pathname === '/api/trigger-scrape') {
     try {
-      await scrapeNews(db);
-      return new Response('Scraper ejecutado', { status: 200, headers: corsHeaders(request, '*') });
+      const result = await scrapeNews(db, env, ctx);
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders(request, '*') }
+      });
     } catch (err) {
-      return new Response(err.message, { status: 500, headers: corsHeaders(request, '*') });
+      return new Response(JSON.stringify({ error: err.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders(request, '*') }
+      });
     }
   }
 
