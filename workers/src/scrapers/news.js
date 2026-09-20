@@ -14,7 +14,9 @@ const RSS_SOURCES = [
   { name: 'Bing Tributos Pymes', url: 'https://www.bing.com/news/search?q=tributos+pymes+espana&format=rss&setmkt=es-ES&setlang=es' }
 ];
 
-const STRICT_EXCLUDE_KEYWORDS = /\b(shakira|pique|futbol|futbolista|jugador|fichaje|partido|liga|champions|cantante|artista|actor|actriz|cine|pel[ií]cula|concierto|festival|hollywood|novela|televisi[oó]n|gh vip|supervivientes|celebrity|zapatero|rajoy|s[aá]nchez|feij[oó]o|aznar|abascal|iglesias|marruecos|ucrania|guerra|misil|israel|bater[ií]as?|audiovisual|volkswagen|padres e hijos|padre a hijo|hijos? a padres?|hermano|hermana|familiares?|entre familiares|pr[eé]stamos? familiares?|donar dinero a un familiar|donaciones? entre familiares|cajero|cajeros|sacar dinero|dinero en efectivo|efectivo que se puede|l[ií]mite de efectivo|bizum que reciben|declarar los bizum|inquilino|casero|alquiler de vivienda|destroza la vivienda|arrendamiento de vivienda|ganancias del juego|casinos?|loter[ií]a|apuestas?|juegos? de azar|pesebre|hipoteca inversa|licencia de apertura|brics|desdolarizaci[oó]n|d[oó]lar|blackrock|fondos? buitre|bancos? centrales?|wall street|gas europeo|almacenamiento de gas|bonos mundiales|financiaci[oó]n auton[oó]mica|financiacion auton[oó]mica|reparto.*ccaa|comunidades aut[oó]nomas|estado y las comunidades|las comunidades y el estado|concierto econ[oó]mico|cupo catal[aá]n|consejo de pol[ií]tica fiscal|ley de financiaci[oó]n|plant[oó]n de madrid|ayuso planta|madrid se borra|junta de castilla y le[oó]n exige|consejeros del psoe|hacienda presume de dar.*a las ccaa|voracidad fiscal|liberaci[oó]n fiscal|d[ií]a de la liberaci[oó]n fiscal|hacienda recauda|recaudaci[oó]n casi el doble|recauda.*m[aá]s r[aá]pido|recauda cada mes|la agencia tributaria recauda|gpt-3|gpt-4|gpt-5|openai|sam altman|f[ií]sica cu[aá]ntica|cu[aá]ntica|ceuta|melilla|ayuntamiento de|cabildo|inversor:\s*['"«]|inspector.*:\s*['"«]|asesor.*:\s*['"«]|presidente de.*:\s*['"«]|entrevista a\b|afirma en una entrevista|en declaraciones a|osnabrück|job crafting|mba\b|m[aá]ster|master|cursos? gratuitos?|gimnasio|renting flexible|softphone|ecosistema mac|airbus|efactura f[oó]rum|calendario laboral.*festivos|tasa tur[ií]stica)\b/i;
+const STRICT_EXCLUDE_KEYWORDS = /\b(shakira|pique|futbol|futbolista|jugador|fichaje|partido|liga|champions|cantante|artista|actor|actriz|cine|pel[ií]cula|concierto|festival|hollywood|novela|televisi[oó]n|gh vip|supervivientes|celebrity|zapatero|rajoy|s[aá]nchez|feij[oó]o|aznar|abascal|iglesias|montero responde|aldama|koldo|[aá]balos|bego[ñn]a|andorra|banquero del pueblo|notaria|viven asfixiados|banca pag[oó]|m[aá]s medidas del pp|marruecos|ucrania|guerra|misil|israel|bater[ií]as?|audiovisual|volkswagen|padres e hijos|padre a hijo|hijos? a padres?|hermano|hermana|familiares?|entre familiares|pr[eé]stamos? familiares?|donar dinero a un familiar|donaciones? entre familiares|donaciones de hasta|cajero|cajeros|sacar dinero|retiradas de efectivo|dinero en efectivo|efectivo que se puede|l[ií]mite de efectivo|bizum que reciben|declarar los bizum|inquilino|casero|alquiler de vivienda|destroza la vivienda|arrendamiento de vivienda|ganancias del juego|casinos?|loter[ií]a|apuestas?|juegos? de azar|pesebre|hipoteca inversa|licencia de apertura|brics|desdolarizaci[oó]n|d[oó]lar|blackrock|fondos? buitre|bancos? centrales?|wall street|gas europeo|almacenamiento de gas|bonos mundiales|financiaci[oó]n auton[oó]mica|financiacion auton[oó]mica|reparto.*ccaa|comunidades aut[oó]nomas|estado y las comunidades|las comunidades y el estado|concierto econ[oó]mico|cupo catal[aá]n|consejo de pol[ií]tica fiscal|ley de financiaci[oó]n|plant[oó]n de madrid|ayuso planta|madrid se borra|junta de castilla y le[oó]n exige|consejeros del psoe|hacienda presume de dar.*a las ccaa|voracidad fiscal|liberaci[oó]n fiscal|d[ií]a de la liberaci[oó]n fiscal|hacienda recauda|recaudaci[oó]n casi el doble|recauda.*m[aá]s r[aá]pido|recauda cada mes|la agencia tributaria recauda|gpt-3|gpt-4|gpt-5|openai|sam altman|f[ií]sica cu[aá]ntica|cu[aá]ntica|ceuta|melilla|extremadura|comunidad valenciana|generalitat|junta de andaluc[ií]a|galicia|castilla|asturias|arag[oó]n|murcia|baleares|canarias|madrid busca|madrid lanza|ayudas al gas[oó]leo|subvenci[oó]n de hasta|ayudas de hasta|gas[oó]leo|taxi\b|taxis|seguro de salud|sms|ciberataque|startups|inversores|compraventa|absentismo|algoritmos|transportistas|cajas y|pasaporte digital|ayuntamiento de|cabildo|inversor:\s*['"«]|inspector.*:\s*['"«]|asesor.*:\s*['"«]|presidente de.*:\s*['"«]|entrevista a\b|afirma en una entrevista|en declaraciones a|osnabrück|job crafting|mba\b|m[aá]ster|master|cursos? gratuitos?|gimnasio|renting flexible|softphone|ecosistema mac|airbus|efactura f[oó]rum|calendario laboral.*festivos|tasa tur[ií]stica)\b/i;
+
+const TUTORIAL_OR_MARKETING = /^(c[oó]mo|gu[ií]a|qu[eé] es|cu[aá]l es|\d+\s+(claves|consejos|pasos|obligaciones|errores)|diferencias entre|ventajas y desventajas|por qu[eé] deber[ií]as|plan de acci[oó]n|qonto|uroborox|comprar una empresa|seguro de salud|cuenta gratis|compraventa de empresas|gesti[oó]n del talento|generaci[oó]n z|conoce|aprende)\b/i;
 
 const FOREIGN_EXCLUDE = /\b(mexico|méxico|sheinbaum|monreal|mañanera|sat\b|mmdp|pesos mexicanos|paquete económico|diputados de méxico|senado mexicano|lópez obrador|amlo|colombia|bogot[aá]|dian\b|gustavo petro|argentina|afip\b|arca\b|milei|buenos aires|pesos argentinos|per[uú]|sunat\b|chile\b|sii\b|latam|estados unidos|biden|trump|irs\b|india\b|sitharaman|gst\b|rupees|dólares\b|francia\b|precriterios|morena\b)\b/i;
 
@@ -25,6 +27,7 @@ const BUSINESS_TARGET_KEYWORDS = /\b(autónom[oa]s?|autonom[oa]s?|pymes?|empresa
 
 export function isValidSpanishTaxNews(title, summary) {
   const combined = `${title || ''} ${summary || ''}`;
+  if (TUTORIAL_OR_MARKETING.test(title || '')) return false;
   if (STRICT_EXCLUDE_KEYWORDS.test(combined)) return false;
   if (FOREIGN_EXCLUDE.test(combined)) return false;
   const englishMatches = combined.match(ENGLISH_STOPWORDS);
@@ -239,6 +242,16 @@ export function detectUrgency(text) {
  * Opcionalmente genera posts completos con IA si se pasa env.
  */
 export async function scrapeNews(db, env = null, ctx = null) {
+  // Protección contra saturación: si ya hay 5 o más posts en revisión (pending o draft), pausar ingesta
+  const pendingCheck = await db.prepare(
+    "SELECT count(*) as count FROM posts WHERE status IN ('pending', 'draft')"
+  ).first();
+  const currentPending = pendingCheck?.count || 0;
+  if (currentPending >= 5) {
+    console.log(`[News Scraper] Ingesta pausada: ya hay ${currentPending} posts pendientes en la cola de revisión.`);
+    return { status: 'paused_queue_full', pendingCount: currentPending, inserted: 0 };
+  }
+
   let inserted = 0;
   const newPostIds = [];
   const debug = [];
@@ -251,6 +264,7 @@ export async function scrapeNews(db, env = null, ctx = null) {
   const history = await loadHistorySignatures(db);
 
   for (const source of RSS_SOURCES) {
+    if (inserted >= 3) break; // Máximo 3 noticias nuevas por ejecución diaria
     let feedCount = 0;
     let matchCount = 0;
     let dupCount = 0;
@@ -266,6 +280,7 @@ export async function scrapeNews(db, env = null, ctx = null) {
       let match;
       
       while ((match = itemRegex.exec(xml)) !== null) {
+        if (inserted >= 3) break;
         feedCount++;
         const itemXml = match[1];
         
@@ -274,6 +289,16 @@ export async function scrapeNews(db, env = null, ctx = null) {
         let summary = extractTagContent(itemXml, 'description').replace(/<[^>]*>?/gm, '').trim();
         
         if (!title || !link) continue;
+
+        // Filtro estricto de frescura: ignorar artículos con más de 36 horas
+        let pubDateStr = extractTagContent(itemXml, 'pubDate') || extractTagContent(itemXml, 'dc:date');
+        if (pubDateStr) {
+          const pubDate = new Date(pubDateStr);
+          if (!isNaN(pubDate.getTime())) {
+            const diffHours = (Date.now() - pubDate.getTime()) / (1000 * 60 * 60);
+            if (diffHours > 36) continue;
+          }
+        }
         
         let sourceName = source.name;
         if (source.name.startsWith('Google') && title.includes(' - ')) {

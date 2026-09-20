@@ -92,11 +92,16 @@ export default {
     const db = env.DB;
     console.log('[worker] Running scheduled cron trigger at', new Date().toISOString());
     try {
-      // 1. Ejecutar scrapers (Scraping Serverless)
-      console.log('[worker] Ejecutando scrapers...');
-      await scrapeBOE(db);
-      await scrapeNews(db);
-      console.log('[worker] Scrapers finalizados.');
+      // 1. Ejecutar scrapers (Scraping Serverless) SOLO una vez al día (06:00 UTC = 07:00/08:00 España)
+      const currentHour = new Date().getUTCHours();
+      if (currentHour === 6) {
+        console.log('[worker] Ejecutando scrapers diarios (06:00 UTC)...');
+        await scrapeBOE(db);
+        await scrapeNews(db, env, ctx);
+        console.log('[worker] Scrapers finalizados.');
+      } else {
+        console.log(`[worker] Hora actual (${currentHour}:00 UTC). Scrapers en reposo hasta las 06:00 UTC.`);
+      }
 
       // 2. Publicar posts programados
       // Find posts where status is 'scheduled' and scheduled_at is in the past (or exactly now)
