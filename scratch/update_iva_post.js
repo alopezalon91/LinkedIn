@@ -2,28 +2,29 @@ const API_URL = "https://mytaxbot-linkedin.a-lopezalon91.workers.dev/api";
 const DASHBOARD_SECRET = "d5a8fb21e7d97b0a790518d6bc1f9b3e";
 const POST_ID = "da558cae-d1cc-4dfb-b6fa-77253d2e80fb";
 
-const postContent = `Viajes de negocios, ferias internacionales, alquiler de vehículos o formación en Europa... Es habitual que autónomos y pymes españolas paguen IVA fuera de España.
+const postContent = `Viajes de negocios, ferias internacionales, alquiler de vehículos o contratación de servicios en Europa... Es habitual que autónomos y pymes españolas soporten importes significativos de IVA fuera de España.
 
-Lo que muchos ignoran es que ese impuesto no se mete en el Modelo 303 y que la ventana para recuperarlo vence el próximo 30 de septiembre.
+Lo que muchos ignoran es que ese impuesto no se mete jamás en el Modelo 303 nacional y que la ventana para recuperarlo vence el próximo 30 de septiembre.
 
-La clave práctica para no perder ese dinero:
+Para articular esta recuperación sin contingencias, la dirección financiera debe controlar cuatro claves técnicas:
 
-1. El canal: Modelo 360 (exclusivo para la UE)
-Se presenta ante la sede de la AEAT, que remite la petición a la administración tributaria del país donde soportaste el impuesto. (Para terceros países con reciprocidad como Reino Unido o Suiza, el trámite se realiza directamente ante sus propias agencias).
+1. El canal: Modelo 360 (exclusivo para la Unión Europea)
+La devolución del IVA soportado en territorio comunitario se rige por la Directiva 2008/9/CE y se tramita telemáticamente mediante el Modelo 360 ante la sede de la AEAT. Hacienda actúa como ventanilla única: remite el expediente a la administración tributaria del Estado donde se devengó el impuesto, que es quien ingresa los fondos. Para terceros países con reciprocidad (como Reino Unido, Suiza o Noruega), este modelo no aplica; debe acudirse directamente ante sus propias agencias fiscales.
 
-2. Plazo improrrogable
-El 30 de septiembre finaliza el plazo para reclamar el IVA soportado a lo largo del ejercicio anterior. Dejar pasar la fecha no solo extingue el derecho a devolución; la AEAT puede rechazar que lo contabilices como gasto deducible en Renta o Sociedades por considerarlo una liberalidad debida a inacción.
+2. Plazo improrrogable y doble castigo fiscal (Art. 15.f LIS)
+El 30 de septiembre finaliza el plazo para reclamar el IVA del ejercicio anterior. Dejar pasar la fecha no solo extingue el derecho a devolución; la AEAT rechaza que lo contabilices como gasto deducible en Renta o Sociedades. Al ser una pérdida por negligencia o inacción del contribuyente, la doctrina tributaria lo califica como liberalidad no deducible (Art. 15.f LIS), provocando un doble sobrecoste.
 
-3. Umbrales mínimos de tramitación
+3. Asimetría normativa y umbrales mínimos
+La deducibilidad no se rige por la ley española, sino por la del país de destino (hostelería o vehículos tienen restricciones distintas en Francia o Alemania). Además, existen importes mínimos de admisión:
 • 400 € si solicitas la devolución trimestral (mínimo 3 meses).
-• 50 € si la reclamación abarca el año completo (o lo restante de ejercicio).
+• 50 € si la reclamación abarca el año completo.
 
-4. La trampa documental (Art. 105.1 LGT)
-Los tickets o facturas simplificadas no sirven. Los Estados miembros exigen factura formal completa con desglose de IVA y datos fiscales del emisor y receptor, además de acreditar la correlación estricta con la actividad económica.
+4. La trampa documental: veto a los tickets (Art. 105.1 LGT)
+Bajo la carga de la prueba (Art. 105.1 LGT), los tickets o facturas simplificadas no sirven; suponen el rechazo fulminante en los Estados miembros. Se exige factura formal completa con desglose de cuotas y acreditar la afección exclusiva a la actividad.
 
-Dejar facturas extranjeras en el cajón es un drenaje directo de tesorería.
+Dejar facturas extranjeras en el cajón no es prudencia: es un drenaje directo de tesorería.
 
-¿Tiene tu departamento financiero un protocolo para auditar y solicitar este IVA antes del cierre de plazo?
+¿Tiene tu departamento financiero un protocolo para auditar y reclamar este IVA antes del 30 de septiembre?
 
 #IVAInternacional #Modelo360 #Tesoreria #Pymes #DireccionFinanciera #Fiscalidad`;
 
@@ -49,7 +50,7 @@ const slides = [
     title: "Plazo improrrogable: 30 de septiembre del año siguiente",
     bullets: [
       "**Pérdida irreversible:** Si no se presenta antes del 30 de septiembre, se extingue de forma definitiva el derecho a recuperar el IVA del ejercicio previo",
-      "**Riesgo en IS / IRPF:** Hacienda puede rechazar computar ese IVA como mayor gasto deducible al calificarlo de liberalidad debida a negligencia"
+      "**Riesgo en IS / IRPF:** Hacienda puede rechazar computar ese IVA como mayor gasto deducible al calificarlo de liberalidad debida a negligencia (Art. 15.f LIS)"
     ]
   },
   {
