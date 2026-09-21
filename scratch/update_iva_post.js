@@ -9,17 +9,21 @@ Lo que muchos ignoran es que ese impuesto no se mete jamás en el Modelo 303 nac
 Para articular esta recuperación sin contingencias, la dirección financiera debe controlar cuatro claves técnicas:
 
 1. El canal: Modelo 360 (exclusivo para la Unión Europea)
+
 La devolución del IVA soportado en territorio comunitario se rige por la Directiva 2008/9/CE y se tramita telemáticamente mediante el Modelo 360 ante la sede de la AEAT. Hacienda actúa como ventanilla única: remite el expediente a la administración tributaria del Estado donde se devengó el impuesto, que es quien ingresa los fondos. Para terceros países con reciprocidad (como Reino Unido, Suiza o Noruega), este modelo no aplica; debe acudirse directamente ante sus propias agencias fiscales.
 
 2. Plazo improrrogable y doble castigo fiscal (Art. 15.f LIS)
+
 El 30 de septiembre finaliza el plazo para reclamar el IVA del ejercicio anterior. Dejar pasar la fecha no solo extingue el derecho a devolución; la AEAT rechaza que lo contabilices como gasto deducible en Renta o Sociedades. Al ser una pérdida por negligencia o inacción del contribuyente, la doctrina tributaria lo califica como liberalidad no deducible (Art. 15.f LIS), provocando un doble sobrecoste.
 
 3. Asimetría normativa y umbrales mínimos
+
 La deducibilidad no se rige por la ley española, sino por la del país de destino (hostelería o vehículos tienen restricciones distintas en Francia o Alemania). Además, existen importes mínimos de admisión:
 • 400 € si solicitas la devolución trimestral (mínimo 3 meses).
 • 50 € si la reclamación abarca el año completo.
 
 4. La trampa documental: veto a los tickets (Art. 105.1 LGT)
+
 Bajo la carga de la prueba (Art. 105.1 LGT), los tickets o facturas simplificadas no sirven; suponen el rechazo fulminante en los Estados miembros. Se exige factura formal completa con desglose de cuotas y acreditar la afección exclusiva a la actividad.
 
 Dejar facturas extranjeras en el cajón no es prudencia: es un drenaje directo de tesorería.
@@ -82,7 +86,7 @@ const slides = [
 const mediaBase64 = Buffer.from('CAROUSEL:' + JSON.stringify(slides)).toString('base64');
 
 async function main() {
-  console.log("Updating post content and carousel for:", POST_ID);
+  console.log("Updating post spacing format for:", POST_ID);
   const res = await fetch(`${API_URL}/posts/${POST_ID}`, {
     method: 'PATCH',
     headers: {
@@ -99,7 +103,7 @@ async function main() {
   console.log("Status:", res.status);
   const data = await res.json();
   if (res.ok) {
-    console.log("✅ Post and carousel successfully updated:", data.id);
+    console.log("✅ Post successfully updated with mobile-optimized spacing:", data.id);
   } else {
     console.error("❌ Failed to update post:", data);
   }
