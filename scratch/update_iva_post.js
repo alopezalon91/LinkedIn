@@ -4,7 +4,7 @@ const POST_ID = "da558cae-d1cc-4dfb-b6fa-77253d2e80fb";
 
 const postContent = `Viajes de negocios, ferias internacionales, alquiler de vehículos o contratación de servicios en Europa... Es habitual que autónomos y pymes españolas soporten importes significativos de IVA fuera de España.
 
-Lo que muchos ignoran es que ese impuesto no se mete jamás en el Modelo 303 nacional y que la ventana para recuperarlo vence el próximo 30 de septiembre.
+Lo que muchos ignoran es que ese impuesto no es deducible en el Modelo 303 nacional y que la ventana para recuperarlo vence el próximo 30 de septiembre.
 
 Para articular esta recuperación sin contingencias, la dirección financiera debe controlar cuatro claves técnicas:
 
@@ -24,7 +24,7 @@ La deducibilidad no se rige por la ley española, sino por la del país de desti
 
 4. La trampa documental: veto a los tickets (Art. 105.1 LGT)
 
-Bajo la carga de la prueba (Art. 105.1 LGT), los tickets o facturas simplificadas no sirven; suponen el rechazo fulminante en los Estados miembros. Se exige factura formal completa con desglose de cuotas y acreditar la afección exclusiva a la actividad.
+Bajo la carga de la prueba (Art. 105.1 LGT), las facturas simplificadas o tickets no son válidas; suponen el rechazo fulminante en los Estados miembros. Se exige factura formal completa con desglose de cuotas y acreditar la afección exclusiva a la actividad.
 
 Dejar facturas extranjeras en el cajón no es prudencia: es un drenaje directo de tesorería.
 
@@ -36,31 +36,31 @@ const slides = [
   {
     slide_type: "cover",
     pre_title: "FISCALIDAD INTERNACIONAL",
-    title: "El IVA extranjero no se mete en el Modelo 303: cómo recuperarlo antes del 30 de septiembre",
+    title: "Cómo recuperar el IVA internacional antes del 30 de septiembre",
     bullets: []
   },
   {
     slide_type: "interior",
     pre_title: "EL CANAL ADECUADO",
-    title: "Modelo 360: exclusivo para países de la Unión Europea",
+    title: "El IVA en el extranjero no es deducible en el Modelo 303",
     bullets: [
-      "**Ventanilla única AEAT:** La solicitud telemática se presenta en España, pero la resuelve la administración del Estado donde se soportó el impuesto",
+      "**Modelo 360 (exclusivo UE):** La solicitud se tramita telemáticamente ante la AEAT para su remisión al Estado miembro donde se devengó el impuesto",
       "**Terceros países con reciprocidad:** Para Reino Unido, Suiza o Noruega, la tramitación se efectúa directamente ante sus propias agencias fiscales"
     ]
   },
   {
     slide_type: "interior",
     pre_title: "EL CALENDARIO FISCAL",
-    title: "Plazo improrrogable: 30 de septiembre del año siguiente",
+    title: "Plazo improrrogable: 30 de septiembre",
     bullets: [
       "**Pérdida irreversible:** Si no se presenta antes del 30 de septiembre, se extingue de forma definitiva el derecho a recuperar el IVA del ejercicio previo",
-      "**Riesgo en IS / IRPF:** Hacienda puede rechazar computar ese IVA como mayor gasto deducible al calificarlo de liberalidad debida a negligencia (Art. 15.f LIS)"
+      "**Riesgo en IS / IRPF:** Hacienda puede rechazar computar ese IVA como mayor gasto deducible al calificarlo de liberalidad debida a inacción (Art. 15.f LIS)"
     ]
   },
   {
     slide_type: "interior",
     pre_title: "UMBRALES DE TRAMITACIÓN",
-    title: "Importes mínimos exigidos para admitir la solicitud",
+    title: "Importes mínimos para solicitar la devolución",
     bullets: [
       "**Devolución trimestral (mínimo 400 €):** Aplicable para solicitudes que abarquen entre 3 meses y menos de un año natural completo",
       "**Devolución anual (mínimo 50 €):** Aplicable si la reclamación cubre todo el ejercicio natural o el periodo restante del año"
@@ -69,9 +69,9 @@ const slides = [
   {
     slide_type: "interior",
     pre_title: "RIGOR PROBATORIO",
-    title: "La trampa documental: los tickets no sirven (Art. 105.1 LGT)",
+    title: "Invalidez de las facturas simplificadas (Art. 105.1 LGT)",
     bullets: [
-      "**Factura formal completa:** Los tickets o facturas simplificadas suponen el rechazo automático e inapelable en casi todos los Estados miembros",
+      "**Factura formal completa:** Las facturas simplificadas o tickets suponen el rechazo automático en la práctica totalidad de los Estados miembros",
       "**Afección económica:** La empresa debe acreditar documentalmente que el gasto responde en exclusiva a las necesidades de la actividad"
     ]
   },
@@ -86,7 +86,7 @@ const slides = [
 const mediaBase64 = Buffer.from('CAROUSEL:' + JSON.stringify(slides)).toString('base64');
 
 async function main() {
-  console.log("Updating post spacing format for:", POST_ID);
+  console.log("Updating post content and carousel with refined professional titles for:", POST_ID);
   const res = await fetch(`${API_URL}/posts/${POST_ID}`, {
     method: 'PATCH',
     headers: {
@@ -103,7 +103,7 @@ async function main() {
   console.log("Status:", res.status);
   const data = await res.json();
   if (res.ok) {
-    console.log("✅ Post successfully updated with mobile-optimized spacing:", data.id);
+    console.log("✅ Post and carousel successfully updated with polished titles:", data.id);
   } else {
     console.error("❌ Failed to update post:", data);
   }
