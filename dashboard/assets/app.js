@@ -318,6 +318,8 @@ function renderPostCard(post) {
     }
   }
 
+  const hasCarousel = Boolean(post.media_base64) || post.type === 'carrusel' || post.type === 'carousel';
+
   card.innerHTML = `
     <div class="post-card-header">
       ${renderTypeBadge(post.type)}
@@ -358,9 +360,11 @@ function renderPostCard(post) {
         <!-- AI Rewrite Section (visible only when editing) -->
         <div class="ai-rewrite-section" id="ai-rewrite-section-${post.id}" style="display:none; margin-top:12px; padding:12px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:6px;">
           <label style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:6px;">🪄 Redactar de nuevo con Inteligencia Artificial:</label>
-          <div style="display:flex; gap:8px; position:relative; align-items:center; width:100%;">
-            <input type="text" id="ai-instructions-${post.id}" placeholder="Ej: Enfócalo para el sector inmobiliario..." style="flex:1; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:4px; padding:8px 36px 8px 8px; color:var(--text-primary); font-size:13px; outline:none;" />
-            <button id="ai-mic-btn-${post.id}" onclick="PostActions.startVoiceRewrite('${post.id}')" style="position:absolute; right:115px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;" title="Dictar instrucciones">🎙️</button>
+          <div class="ai-rewrite-box" style="display:flex; gap:8px; align-items:center; width:100%;">
+            <div style="position:relative; flex:1; min-width:0;">
+              <input type="text" id="ai-instructions-${post.id}" placeholder="Ej: Enfócalo para el sector inmobiliario..." style="width:100%; box-sizing:border-box; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:4px; padding:8px 36px 8px 8px; color:var(--text-primary); font-size:13px; outline:none;" />
+              <button id="ai-mic-btn-${post.id}" onclick="PostActions.startVoiceRewrite('${post.id}')" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;" title="Dictar instrucciones">🎙️</button>
+            </div>
             <button class="btn btn-primary btn-sm" id="ai-rewrite-btn-${post.id}" onclick="PostActions.regenerateWithIA('${post.id}')" style="flex-shrink:0;">🪄 Rehacer post</button>
           </div>
           <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
@@ -386,36 +390,60 @@ function renderPostCard(post) {
         ${post.scheduled_at ? `<br>📅 Programado para: ${formatDate(post.scheduled_at)}` : ''}
       </div>
       
-      ${post.status === 'draft' ? `
-        <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">
-          ❌ Descartar Idea
-        </button>
-        <button class="btn btn-primary btn-sm" id="generate-btn-${post.id}" onclick="PostActions.generatePost('${post.id}')" style="font-weight:bold; background-color:var(--accent-purple);">
-          ✨ Generar Post con IA
-        </button>
-      ` : `
-        <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">\n          👁 Preview\n        </button>\n        <button class="btn btn-ghost btn-sm" id="regen-orig-btn-${post.id}" onclick="PostActions.regenerateFromOriginal('${post.id}')" title="Volver a generar desde la noticia original">\n          🔄 Rehacer\n        </button>\n        <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">\n          ✏️ Editar\n        </button>
-        <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">
-          ❌ Rechazar
-        </button>
-        ${State.currentView === 'scheduled'
-            ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
-             <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>`
-          : State.currentView === 'approved'
-          ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
-             <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
-          : State.currentView === 'published'
-          ? `<button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes publicadas">📸 Ver Carrusel</button>
-             ${post.linkedin_post_id ? `<a href="https://www.linkedin.com/feed/update/${post.linkedin_post_id}" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;">🔗 Ver en LinkedIn</a>` : ''}`
-          : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
-             <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
-             <button class="btn btn-outline btn-sm" onclick="PostActions.downloadPDF('${post.id}')" title="Descargar PDF del carrusel para LinkedIn">⬇️ Descargar PDF</button>
-             <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
-             <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>`
-        }
-      `}
+      <div class="post-card-actions">
+        ${post.status === 'draft' ? `
+          <button class="btn btn-primary btn-sm" id="generate-btn-${post.id}" onclick="PostActions.generatePost('${post.id}')" style="font-weight:bold; background-color:var(--accent-purple);">
+            ✨ Generar Post con IA
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">
+            ❌ Descartar Idea
+          </button>
+        ` : `
+          ${State.currentView === 'scheduled'
+            ? `<button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
+               <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Reprogramar</button>
+               <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">✏️ Editar</button>
+               <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">❌ Descartar</button>
+               <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">👁 Preview</button>
+               <button class="btn btn-ghost btn-sm" id="regen-orig-btn-${post.id}" onclick="PostActions.regenerateFromOriginal('${post.id}')" title="Volver a generar desde la noticia original">🔄 Rehacer</button>
+               ${hasCarousel ? `
+                 <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
+                 <button class="btn btn-outline btn-sm" onclick="PostActions.downloadPDF('${post.id}')" title="Descargar PDF del carrusel para LinkedIn">⬇️ Descargar PDF</button>
+               ` : ''}`
+            : State.currentView === 'approved'
+            ? `<button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
+               <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>
+               <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">✏️ Editar</button>
+               <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">❌ Rechazar</button>
+               <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">👁 Preview</button>
+               <button class="btn btn-ghost btn-sm" id="regen-orig-btn-${post.id}" onclick="PostActions.regenerateFromOriginal('${post.id}')" title="Volver a generar desde la noticia original">🔄 Rehacer</button>
+               ${hasCarousel ? `
+                 <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
+                 <button class="btn btn-outline btn-sm" onclick="PostActions.downloadPDF('${post.id}')" title="Descargar PDF del carrusel para LinkedIn">⬇️ Descargar PDF</button>
+               ` : ''}`
+            : State.currentView === 'published'
+            ? `${post.linkedin_post_id ? `<a href="https://www.linkedin.com/feed/update/${post.linkedin_post_id}" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;">🔗 Ver en LinkedIn</a>` : ''}
+               <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">👁 Preview</button>
+               <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">✏️ Editar</button>
+               <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">❌ Eliminar</button>
+               ${hasCarousel ? `
+                 <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes publicadas">📸 Ver Carrusel</button>
+                 <button class="btn btn-outline btn-sm" onclick="PostActions.downloadPDF('${post.id}')" title="Descargar PDF del carrusel para LinkedIn">⬇️ Descargar PDF</button>
+               ` : ''}`
+            : `<button class="btn btn-success btn-sm" id="approve-btn-${post.id}" onclick="PostActions.approve('${post.id}')">✅ Aprobar</button>
+               <button class="btn btn-danger btn-sm" onclick="PostActions.reject('${post.id}')">❌ Rechazar</button>
+               <button class="btn btn-primary btn-sm" onclick="PostActions.publishNow('${post.id}')">🚀 Publicar Ahora</button>
+               <button class="btn btn-ghost btn-sm" onclick="PostActions.openScheduleModal('${post.id}')">🕒 Programar</button>
+               <button class="btn btn-ghost btn-sm" id="edit-btn-${post.id}" onclick="PostActions.toggleEdit('${post.id}')">✏️ Editar</button>
+               <button class="btn btn-ghost btn-sm" onclick="PostActions.showPreview('${post.id}')">👁 Preview</button>
+               <button class="btn btn-ghost btn-sm" id="regen-orig-btn-${post.id}" onclick="PostActions.regenerateFromOriginal('${post.id}')" title="Volver a generar desde la noticia original">🔄 Rehacer</button>
+               ${hasCarousel ? `
+                 <button class="btn btn-outline btn-sm" onclick="PostActions.previewCarousel('${post.id}')" title="Ver imágenes generadas antes de publicar">📸 Previsualizar Carrusel</button>
+                 <button class="btn btn-outline btn-sm" onclick="PostActions.downloadPDF('${post.id}')" title="Descargar PDF del carrusel para LinkedIn">⬇️ Descargar PDF</button>
+               ` : ''}`
+          }
+        `}
+      </div>
     </div>
   `;
 
