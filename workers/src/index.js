@@ -530,7 +530,7 @@ async function handleUpdatePost(db, env, ctx, request, postId) {
     return _handleReject(db, postId);
   }
   if ((updates.action === 'schedule' || updates.status === 'scheduled') && updates.scheduled_at) {
-    return _handleSchedule(db, postId, updates.scheduled_at, updates.media_base64 ?? null);
+    return _handleSchedule(db, postId, updates.scheduled_at, updates.media_base64 ?? null, updates.content_edited ?? null);
   }
 
   try {
@@ -605,9 +605,9 @@ async function _handleReject(db, postId) {
   }
 }
 
-async function _handleSchedule(db, postId, scheduledAt, mediaBase64) {
+async function _handleSchedule(db, postId, scheduledAt, mediaBase64, contentEdited = null) {
   try {
-    const post = await schedulePost(db, postId, scheduledAt, mediaBase64);
+    const post = await schedulePost(db, postId, scheduledAt, mediaBase64, contentEdited);
     return jsonResponse(post);
   } catch (err) {
     return errorResponse(err.message, err.message.includes('not found') ? 404 : 400);

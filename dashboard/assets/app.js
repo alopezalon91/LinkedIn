@@ -133,9 +133,9 @@ const API = {
     body: JSON.stringify({ action: 'reject' }),
   }),
 
-  schedulePost: (id, scheduledAt, mediaBase64) => API.request(`/api/posts/${id}`, {
+  schedulePost: (id, scheduledAt, mediaBase64, contentEdited = null) => API.request(`/api/posts/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ action: 'schedule', scheduled_at: scheduledAt, media_base64: mediaBase64 || null }),
+    body: JSON.stringify({ action: 'schedule', scheduled_at: scheduledAt, media_base64: mediaBase64 || null, content_edited: contentEdited || null }),
   }),
 
   publishPost: (id, formData = null) => API.request(`/api/publish/${id}`, { 
@@ -595,11 +595,10 @@ const PostActions = {
       
       const isoStr = new Date(`${date}T${time}`).toISOString();
       const editor = document.getElementById(`editor-${postId}`);
-      const isEditing = editor && editor.classList.contains('visible');
-      const editedContent = isEditing ? editor.value : null;
+      const post = State.posts.find(p => p.id === postId);
+      const currentText = (editor && editor.value ? editor.value : (post?.content_edited || post?.content || '')).trim();
 
       try {
-        const post = State.posts.find(p => p.id === postId);
         const editedSlidesB64 = PostActions.getEditedSlides(postId, post);
         if (editedSlidesB64) {
           post.media_base64 = editedSlidesB64;
@@ -625,10 +624,10 @@ const PostActions = {
           }
         }
         
-        if (editedContent) {
-          await API.approvePost(postId, editedContent, post.media_base64); // Save edits first
+        if (currentText) {
+          await API.approvePost(postId, currentText, post.media_base64); // Save edits first
         }
-        await API.schedulePost(postId, isoStr, post.media_base64);
+        await API.schedulePost(postId, isoStr, post.media_base64, currentText);
         Toast.show('Post programado ✅', 'success');
         modal.classList.remove('visible');
         removePostCard(postId);

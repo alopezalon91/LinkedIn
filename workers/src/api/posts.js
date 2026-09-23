@@ -428,7 +428,7 @@ export async function rejectPost(db, id) {
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
 
-export async function schedulePost(db, id, scheduledAt, mediaBase64 = null) {
+export async function schedulePost(db, id, scheduledAt, mediaBase64 = null, contentEdited = null) {
   if (!scheduledAt) throw new Error('scheduledAt timestamp is required');
 
   const ts = new Date(scheduledAt);
@@ -444,6 +444,9 @@ export async function schedulePost(db, id, scheduledAt, mediaBase64 = null) {
   const updates = { status: 'scheduled', scheduled_at: scheduledAt };
   if (mediaBase64) {
     updates.media_base64 = mediaBase64;
+  }
+  if (contentEdited) {
+    updates.content_edited = contentEdited;
   }
 
   return updatePost(db, id, updates);

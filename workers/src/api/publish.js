@@ -141,8 +141,28 @@ export async function publishPost(db, env, postId, request) {
     }
   }
 
+  // Determine a professional title for document posts instead of generic "Documento Adjunto"
+  let docTitle = "Guía Especializada";
+  if (post.media_base64) {
+    try {
+      const _bytes = Uint8Array.from(atob(post.media_base64), c => c.charCodeAt(0));
+      const decodedStr = new TextDecoder().decode(_bytes);
+      if (decodedStr.startsWith('CAROUSEL:')) {
+        const slides = JSON.parse(decodedStr.substring(9));
+        if (slides[0]?.title) docTitle = slides[0].title;
+      }
+    } catch(e) {}
+  }
+  if (docTitle === "Guía Especializada") {
+    const rawText = post.content_edited || post.content || '';
+    const firstLine = rawText.split('\n')[0].replace(/^[#*\s]+/, '').trim();
+    if (firstLine.length > 5) {
+      docTitle = firstLine.substring(0, 80);
+    }
+  }
+
   // 5. Build REST Posts payload
-  const payload = buildPostPayload(linkedin_urn, textToPublish, multiImageUrns.length > 0 ? multiImageUrns : mediaUrn);
+  const payload = buildPostPayload(linkedin_urn, textToPublish, multiImageUrns.length > 0 ? multiImageUrns : mediaUrn, docTitle);
 
   // 5. POST to LinkedIn
   const response = await fetch(LINKEDIN_POSTS_URL, {
@@ -253,11 +273,29 @@ function toBoldUnicode(text) {
   }).join('');
 }
 
-function formatLinkedInText(text) {
-  return (text || '').replace(/\*\*(.*?)\*\*/g, (m, p1) => toBoldUnicode(p1));
+export function formatLinkedInText(text) {
+  if (!text) return '';
+  // 1. Normalize line endings to LF (\n)
+  let processed = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // 2. Convert markdown bold **text** to Unicode bold (e.g. 𝗮𝗯𝗰)
+  processed = processed.replace(/\*\*(.*?)\*\*/g, (m, p1) => toBoldUnicode(p1));
+
+  // 3. Escape LinkedIn Little Text Format reserved markup characters:
+  // According to LinkedIn Little Text Format spec:
+  // Characters reserved: \ | { } @ [ ] ( ) < > ~ _ *
+  // If not escaped, LinkedIn's parser treats them as markup delimiters (e.g. mention URNs),
+  // causing parsing failure and silent truncation of the remainder of the post.
+  processed = processed.replace(/(?<!\\)([|{}@[\]()<>~_*])/g, (m, c) => '\\' + c);
+
+  // 4. Escape '#' ONLY if it is not part of a valid hashtag (#palabra)
+  // This allows hashtags like #IVA to remain clickable while preventing broken hash tags
+  processed = processed.replace(/(?<!\\)#(?![a-zA-Z0-9_áéíóúÁÉÍÓÚñÑ])/g, (m) => '\\' + m);
+
+  return processed;
 }
 
-function buildPostPayload(authorUrn, text, mediaUrnOrArray = null) {
+function buildPostPayload(authorUrn, text, mediaUrnOrArray = null, docTitle = "Guía Técnica") {
   const payload = {
     author: authorUrn,
     commentary: text,
@@ -281,7 +319,7 @@ function buildPostPayload(authorUrn, text, mediaUrnOrArray = null) {
       payload.content = {
         media: {
           id: mediaUrnOrArray,
-          title: "Documento Adjunto"
+          title: docTitle
         }
       };
     }
