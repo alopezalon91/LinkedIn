@@ -314,9 +314,15 @@ def filter_by_keywords(entries: list[dict], keywords: list[str] | None = None) -
 
     filtered: list[dict] = []
     pattern = re.compile(r'\b(' + '|'.join(re.escape(kw) for kw in keywords) + r')\b', re.IGNORECASE)
+    exclude_pattern = re.compile(
+        r'\b(organismos?\s+aut[óo]nomos?|ciudades?\s+aut[óo]nomas?|comunidades?\s+aut[óo]nomas?|oposici[óo]n(?:es)?|concurso(?:s)?|proceso(?:s)?\s+selectivo(?:s)?|tribunal(?:es)?\s+calificador(?:es)?|admitid[oa]s?|excluid[oa]s?|personal\s+(?:laboral|funcionario)|escalas?\s+t[ée]cnicas?|nombramientos?|ceses?|licitaci[óo]n(?:es)?|adjudicaci[óo]n(?:es)?|subastas?|premios?|becas?|gas\b|electricidad|el[ée]ctric[oa]|hidrocarburos?|energ[íi]a|cnmc|convenio\s+(?:colectivo|único)|fuerzas\s+armadas|polic[íi]a|guardia\s+civil|militares?|planes?\s+de\s+estudio|titulaciones?|universidad(?:es)?|enseñanza|curr[íi]culo|mutualidad\s+general\s+judicial|muface|isfas)\b',
+        re.IGNORECASE
+    )
     
     for entry in entries:
         searchable = f"{entry.get('titulo', '')} {entry.get('departamento', '')}".lower()
+        if exclude_pattern.search(searchable):
+            continue
         if pattern.search(searchable):
             filtered.append(entry)
 

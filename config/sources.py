@@ -19,11 +19,9 @@ BOE_SUMARIO_URL = "https://www.boe.es/datosabiertos/api/boe/sumario/{date}"
 BOE_DOCUMENTO_URL = "https://www.boe.es/datosabiertos/api/documento/id/{id}"
 
 # BOE sections we care about (Roman numeral prefix matches old API response, Arabic matches new API)
-# I/1 = Disposiciones generales (Leyes, RD, Órdenes)
-# II/2A/2B = Autoridades y personal
-# III/3 = Otras disposiciones
-# IV/4 = Administración de Justicia  ← less relevant, kept for completeness
-BOE_RELEVANT_SECTIONS = {"I", "II", "III", "1", "2A", "2B", "3"}
+# I/1 = Disposiciones generales (Leyes, Reales Decretos, Órdenes Ministeriales)
+# Blindaje estricto: Eliminadas secciones 2 (Personal/Oposiciones), 3 (Otras disposiciones), 4 (Justicia) y 5 (Anuncios)
+BOE_RELEVANT_SECTIONS = {"I", "1"}
 
 # Minimum section ranks to include (mapped to numeric priority for sorting)
 BOE_SECTION_PRIORITY = {

@@ -96,7 +96,7 @@ export default {
       const currentHour = new Date().getUTCHours();
       if (currentHour === 6) {
         console.log('[worker] Ejecutando scrapers diarios (06:00 UTC)...');
-        await scrapeBOE(db);
+        await scrapeBOE(db, env, ctx);
         await scrapeNews(db, env, ctx);
         console.log('[worker] Scrapers finalizados.');
       } else {
