@@ -117,28 +117,7 @@ export async function scrapeBOE(db, env = null, ctx = null) {
       }
     }
     
-    console.log(`[BOE Scraper] Ejecutado. Nuevos posts: ${inserted}`);
-
-    // Si hay posts y env disponible, generar post con IA en segundo plano
-    if (env && newPostIds.length > 0) {
-      const toGenerate = newPostIds.slice(0, 2);
-      const bgGenerate = async () => {
-        for (const id of toGenerate) {
-          try {
-            await generatePostFromDraft(db, env, ctx, id);
-            console.log(`[BOE Scraper] Post normativo generado automáticamente con IA: ${id}`);
-          } catch (err) {
-            console.error(`[BOE Scraper] Fallo al generar post IA para ${id}:`, err);
-          }
-        }
-      };
-      if (ctx && typeof ctx.waitUntil === 'function') {
-        ctx.waitUntil(bgGenerate());
-      } else {
-        bgGenerate();
-      }
-    }
-
+    console.log(`[BOE Scraper] Ejecutado. Nuevos borradores guardados: ${inserted}`);
     return inserted;
   } catch (e) {
     console.error(`[BOE Scraper] Excepción:`, e);

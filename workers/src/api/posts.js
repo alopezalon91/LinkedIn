@@ -918,10 +918,13 @@ Estructura en párrafos claros y legibles (2 a 4 líneas), usando enumeraciones 
     const uniqueParagraphs = new Set(paragraphs);
     const isRedundant = paragraphs.length > 0 && uniqueParagraphs.size !== paragraphs.length;
 
-    if (typeof postText === 'string' && postText.length >= 1400 && postText.length <= 2800 && !isRedundant) {
+    // Check for formulaic AI cliché hooks
+    const hasClichéHook = /^(muchos\s+(?:aut[óo]nomos?|empresarios?)\s+(?:creen|piensan|asumen)|existe\s+la\s+creencia|a\s+menudo\s+se\s+(?:cree|piensa)|es\s+habitual\s+(?:creer|pensar)|no\s+es\s+una\s+simple\s+noticia|en\s+el\s+panorama\s+actual)/i.test(postText.trim());
+
+    if (typeof postText === 'string' && postText.length >= 1400 && postText.length <= 2800 && !isRedundant && !hasClichéHook) {
       break; // Success!
     } else {
-      console.warn(`Attempt ${attempt} failed validation: post length ${postText.length} not in 1400-2800 or redundancy=${isRedundant}. Retrying...`);
+      console.warn(`Attempt ${attempt} failed validation: post length ${postText.length}, redundancy=${isRedundant}, clichéHook=${hasClichéHook}. Retrying...`);
       if (attempt > maxRetries) {
         if (postText && postText.length >= 1000) {
           console.warn(`Accepting generated post with length ${postText.length} after max retries.`);
@@ -929,10 +932,20 @@ Estructura en párrafos claros y legibles (2 a 4 líneas), usando enumeraciones 
         }
         throw new Error(`VALIDATION_FAILED: El modelo no alcanzó la densidad procedural requerida sin redundancias (generó ${postText.length}) tras ${maxRetries} reintentos.`);
       }
-      currentTemperature = 0.2; // Force strict, dense structure on retry
+      currentTemperature = 0.3;
       
-      // INYECTAR REGAÑINA Y FORZADO DE ESTRUCTURA MULTI-SECCIÓN
-      prompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO - LONGITUD ESTRICTA]\nTu intento anterior falló porque la longitud fue incorrecta (${postText.length} caracteres) o repetía párrafos. Debes generar estrictamente entre 1800 y 2500 caracteres SIN REPETIR NINGUNA FRASE. Ajusta el nivel de detalle para cumplir esta longitud exacta.\n\n¡ATENCIÓN! RESPONDE ÚNICA Y EXCLUSIVAMENTE CON EL CÓDIGO JSON. NO PIDAS DISCULPAS, SÓLO EL JSON PARSEABLE.`;
+      let errorReason = '';
+      if (hasClichéHook) {
+        errorReason += `\n- ERROR DE GANCHO: Has empezado con una frase cliché de IA ("Muchos autónomos creen/piensan..."). ESTÁ PROHIBIDO. Empieza DIRECTAMENTE con el caso real, la cifra o la consecuencia práctica.`;
+      }
+      if (isRedundant) {
+        errorReason += `\n- Has repetido frases o párrafos. Redacta sin redundancias.`;
+      }
+      if (postText.length < 1400 || postText.length > 2800) {
+        errorReason += `\n- La longitud fue incorrecta (${postText.length} caracteres). Genera estrictamente entre 1800 y 2500 caracteres.`;
+      }
+      
+      prompt += `\n\n[INSTRUCCIÓN CRÍTICA DE REINTENTO]${errorReason}\n¡ATENCIÓN! RESPONDE ÚNICA Y EXCLUSIVAMENTE CON EL CÓDIGO JSON. NO PIDAS DISCULPAS, SÓLO EL JSON PARSEABLE.`;
     }
   }
 

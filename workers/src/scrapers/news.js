@@ -369,29 +369,9 @@ export async function scrapeNews(db, env = null, ctx = null) {
     }
   }
   
-  console.log(`[News Scraper] Ejecutado. Nuevos posts: ${inserted}`);
+  console.log(`[News Scraper] Ejecutado. Nuevos borradores guardados: ${inserted}`);
 
-  // Generar automáticamente con IA los posts más relevantes para la cola de revisión
-  if (env && newPostIds.length > 0) {
-    const toGenerate = newPostIds.slice(0, 5);
-    const bgGenerate = async () => {
-      for (const id of toGenerate) {
-        try {
-          await generatePostFromDraft(db, env, ctx, id);
-          console.log(`[News Scraper] Post generado automáticamente con IA: ${id}`);
-        } catch (err) {
-          console.error(`[News Scraper] Fallo al generar post IA para ${id}:`, err);
-        }
-      }
-    };
-    if (ctx && typeof ctx.waitUntil === 'function') {
-      ctx.waitUntil(bgGenerate());
-    } else {
-      bgGenerate();
-    }
-  }
-
-  // Comprobar posts pendientes actuales en DB
+  // Comprobar posts recientes en DB
   const recentRows = await db.prepare("SELECT id, source_name, status, urgency, created_at FROM posts ORDER BY created_at DESC LIMIT 15").all();
 
   return { inserted, newPostIds, recent_posts: recentRows.results ?? [], debug };
